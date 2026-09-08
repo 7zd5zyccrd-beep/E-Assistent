@@ -10,6 +10,14 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.55 08.09.2026  Der Zoom per Doppeltipp ist abgeschaltet (touch-action:
+                    manipulation auf html und body): schnelles Tippen
+                    nacheinander vergroesserte sonst die Seite. Wischen und
+                    Zwei-Finger-Zoom bleiben, das Unterschriftenfeld behaelt
+                    seine eigene Regel.
+  v1.54 08.09.2026  Das Passwort ist hinterlegt: die Zeile ZUGANG traegt Salz
+                    und Pruefwert. Die App laesst sich damit oeffnen; alle
+                    Geraete melden sich einmal neu an.
   v1.53 08.09.2026  Umzug von Netlify zu GitHub Pages. Die Zugangssperre rechnet
                     den Pruefwert jetzt mit PBKDF2 (250.000 Runden, eigenes
                     Salz) statt mit einer einfachen SHA-256-Pruefsumme; das
@@ -269,7 +277,10 @@
 html{color-scheme:light dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none !important}   /* muss die Layout-Regeln unten überstimmen */
-html,body{margin:0;padding:0}
+/* touch-action:manipulation nimmt iOS den Zoom per Doppeltipp – schnelles
+   Tippen nacheinander vergrößerte sonst die Seite. Wischen und Zwei-Finger-
+   Zoom bleiben; das Unterschriftenfeld behält seine eigene Regel (none). */
+html,body{margin:0;padding:0;touch-action:manipulation}
 body{
   background:var(--enclosure);
   color:var(--ink);
@@ -1021,7 +1032,7 @@ window.addEventListener('error', e => {
    Ein Schild, kein Schloss: wer den Quelltext liest, kommt daran vorbei.
    ============================================================ */
 (function(){
-  var ZUGANG = { salz:'', pruef:'', runden:250000 };
+  var ZUGANG = { salz:'4a1d2b0f3b055bc44511ec1b3bb636d7', pruef:'eaf6658ba06f8522cddee7ac5830f30651aebf521be2fa49b274be7b8e56e4aa', runden:250000 };
 
   var KEY  = 'bds.zugang';
   var root = document.documentElement;
@@ -1586,7 +1597,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.53';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.55';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 08.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
