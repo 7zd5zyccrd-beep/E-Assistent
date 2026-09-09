@@ -10,6 +10,18 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.69 09.09.2026  Zwei Luecken beim Hochschieben geschlossen. Die
+                    Nachschiebe-Runde ging nur ueber die offenen Projekte: ein
+                    Foto, das beim Ablegen noch nicht oben war, waere fuer immer
+                    nur auf dem einen Geraet geblieben - genau das, was die
+                    Ablage verhindern soll. Sie laeuft jetzt auch ueber die
+                    Ablage. Die Vorschau hatte gar keinen Wiederholungsversuch
+                    und haengt jetzt am selben Mechanismus; dafuer traegt sie
+                    einen eigenen Vermerk "vor" am Foto, damit sie nicht bei
+                    jedem Start erneut hochgeht. Dazu ist der Streifen "Original
+                    laden" durch einen runden Symbolknopf mitten auf der
+                    Vorschau ersetzt - der Streifen sass knapp ueber dem
+                    Loeschknopf und war schwer zu treffen.
   v1.68 09.09.2026  Vorschaubilder. Neben dem Original wird beim Aufnehmen ein
                     kleines Bild von rund 40 KB erzeugt (480 px, JPEG) und
                     zuerst hochgeschoben - es ist in Sekunden da und fuellt die
@@ -543,15 +555,21 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
 .fotos{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
 #photoBody .rail-empty{margin-bottom:10px}   /* gleicher Abstand zum Knopf wie bei vorhandenen Fotos */
 .foto{width:104px;position:relative}
-.foto img.nur-vorschau{opacity:.82}
+.foto img.nur-vorschau{opacity:.9}
 .foto-marke{
-  position:absolute; left:0; right:0; top:78px; z-index:2;
-  border:0; margin:0; padding:5px 4px; cursor:pointer;
-  background:rgba(26,31,22,.82); color:#fff;
-  font-family:var(--f-body); font-size:11px; line-height:1.2;
-  border-bottom-left-radius:12px; border-bottom-right-radius:12px;
+  /* Mittig auf dem Bild (104 px hoch), weit weg vom Löschknopf darunter. */
+  position:absolute; left:52px; top:52px; transform:translate(-50%,-50%);
+  width:38px; height:38px; border-radius:50%; border:0; padding:0; z-index:2;
+  background:rgba(26,31,22,.66); color:#fff; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 1px 6px rgba(0,0,0,.35);
 }
-.foto-marke:disabled{opacity:.7;cursor:default}
+.foto-marke:active{background:rgba(26,31,22,.86)}
+.foto-marke:disabled{cursor:default}
+@media (prefers-reduced-motion:no-preference){
+  .foto-marke:disabled{animation:fotoPuls 1s ease-in-out infinite}
+}
+@keyframes fotoPuls{50%{opacity:.45}}
 .foto img{width:104px;height:104px;object-fit:cover;display:block;
   border:1.5px solid var(--field-border);border-radius:var(--r)}
 .foto .btn{margin-top:6px;min-height:38px;font-size:15px;padding:0 8px}
@@ -1901,7 +1919,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.68';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.69';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4722,6 +4740,11 @@ $('#fvWeg').onclick = () => {
 })();
 
 
+/* Pfeil nach unten auf eine Grundlinie – das übliche Zeichen fürs Herunterladen. */
+const LADE_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" '
+  + 'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+  + '<path d="M12 4v10"/><path d="M7.5 10.5 12 15l4.5-4.5"/><path d="M5 19h14"/></svg>';
+
 /* Vorschau: neben dem Original liegt ein kleines Bild von etwa 40 KB. Es ist in
    Sekunden übertragen und füllt die Kachel, während das Original noch unterwegs
    ist oder gar nicht erst geholt wird. Schlüssel im Bildspeicher ist "V"+Kennung,
@@ -4745,16 +4768,20 @@ function vorschauBauen(datei, kante = 480, guete = 0.72){
     img.src = u;
   });
 }
-async function vorschauHoch(pid, fid, blob){
-  if(!fbProjEin || !pid || !fid) return;
-  try { await FB.fn.set(FB.fn.ref(FB.db, 'vorschau/' + pid + '/' + fid), await blobDataUrl(blob)); }
-  catch(e){}
+async function vorschauHoch(pid, f, blob){
+  if(!fbProjEin || !pid || !f || !f.fid) return false;
+  try {
+    await FB.fn.set(FB.fn.ref(FB.db, 'vorschau/' + pid + '/' + f.fid), await blobDataUrl(blob));
+    f.vor = true;                                // Vermerk reist im Kopf mit
+    return true;
+  } catch(e){ return false; }
 }
 /* Vorschau besorgen: erst aus dem Bildspeicher, sonst aus der Datenbank, sonst
    aus dem Original hier auf dem Gerät (Altbestand ohne Vorschau). */
-async function vorschauHolen(pid, fid){
+async function vorschauHolen(pid, f){
+  const fid = f.fid;
   try { const v = await Bilder.lesen(VOR(fid)); if(v) return v; } catch(e){}
-  if(fbProjEin) try {
+  if(fbProjEin && f.vor) try {
     const snap = await FB.fn.get(FB.fn.ref(FB.db, 'vorschau/' + pid + '/' + fid));
     const txt = snap.val();
     if(txt){ const b = dataUrlBlob(txt); await Bilder.legen(VOR(fid), b); return b; }
@@ -4764,7 +4791,7 @@ async function vorschauHolen(pid, fid){
     if(gross){
       const v = await vorschauBauen(gross);
       await Bilder.legen(VOR(fid), v);
-      vorschauHoch(pid, fid, v);                 // nachträglich auch für die anderen
+      if(await vorschauHoch(pid, f, v)) fotoStandSichern(pid);   // nachträglich für die anderen
       return v;
     }
   } catch(e){}
@@ -4786,6 +4813,15 @@ const blobDataUrl = blob => new Promise((res, rej) => {
   r.readAsDataURL(blob);
 });
 
+/* Ein Bild liegt entweder ganz in der Datenbank oder gar nicht – ein Schreib-
+   vorgang landet vollständig oder überhaupt nicht. Der Vermerk "hoch" wird erst
+   gesetzt, wenn die Datenbank den Empfang bestätigt hat. Wird die App vorher
+   geschlossen, bleibt er aus, und die Runde unten holt es später nach. */
+function fotoStandSichern(pid){
+  const P = PROJECTS.find(p => p.id === pid);
+  if(P){ saveProjects(); fbProjHoch(P); return; }
+  saveArch();                                   // dann steckt es in der Ablage
+}
 async function fotoHoch(pid, f){
   if(!fbProjEin || !pid || !f || !f.fid || f.hoch) return;
   let blob;
@@ -4795,15 +4831,28 @@ async function fotoHoch(pid, f){
     const txt = await blobDataUrl(blob);
     await FB.fn.set(FB.fn.ref(FB.db, 'fotos/' + pid + '/' + f.fid), txt);
     f.hoch = true;                                   // steht im Kopf und reist mit
-    const P = PROJECTS.find(p => p.id === pid);
-    if(P){ saveProjects(); fbProjHoch(P); }
+    fotoStandSichern(pid);
   } catch(e){}
 }
-/* Nach einer Funkpause nachholen, was liegengeblieben ist. */
+/* Nach einer Funkpause und bei jedem Start nachholen, was liegengeblieben ist –
+   auch in der Ablage. Ein Foto, das beim Ablegen noch nicht oben war, wäre
+   sonst für immer nur auf diesem Gerät, und genau das soll die Ablage
+   verhindern. Die Vorschau hängt am selben Mechanismus. */
 function fotosNachschieben(){
-  PROJECTS.forEach(P => (P.photos || []).forEach(f => {
-    if(f && !f.hoch) fotoHoch(P.id, f);
-  }));
+  const runde = (pid, f) => {
+    if(!f || !f.fid) return;
+    if(!f.hoch) fotoHoch(pid, f);
+    if(!f.vor) Bilder.lesen(VOR(f.fid))
+      .then(v => v ? v : Bilder.lesen(f.fid).then(g => g ? vorschauBauen(g)
+        .then(nv => Bilder.legen(VOR(f.fid), nv).then(() => nv)) : null))
+      .then(v => { if(v) return vorschauHoch(pid, f, v).then(ok => { if(ok) fotoStandSichern(pid); }); })
+      .catch(() => {});
+  };
+  PROJECTS.forEach(P => (P.photos || []).forEach(f => runde(P.id, f)));
+  ARCH.forEach(e => {
+    const st = archStand(e);
+    if(st && st.id) (st.photos || []).forEach(f => runde(st.id, f));
+  });
 }
 async function fotoHolen(pid, fid){
   const snap = await FB.fn.get(FB.fn.ref(FB.db, 'fotos/' + pid + '/' + fid));
@@ -4859,7 +4908,7 @@ function fotoFehltZeigen(kachel, f){
   const pid = PROJ && PROJ.id;
   /* Erst die Vorschau: sie ist klein und meist sofort da. Das Original wiegt
      gut drei Megabyte und wird nur auf ausdrückliches Antippen geholt. */
-  vorschauHolen(pid, f.fid).then(v => {
+  vorschauHolen(pid, f).then(v => {
     if(v && img){
       const u = URL.createObjectURL(v);
       fotoUrls.push(u);
@@ -4868,13 +4917,14 @@ function fotoFehltZeigen(kachel, f){
       const marke = document.createElement('button');
       marke.type = 'button';
       marke.className = 'foto-marke';
-      marke.textContent = 'Original laden';
+      marke.title = 'Original laden';
+      marke.setAttribute('aria-label', 'Original laden');
+      marke.innerHTML = LADE_SVG;
       marke.onclick = () => {
-        marke.textContent = 'lädt …'; marke.disabled = true;
+        marke.disabled = true;
         fotoHolen(pid, f.fid)
-          .then(b => { if(b) renderPhotos(); else { marke.textContent = 'nicht da'; } })
-          .catch(() => { marke.textContent = 'Original laden'; marke.disabled = false;
-                         toast('Ohne Verbindung geht das nicht'); });
+          .then(b => { if(b) renderPhotos(); else marke.disabled = false; })
+          .catch(() => { marke.disabled = false; toast('Ohne Verbindung geht das nicht'); });
       };
       kachel.insertBefore(marke, kachel.firstChild);
       return;
@@ -4926,7 +4976,8 @@ $('#photoFile').onchange = async e => {
   /* Vorschau zuerst: sie ist in Sekunden oben und füllt die Kachel beim
      Kollegen, während das Original noch unterwegs ist. */
   vorschauBauen(datei)
-    .then(v => Bilder.legen(VOR(fid), v).then(() => vorschauHoch(PROJ.id, fid, v)))
+    .then(v => Bilder.legen(VOR(fid), v).then(() => vorschauHoch(PROJ.id, eintrag, v)))
+    .then(ok => { if(ok) fotoStandSichern(PROJ.id); })
     .catch(() => {});
   fotoHoch(PROJ.id, eintrag);              // im Hintergrund, ohne die Ansicht aufzuhalten
   renderPhotos();
