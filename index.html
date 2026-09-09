@@ -10,6 +10,28 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.75 09.09.2026  Fehler aus v1.71/74: nach dem Export blieb die Ansicht im
+                    Abschluss stehen und das Projekt galt weiter als offen. Die
+                    Ladefunktion der Ablage lief schon bei ihrer Deklaration -
+                    dort gab es aber weder "Bilder" noch "current". Bei einem
+                    let wirft in dieser Luecke sogar ein typeof, das Versprechen
+                    scheiterte still, und weil der Export seither darauf wartet,
+                    wurde das Ablegen uebersprungen. Nebenwirkung desselben
+                    Fehlers: die Ablage wurde nie aus der Datenbank gelesen und
+                    war nach jedem Start leer. Geladen wird jetzt im
+                    Startabschnitt, wenn alles steht.
+  v1.74 09.09.2026  Die Ablage laeuft jetzt ueber alle Geraete: was Thomas
+                    ablegt, steht auch bei Hagen in der Liste - fuer die
+                    Abrechnung der eigentliche Zweck. Zwei Pfade aus demselben
+                    Grund wie bei den Fotos: unter ablage/<id> nur die
+                    Kurzangaben fuer die Liste, unter ablageVoll/<id> der
+                    vollstaendige Stand mit Unterschriftsbild. Gelauscht wird
+                    nur auf die Kurzangaben; der volle Stand wird erst geholt,
+                    wenn jemand "Erneut sichern" antippt. In der Karte steht,
+                    von wem der Eintrag stammt, eigene stehen oben, darin nach
+                    Datum. Loeschen entfernt ihn ueberall, samt Fotos und
+                    Vorschauen. Was ohne Netz abgelegt wurde, geht nach der
+                    Funkpause von selbst hinauf.
   v1.73 09.09.2026  Das Bild kam oben an, der Vermerk dazu nicht - beim
                     Empfaenger stand dauerhaft "Wird noch uebertragen". Zwei
                     Wege, auf denen er verlorenging: (1) der Vermerk wurde auf
@@ -1984,7 +2006,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.73';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.75';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -2118,10 +2140,17 @@ function migrateProject(P){
    Unterschriftsbild. Bei sechzig Einträgen stößt das an die rund fünf Megabyte
    des localStorage – und ist der voll, speichert er still nicht mehr. Sie liegt
    deshalb in derselben Datenbank wie die Bilder. Geladen wird beim Start;
-   solange das läuft, ist ARCH leer, deshalb wartet das Ablegen darauf. */
+   solange das läuft, ist ARCH leer, deshalb wartet das Ablegen darauf.
+
+   Das Laden steht bewusst in einer Funktion und wird erst im Startabschnitt
+   ganz unten gerufen: hier oben gibt es weder "Bilder" noch "current" – bei
+   einem let wirft in dieser Lücke sogar ein typeof, und der Fehler blieb
+   unbemerkt, weil er nur ein Versprechen scheitern ließ. */
 let ARCH = [];
 let archBereit = false;
-const archLadenP = (async () => {
+let archLoeser = null;
+const archLadenP = new Promise(res => { archLoeser = res; });
+async function ablageLaden(){
   let ausDb = null, ausAlt = null;
   try { ausDb  = await Bilder.datenLesen('archive'); } catch(e){}
   try { ausAlt = Store.get('archive', null); } catch(e){}
@@ -2131,9 +2160,9 @@ const archLadenP = (async () => {
     try { await Bilder.datenLegen('archive', ARCH); Store.set('archive', null); } catch(e){}
   }
   archBereit = true;
-  if(typeof current !== 'undefined' && current === 'archive') renderArchive();
-  return ARCH;
-})();
+  if(current === 'archive') renderArchive();
+  archLoeser(ARCH);
+}
 let editIdx = null;                          // Index des Kreises in Bearbeitung
 let sigMode = 'later';        // Vorauswahl: es wird später unterschrieben
 let stack = [];                              // Navigations-Historie
@@ -6435,9 +6464,11 @@ $('#btnExportDocs').onclick = () => {
 const ABLAGE_MAX = 60;                       // rund drei Monate bei zwanzig Wohnungen
 
 const archStand   = e => e && e.stand ? e.stand : null;
-const archAdresse = e => archStand(e) ? (e.stand.address || '') : ((e.projekt || {}).adresse || '');
-const archWohnung = e => archStand(e) ? (e.stand.flat || '')    : ((e.projekt || {}).wohnung || '');
-const archKreise  = e => archStand(e) ? (e.stand.items || []).length : ((e.stromkreise || []).length);
+const archAdresse = e => e.adresse || (archStand(e) ? (e.stand.address || '') : ((e.projekt || {}).adresse || ''));
+const archWohnung = e => e.wohnung || (archStand(e) ? (e.stand.flat || '')    : ((e.projekt || {}).wohnung || ''));
+const archKreise  = e => e.kreise != null ? e.kreise
+  : (archStand(e) ? (e.stand.items || []).length : ((e.stromkreise || []).length));
+const archFotos   = e => e.fotos != null ? e.fotos : (archStand(e) ? (e.stand.photos || []).length : 0);
 const archDatum   = e => e.abgelegtAm
   || (archStand(e) ? (e.stand.finishedAt || e.stand.startedAt) : Date.parse((e.projekt || {}).beginn)) || 0;
 
@@ -6467,6 +6498,8 @@ function archiveNow(){
     owner: PROJ.owner || null,
     ownerName: PROJ.ownerName || '',
     ablegerName: CFG.tester || FB.konto || '',
+    adresse: PROJ.address || '', wohnung: PROJ.flat || '',
+    kreise: (PROJ.items || []).length, fotos: (PROJ.photos || []).length,
     stand: JSON.parse(JSON.stringify(PROJ)),   // vollständig, damit sich der Export wiederholen lässt
     bericht: exportObj()
   };
@@ -6474,6 +6507,7 @@ function archiveNow(){
   ARCH.unshift(eintrag);
   ablageKuerzen();
   saveArch();
+  ablageHoch(eintrag);                         // Kurzangaben sofort, voller Stand hinterher
   const weg = PROJ.id;
   PROJECTS = PROJECTS.filter(p => p.id !== PROJ.id); saveProjects();
   fbProjWeg(weg, false); // sonst käme die abgeschlossene Prüfung als offene zurück; Fotos bleiben
@@ -6482,20 +6516,104 @@ function archiveNow(){
 }
 
 /* ============================================================
-   ARCHIV
+   ABGLEICH DER ABLAGE
+
+   Zwei Pfade, aus demselben Grund wie bei den Fotos: unter ablage/<id> stehen
+   nur die Kurzangaben für die Liste, unter ablageVoll/<id> der vollständige
+   Stand mit Unterschriftsbild. Gelauscht wird auf die Kurzangaben – die sind
+   klein. Der volle Stand wird erst geholt, wenn wirklich jemand "Erneut
+   sichern" antippt; sonst zöge jede Änderung alles mit.
    ============================================================ */
+const eigenesArch = e => !e.owner || e.owner === FB.uid;
+
+function archKurz(e){
+  const st = archStand(e);
+  return {
+    id: e.id, abgelegtAm: e.abgelegtAm,
+    owner: e.owner || null, ownerName: e.ownerName || '', ablegerName: e.ablegerName || '',
+    adresse: e.adresse || (st ? st.address : '') || '',
+    wohnung: e.wohnung || (st ? st.flat : '') || '',
+    kreise:  e.kreise  != null ? e.kreise  : (st ? (st.items  || []).length : 0),
+    fotos:   e.fotos   != null ? e.fotos   : (st ? (st.photos || []).length : 0)
+  };
+}
+function ablageHoch(e){
+  if(!fbProjEin || !e || !e.id) return;
+  try { FB.fn.set(FB.fn.ref(FB.db, 'ablage/' + e.id), JSON.stringify(archKurz(e))); } catch(x){}
+  if(e.hoch || !archStand(e)) return;
+  const p = FB.fn.set(FB.fn.ref(FB.db, 'ablageVoll/' + e.id),
+                      JSON.stringify({stand:e.stand, bericht:e.bericht || null}));
+  p.then(() => {
+    const t = ARCH.find(x => x.id === e.id);
+    if(t){ t.hoch = true; saveArch(); }
+  }, () => {});
+}
+function ablageNachschieben(){ ARCH.forEach(e => { if(!e.hoch) ablageHoch(e); }); }
+
+function ablageWeg(id){
+  if(!fbProjEin || !id) return;
+  ['ablage/', 'ablageVoll/', 'fotos/', 'vorschau/'].forEach(pfad => {
+    try { FB.fn.set(FB.fn.ref(FB.db, pfad + id), null); } catch(x){}
+  });
+}
+
+function ablageRein(alle){
+  alle = alle || {};
+  let geaendert = false;
+  Object.keys(alle).forEach(id => {
+    let k;
+    try { k = JSON.parse(alle[id]); } catch(e){ return; }
+    let e = ARCH.find(x => x.id === id);
+    if(!e){ e = {ablage:1, id, hoch:true}; ARCH.push(e); geaendert = true; }
+    ['abgelegtAm','owner','ownerName','ablegerName','adresse','wohnung','kreise','fotos']
+      .forEach(s => { if(e[s] !== k[s]){ e[s] = k[s]; geaendert = true; } });
+  });
+  /* Anderswo gelöscht: nur was hier schon einmal abgeglichen war. Ein rein
+     örtlich abgelegter Eintrag bleibt stehen. */
+  const weg = ARCH.filter(e => e.hoch && !alle[e.id]);
+  if(weg.length){
+    weg.forEach(e => {
+      const st = archStand(e);
+      ((st && st.photos) || []).forEach(f => {
+        if(f && f.fid){ Bilder.weg(f.fid).catch(() => {}); Bilder.weg(VOR(f.fid)).catch(() => {}); }
+      });
+    });
+    ARCH = ARCH.filter(e => !weg.includes(e));
+    geaendert = true;
+  }
+  if(!geaendert) return;
+  ARCH.sort((a, b) => (eigenesArch(b) - eigenesArch(a)) || (archDatum(b) - archDatum(a)));
+  ablageKuerzen();
+  saveArch();
+  if(current === 'archive') renderArchive();
+}
+
+/* Den vollen Stand nachholen – nötig, wenn ein anderer die Prüfung abgelegt hat
+   und hier nur die Kurzangaben liegen. */
+async function ablageVollHolen(id){
+  if(!fbProjEin) return null;
+  const snap = await FB.fn.get(FB.fn.ref(FB.db, 'ablageVoll/' + id));
+  const txt = snap.val();
+  if(!txt) return null;
+  let daten;
+  try { daten = JSON.parse(txt); } catch(e){ return null; }
+  const e = ARCH.find(x => x.id === id);
+  if(e && daten.stand){ e.stand = daten.stand; e.bericht = daten.bericht || null; saveArch(); }
+  return daten.stand || null;
+}
+
+
 function renderArchive(){
   $('#archiveBody').innerHTML = ARCH.length ? ARCH.map((e, i) => {
-    const st  = archStand(e);
-    const whg = archWohnung(e);
-    const fotos = st ? (st.photos || []).length : 0;
+    const whg = archWohnung(e), fotos = archFotos(e);
+    const wer = !e.owner ? '' :
+      (eigenesArch(e) ? 'Von dir' : `Von ${esc(e.ablegerName || e.ownerName || 'jemand anderem')}`) + ' · ';
     return `
     <div class="card">
       <div><strong>${esc((archAdresse(e) || '').split('\n')[0] || 'Ohne Adresse')}${whg ? ' · ' + esc(flatLabel(whg)) : ''}</strong></div>
-      <div class="muted small">${dstr(archDatum(e))} · ${archKreise(e)} Kreise${
-        fotos ? ' · ' + fotos + ' Foto' + (fotos === 1 ? '' : 's') : ''}${
-        e.ablegerName ? ' · abgelegt von ' + esc(e.ablegerName) : ''}</div>
-      ${st ? '' : '<div class="muted small" style="margin-top:4px">Alter Eintrag – nur als Datei zu sichern</div>'}
+      <div class="muted small">${wer}${dstr(archDatum(e))} · ${archKreise(e)} Kreise${
+        fotos ? ' · ' + fotos + ' Foto' + (fotos === 1 ? '' : 's') : ''}</div>
+      ${(!archStand(e) && !e.hoch) ? '<div class="muted small" style="margin-top:4px">Alter Eintrag – nur als Datei zu sichern</div>' : ''}
       <div class="btn-row" style="margin-top:10px">
         <button class="btn ghost" data-arch="${i}">Erneut sichern</button>
         <button class="btn danger" data-adel="${i}">Löschen</button>
@@ -6506,16 +6624,14 @@ function renderArchive(){
   $$('[data-adel]').forEach(b => b.onclick = () => {
     const e = ARCH[+b.dataset.adel];
     showDialog({title:'Endgültig löschen?', ok:'Löschen', danger:true,
-      body:'Damit ist auch die Sicherung dieser Prüfung weg – ein fehlgeschlagener Export lässt sich danach nicht mehr wiederholen.',
+      body:'Damit ist auch die Sicherung dieser Prüfung weg – auf allen Geräten. '
+         + 'Ein fehlgeschlagener Export lässt sich danach nicht mehr wiederholen.',
       onOk:() => {
         const st = archStand(e);
         ((st && st.photos) || []).forEach(f => {
           if(f && f.fid){ Bilder.weg(f.fid).catch(() => {}); Bilder.weg(VOR(f.fid)).catch(() => {}); }
         });
-        if(st && st.id && fbProjEin){
-          try { FB.fn.set(FB.fn.ref(FB.db, 'fotos/' + st.id), null); } catch(x){}
-          try { FB.fn.set(FB.fn.ref(FB.db, 'vorschau/' + st.id), null); } catch(x){}
-        }
+        ablageWeg(e.id);
         ARCH.splice(+b.dataset.adel, 1); saveArch(); renderArchive();
       }});
   });
@@ -6526,18 +6642,26 @@ function renderArchive(){
    kurz zum laufenden Projekt gemacht und danach zurückgetauscht – ein
    JSON-Download hätte den fehlgeschlagenen Vorgang nicht wiederholt. */
 async function erneutSichern(e, knopf){
-  const st = archStand(e);
-  if(!st){                                  // Alteintrag ohne vollständigen Stand
-    const blob = new Blob([JSON.stringify(e, null, 2)], {type:'application/json'});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = 'Pruefung_' + new Date(archDatum(e)).toISOString().slice(0, 10) + '.json';
-    document.body.appendChild(a); a.click(); a.remove();
-    return;
-  }
   const merk = PROJ;
   const text = knopf ? knopf.textContent : '';
   if(knopf){ knopf.textContent = 'baut …'; knopf.disabled = true; }
   try {
+    let st = archStand(e);
+    if(!st && e.hoch){                        // von einem anderen abgelegt
+      if(knopf) knopf.textContent = 'holt …';
+      st = await ablageVollHolen(e.id);
+    }
+    if(!st){
+      if(e.hoch) toast('Der Stand ließ sich nicht holen');
+      else {                                  // Alteintrag ohne vollständigen Stand
+        const blob = new Blob([JSON.stringify(e, null, 2)], {type:'application/json'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+        a.download = 'Pruefung_' + new Date(archDatum(e)).toISOString().slice(0, 10) + '.json';
+        document.body.appendChild(a); a.click(); a.remove();
+      }
+      return;
+    }
+    if(knopf) knopf.textContent = 'baut …';
     PROJ = JSON.parse(JSON.stringify(st));
     const d = PROJ.docs || {};
     await ablegen({projekt:true, protokoll:true, beschriftung:!!d.beschriftung,
@@ -6639,7 +6763,7 @@ function netzSetzen(an){
   if(an){
     clearTimeout(netzTimer); netzTimer = null;
     document.body.dataset.netz = 'an';
-    if(!vorher && fbProjEin) fotosNachschieben();     // Funkpause vorbei
+    if(!vorher && fbProjEin){ fotosNachschieben(); ablageNachschieben(); }   // Funkpause vorbei
   } else if(!netzTimer){
     netzTimer = setTimeout(() => { netzTimer = null; document.body.dataset.netz = 'ab'; }, NETZ_VERZUG);
   }
@@ -6710,7 +6834,11 @@ FB.bereit.then(() => {
     if(current === 'resume') renderResume();
   }); } catch(e){}
   if(praesenzId) praesenzSchreiben();      // Projekt war schon offen, als die Verbindung kam
-  fotosNachschieben();                     // was ohne Netz aufgenommen wurde, geht jetzt hinauf
+  archLadenP.then(() => {
+    try { onValue(ref(FB.db, 'ablage'), s => ablageRein(s.val())); } catch(e){}
+    ablageNachschieben();
+    fotosNachschieben();                   // was ohne Netz aufgenommen wurde, geht jetzt hinauf
+  });
 });
 
 /* ============================================================
@@ -6953,6 +7081,7 @@ function projektOeffnen(p){
 }
 
 /* ---------- Start ---------- */
+ablageLaden().catch(() => { archBereit = true; if(archLoeser) archLoeser(ARCH); });
 fotosUmziehen().catch(() => {});      // Altfotos aus dem localStorage in den Bildspeicher
 window.addEventListener('resize', () => { if(current === 'finish') initPad(); });
 renderHome();
