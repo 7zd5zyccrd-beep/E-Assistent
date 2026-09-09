@@ -10,6 +10,15 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.66 09.09.2026  Bildbetrachter: Antippen einer Fotokachel oeffnet das Bild
+                    bildschirmfuellend auf dunklem Grund. Vergroessert wird mit
+                    zwei Fingern (kein Doppeltipp - den schaltet die App seit
+                    v1.55 bewusst ab), verschoben mit einem Finger, sobald
+                    vergroessert ist; in Originalgroesse wischt derselbe Finger
+                    zum naechsten Bild. Oben stehen Zaehler, Loeschen und
+                    Schliessen, ein Tipp neben das Bild schliesst ebenfalls.
+                    Verschoben wird hoechstens so weit, wie das Bild ueber den
+                    Rand hinausragt.
   v1.65 09.09.2026  Die Ablage taugt jetzt als Sicherheitsnetz. Bisher warf sie
                     beim Ablegen Fotos und Unterschriftsbild weg und loeschte
                     den Eintrag nach dreissig Tagen - fuer den Zweck die
@@ -522,6 +531,39 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
 }
 button.foto-fehlt{cursor:pointer;color:var(--brand-dark);border-color:var(--brand-dark)}
 button.foto-fehlt:disabled{opacity:.6;cursor:default}
+.foto img{cursor:zoom-in}
+
+/* Bildbetrachter: die Kachel mit 104 px taugt nicht, um eine Beschriftung im
+   Verteiler zu lesen. Vergrößert wird mit zwei Fingern – ein Doppeltipp kommt
+   nicht in Frage, den schaltet die App seit v1.55 bewusst ab. */
+#fotoView{
+  position:fixed; inset:0; z-index:4500; background:#0D100B;
+  display:flex; flex-direction:column; touch-action:none;
+}
+#fotoView[hidden]{ display:none; }
+.fv-kopf{
+  display:flex; align-items:center; gap:6px; color:#fff;
+  padding:calc(8px + env(safe-area-inset-top)) 10px 8px;
+}
+.fv-zaehler{
+  flex:1; min-width:0; padding-left:6px;
+  font-family:var(--f-label); font-weight:600; font-size:14px; letter-spacing:.06em;
+}
+.fv-knopf{
+  background:none; border:0; color:#fff; cursor:pointer;
+  font-family:var(--f-body); font-size:15px; padding:10px 12px; min-height:var(--tap);
+}
+.fv-knopf.weg{ color:#E8897C; }
+.fv-buehne{ flex:1; position:relative; overflow:hidden; }
+.fv-buehne img{
+  position:absolute; top:50%; left:50%; max-width:100%; max-height:100%;
+  transform-origin:center center; will-change:transform;
+  -webkit-user-select:none; user-select:none; -webkit-user-drag:none;
+}
+.fv-hinweis{
+  color:#96A088; font-size:12px; text-align:center;
+  padding:0 16px calc(10px + env(safe-area-inset-bottom));
+}
 .chk{
   display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;
   border:1.5px solid var(--field-border);border-radius:var(--r-btn);   /* wie die Buttons */
@@ -1707,6 +1749,15 @@ window.addEventListener('error', e => {
   </main>
 </div>
 
+<div id="fotoView" hidden>
+  <div class="fv-kopf">
+    <span class="fv-zaehler" id="fvZaehler"></span>
+    <button class="fv-knopf weg" id="fvWeg" type="button">Löschen</button>
+    <button class="fv-knopf" id="fvZu" type="button" aria-label="Schließen">Schließen</button>
+  </div>
+  <div class="fv-buehne" id="fvBuehne"><img id="fvBild" alt=""></div>
+</div>
+
 <div id="modal" hidden>
   <div class="modal-box" role="alertdialog" aria-modal="true" aria-labelledby="modalTitle">
     <h2 id="modalTitle">Grenzwert-Hinweis</h2>
@@ -1816,7 +1867,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.65';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.66';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4475,6 +4526,125 @@ async function fotosUmziehen(){
   }
 }
 
+/* ============================================================
+   BILDBETRACHTER
+
+   Vergrößert wird ausschließlich mit zwei Fingern. Ein Doppeltipp scheidet aus:
+   die App schaltet ihn seit v1.55 ab, weil schnelles Tippen sonst die ganze
+   Seite vergrößerte. Verschoben wird mit einem Finger, sobald vergrößert ist;
+   in Originalgröße wischt derselbe Finger zum nächsten Bild.
+   ============================================================ */
+const FV = {offen:false, i:0, url:null, s:1, x:0, y:0};
+
+function fvSetzen(){
+  const b = $('#fvBild');
+  b.style.transform = `translate(-50%,-50%) translate(${FV.x}px, ${FV.y}px) scale(${FV.s})`;
+}
+/* Nicht ins Leere schieben: verschoben wird höchstens so weit, wie das Bild
+   über die Bühne hinausragt. */
+function fvGrenzen(){
+  const b = $('#fvBild'), buehne = $('#fvBuehne');
+  if(!b.clientWidth) return;
+  const uebX = Math.max(0, (b.clientWidth  * FV.s - buehne.clientWidth)  / 2);
+  const uebY = Math.max(0, (b.clientHeight * FV.s - buehne.clientHeight) / 2);
+  FV.x = Math.max(-uebX, Math.min(uebX, FV.x));
+  FV.y = Math.max(-uebY, Math.min(uebY, FV.y));
+}
+function fvZeigen(i){
+  const ps = (PROJ && PROJ.photos) || [];
+  if(!ps.length){ fvSchliessen(); return; }
+  FV.i = Math.max(0, Math.min(ps.length - 1, i));
+  FV.s = 1; FV.x = 0; FV.y = 0;
+  const f = ps[FV.i];
+  $('#fvZaehler').textContent = ps.length > 1 ? `${FV.i + 1} von ${ps.length}` : '';
+  if(FV.url){ try { URL.revokeObjectURL(FV.url); } catch(e){} FV.url = null; }
+  const b = $('#fvBild');
+  b.removeAttribute('src');
+  Bilder.lesen(f.fid).then(blob => {
+    if(!blob || !FV.offen) return;
+    FV.url = URL.createObjectURL(blob);
+    b.src = FV.url;
+  }).catch(() => {});
+  fvSetzen();
+}
+function fvOeffnen(i){
+  FV.offen = true;
+  $('#fotoView').hidden = false;
+  document.documentElement.style.overflow = 'hidden';
+  fvZeigen(i);
+}
+function fvSchliessen(){
+  FV.offen = false;
+  $('#fotoView').hidden = true;
+  document.documentElement.style.overflow = '';
+  if(FV.url){ try { URL.revokeObjectURL(FV.url); } catch(e){} FV.url = null; }
+  $('#fvBild').removeAttribute('src');
+}
+$('#fvZu').onclick = fvSchliessen;
+$('#fvBuehne').addEventListener('click', e => { if(e.target.id === 'fvBuehne') fvSchliessen(); });
+$('#fvWeg').onclick = () => {
+  const ps = (PROJ && PROJ.photos) || [];
+  const f = ps[FV.i];
+  if(!f) return;
+  showDialog({title:'Foto löschen?', ok:'Löschen', danger:true,
+    body:'Das Bild wird auf allen Geräten entfernt.',
+    onOk:() => {
+      const pid = PROJ.id;
+      PROJ.photos.splice(FV.i, 1);
+      if(f.fid){ Bilder.weg(f.fid).catch(() => {}); fotoWeg(pid, f.fid); }
+      saveProj(); renderPhotos();
+      if(!PROJ.photos.length) fvSchliessen(); else fvZeigen(Math.min(FV.i, PROJ.photos.length - 1));
+    }});
+};
+
+(() => {
+  const buehne = $('#fvBuehne');
+  let art = null;                 // 'zoom' | 'schieben' | 'wischen'
+  let d0 = 0, s0 = 1, x0 = 0, y0 = 0, px = 0, py = 0, bewegt = false;
+  const abstand = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+
+  buehne.addEventListener('touchstart', e => {
+    if(e.touches.length === 2){
+      art = 'zoom'; d0 = abstand(e.touches); s0 = FV.s;
+    } else if(e.touches.length === 1){
+      art = FV.s > 1.01 ? 'schieben' : 'wischen';
+      px = e.touches[0].clientX; py = e.touches[0].clientY;
+      x0 = FV.x; y0 = FV.y; bewegt = false;
+    }
+  }, {passive:true});
+
+  buehne.addEventListener('touchmove', e => {
+    if(art === 'zoom' && e.touches.length === 2){
+      e.preventDefault();
+      const d = abstand(e.touches);
+      if(d0 > 0) FV.s = Math.max(1, Math.min(6, s0 * d / d0));
+      if(FV.s <= 1.01){ FV.s = 1; FV.x = 0; FV.y = 0; }
+      fvGrenzen(); fvSetzen();
+    } else if(art === 'schieben' && e.touches.length === 1){
+      e.preventDefault();
+      FV.x = x0 + (e.touches[0].clientX - px);
+      FV.y = y0 + (e.touches[0].clientY - py);
+      bewegt = true;
+      fvGrenzen(); fvSetzen();
+    } else if(art === 'wischen' && e.touches.length === 1){
+      if(Math.abs(e.touches[0].clientX - px) > 10) bewegt = true;
+    }
+  }, {passive:false});
+
+  buehne.addEventListener('touchend', e => {
+    if(art === 'wischen' && bewegt && e.changedTouches.length){
+      const dx = e.changedTouches[0].clientX - px;
+      const dy = e.changedTouches[0].clientY - py;
+      const ps = (PROJ && PROJ.photos) || [];
+      if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) && ps.length > 1){
+        fvZeigen(FV.i + (dx < 0 ? 1 : -1));
+      }
+    }
+    if(!e.touches.length) art = null;
+  }, {passive:true});
+})();
+
+
 /* Fotos gehen einen eigenen Weg: sie liegen unter fotos/<projekt>/<fid> und
    nicht am Projekt, damit sie nicht bei jedem Messwert mitgeschickt werden.
    Heruntergeladen wird erst auf Antippen – ein Original wiegt gut drei
@@ -4548,6 +4718,7 @@ function renderPhotos(){
       const u = URL.createObjectURL(blob);
       fotoUrls.push(u);
       img.src = u;
+      img.onclick = () => fvOeffnen(+kachel.dataset.fotoi);
     }).catch(() => fotoFehltZeigen(kachel, f));
   });
 }
