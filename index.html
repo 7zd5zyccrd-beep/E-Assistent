@@ -10,6 +10,17 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.58 09.09.2026  Der Platz ganz rechts in der Kopfzeile zeigt jetzt den
+                    Verbindungszustand: gruen verbunden, bernstein nicht
+                    verbunden. In den meisten Ansichten faerbt sich dazu das
+                    Logo, in Verteiler und Stromkreis der Knopf im
+                    Messen-Umschalter - die Flaeche des Schalters bleibt grau
+                    bzw. blau, sie traegt schon den Modus. Gefragt wird der
+                    Knoten ".info/connected" von Firebase, nicht
+                    navigator.onLine. Zurueck auf Gruen sofort, hin zu
+                    Bernstein erst nach sechs Sekunden, damit kurze Aussetzer
+                    nicht flackern. Die Zeile in den Einstellungen nennt den
+                    Grund im Klartext.
   v1.57 09.09.2026  Der Schlossbildschirm zeigt bei einer misslungenen Anmeldung
                     den Klartext-Code von Firebase statt alles als falsches
                     Passwort zu deuten; gesperrter Schluessel, abgeschaltete
@@ -834,6 +845,18 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
 .modus::before{content:"";position:absolute;inset:-14px}   /* Berührfläche, ohne Aufbau */
 .modus[aria-pressed="true"]{background:#4C8DD1}
 .modus[aria-pressed="true"]::after{transform:translateX(14px)}
+
+/* Verbindungsanzeige: derselbe Platz ganz rechts in der Kopfzeile trägt sie,
+   meist als Logo, in Verteiler und Stromkreis als Knopf im Umschalter. Grün
+   heißt verbunden, Bernstein heißt nicht verbunden - warum, sagt die Zeile in
+   den Einstellungen. Die Fläche des Umschalters bleibt unberührt, sie trägt
+   schon Bedeutung (grau Bearbeiten, blau Messen). Gesetzt wird das Merkmal in
+   netzSetzen; der Wechsel auf Bernstein ist verzögert, damit kurze Aussetzer
+   beim Gang durchs Haus kein Geflacker geben. */
+.modus::after{ background:var(--brand); }
+body[data-netz="ab"] .modus::after{ background:var(--signal); }
+body[data-netz="ab"] #kopfPunkte i.f{ background:var(--signal); }
+body[data-netz="ab"] #kopfPunkte i.o{ border-color:var(--signal); }
 
 /* Das Merkmal am Grundgerüst steht nur, solange der Modus in der jeweiligen
    Ansicht auch gilt – gesetzt wird es in modusZeigen. Die Regeln hier brauchen
@@ -1698,7 +1721,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.57';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.58';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -5676,12 +5699,35 @@ function fbSetz(k, txt){
   else CFG[k] = String(txt);
 }
 
+/* Verbindungsanzeige. Gefragt wird Firebase selbst über den Knoten
+   ".info/connected" – navigator.onLine meldet auch dann Verbindung, wenn das
+   WLAN zwar steht, aber nichts durchgeht. Zurück auf Grün sofort, hin zu
+   Bernstein erst nach einer Weile: ein kurzer Aussetzer beim Gang durchs Haus
+   soll das Logo nicht flackern lassen. */
+const NETZ_VERZUG = 6000;
+let netzTimer = null;
+let netzAn    = false;
+function netzSetzen(an){
+  netzAn = !!an;
+  if(an){
+    clearTimeout(netzTimer); netzTimer = null;
+    document.body.dataset.netz = 'an';
+  } else if(!netzTimer){
+    netzTimer = setTimeout(() => { netzTimer = null; document.body.dataset.netz = 'ab'; }, NETZ_VERZUG);
+  }
+  if(current === 'settings') fbStatusZeigen();
+}
+/* Ohne Anmeldung oder ohne geladenes SDK meldet sich niemand – dann läuft die
+   Verzögerung einmal ab und die Anzeige geht von selbst auf Bernstein. */
+netzSetzen(false);
+
 function fbStatusZeigen(){
   const p = $('#fbStatus');
   if(!p) return;
-  if(fbEin) p.textContent = fbFremd
-    ? `Angemeldet als ${FB.konto}. Ein Kollege hat Einstellungen geändert – sichtbar, sobald du diese Ansicht verlässt.`
-    : `Abgleich läuft, angemeldet als ${FB.konto}.`;
+  if(fbEin && netzAn) p.textContent = fbFremd
+    ? `Verbunden als ${FB.konto}. Ein Kollege hat Einstellungen geändert – sichtbar, sobald du diese Ansicht verlässt.`
+    : `Verbunden als ${FB.konto}, Abgleich läuft.`;
+  else if(fbEin) p.textContent = `Angemeldet als ${FB.konto}, zurzeit keine Verbindung. Änderungen gehen hinaus, sobald wieder Netz da ist.`;
   else if(FB.lage === 'offline') p.textContent = 'Kein Netz – es wird nur auf diesem Gerät gearbeitet. Der Abgleich holt später auf.';
   else p.textContent = 'Abgleich noch nicht verbunden – es wird auf diesem Gerät gearbeitet.';
 }
@@ -5705,6 +5751,9 @@ FB.bereit.then(() => {
   const {ref, get, set, onValue} = FB.fn;
   fbEin = true;
   fbNameHoch();
+  /* Eigener Knoten von Firebase: er meldet die tatsächliche Verbindung zur
+     Datenbank, nicht bloß das Vorhandensein eines Netzes. */
+  try { onValue(ref(FB.db, '.info/connected'), s => netzSetzen(!!s.val())); } catch(e){}
   get(ref(FB.db, 'betrieb')).then(snap => {
     if(!snap.exists()) fbHoch();                 // erste Inbetriebnahme
     FB_ALLE.forEach(k => onValue(ref(FB.db, 'betrieb/' + k), s => {
