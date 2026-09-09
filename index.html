@@ -10,6 +10,20 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.71 09.09.2026  Auf dem aufnehmenden Geraet zeigt die Kachel jetzt, was mit
+                    dem Bild los ist: ein drehender Ring, solange es uebertragen
+                    wird, sonst die Platznummer in der Warteschlange. Einen
+                    Prozentbalken gibt es nicht - die Realtime Database meldet
+                    beim Schreiben keinen Zwischenstand. Die Anzeige baut die
+                    Kacheln nicht neu auf, sonst flackerten die Bilder bei jedem
+                    Schritt. Ausserdem liegt die Ablage jetzt in derselben
+                    Datenbank wie die Bilder statt im localStorage: seit v1.65
+                    traegt sie den vollstaendigen Projektstand samt
+                    Unterschriftsbild und waere bei sechzig Eintraegen an die
+                    fuenf Megabyte gestossen - ist der localStorage voll,
+                    speichert er still nicht mehr. Vorhandene Eintraege ziehen
+                    beim ersten Start um; das Ablegen wartet, bis die Ablage
+                    geladen ist.
   v1.70 09.09.2026  Fehler aus v1.69: die Nachschiebe-Runde stiess alle Fotos
                     der Ablage gleichzeitig an - bei sechzig Eintraegen also
                     hundert Uebertragungen zu je drei Megabyte auf einmal, und
@@ -575,6 +589,26 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
 }
 .foto-marke:active{background:rgba(26,31,22,.86)}
 .foto-marke:disabled{cursor:default}
+/* Zustand der Übertragung auf dem aufnehmenden Gerät: der laufende Vorgang
+   dreht, wartende zeigen ihren Platz in der Schlange. */
+.foto-status{
+  position:absolute; left:52px; top:52px; transform:translate(-50%,-50%);
+  width:34px; height:34px; border-radius:50%; z-index:3;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(26,31,22,.66); color:#fff;
+  font-family:var(--f-data); font-size:13px; font-weight:600;
+  box-shadow:0 1px 6px rgba(0,0,0,.35);
+}
+.foto-status.laeuft{
+  background:none; box-shadow:none;
+  border:3px solid rgba(255,255,255,.35); border-top-color:#fff;
+  box-sizing:border-box;
+}
+@media (prefers-reduced-motion:no-preference){
+  .foto-status.laeuft{animation:fotoDreh 1s linear infinite}
+  .foto-status.wartet{animation:fotoPuls 1.6s ease-in-out infinite}
+}
+@keyframes fotoDreh{to{transform:translate(-50%,-50%) rotate(360deg)}}
 @media (prefers-reduced-motion:no-preference){
   .foto-marke:disabled{animation:fotoPuls 1s ease-in-out infinite}
 }
@@ -1928,7 +1962,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.70';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.71';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -2058,7 +2092,26 @@ function migrateProject(P){
     f.status = 'nomeasure';
   }
 }
-let ARCH  = Store.get('archive', []);        // abgeschlossene Projekte
+/* Die Ablage trägt seit v1.65 den vollständigen Projektstand samt
+   Unterschriftsbild. Bei sechzig Einträgen stößt das an die rund fünf Megabyte
+   des localStorage – und ist der voll, speichert er still nicht mehr. Sie liegt
+   deshalb in derselben Datenbank wie die Bilder. Geladen wird beim Start;
+   solange das läuft, ist ARCH leer, deshalb wartet das Ablegen darauf. */
+let ARCH = [];
+let archBereit = false;
+const archLadenP = (async () => {
+  let ausDb = null, ausAlt = null;
+  try { ausDb  = await Bilder.datenLesen('archive'); } catch(e){}
+  try { ausAlt = Store.get('archive', null); } catch(e){}
+  if(Array.isArray(ausDb)) ARCH = ausDb;
+  if(Array.isArray(ausAlt) && ausAlt.length){
+    if(!Array.isArray(ausDb) || !ausDb.length) ARCH = ausAlt;   // Umzug
+    try { await Bilder.datenLegen('archive', ARCH); Store.set('archive', null); } catch(e){}
+  }
+  archBereit = true;
+  if(typeof current !== 'undefined' && current === 'archive') renderArchive();
+  return ARCH;
+})();
 let editIdx = null;                          // Index des Kreises in Bearbeitung
 let sigMode = 'later';        // Vorauswahl: es wird später unterschrieben
 let stack = [];                              // Navigations-Historie
@@ -2086,7 +2139,8 @@ const eigenes = p => !p.owner || p.owner === FB.uid;
 const openProjects = mode => PROJECTS.filter(p => (p.mode || 'wdh') === mode)
                                      .sort((a, b) => (eigenes(b) - eigenes(a)) ||
                                        ((b.updatedAt || b.startedAt) - (a.updatedAt || a.startedAt)));
-const saveArch = () => Store.set('archive', ARCH);
+const saveArch = () => Bilder.datenLegen('archive', ARCH)
+  .catch(() => toast('Ablage konnte nicht gesichert werden'));
 
 /* Die Fußleiste ist je nach Ansicht unterschiedlich hoch – von einer Zeile bis
    zu drei Knöpfen. Der Hinweis setzt sich deshalb über die höchste gerade
@@ -4534,31 +4588,35 @@ const HANDOVER_FORMAT = 'pruefassistent-projekt-v1';
 const FOTO_MAX = 6;
 
 const Bilder = (() => {
-  const DB = 'bds-fotos', LADEN = 'fotos';
+  const DB = 'bds-fotos', LADEN = 'fotos', SONST = 'daten';
   let dbP = null;
   function offen(){
     if(dbP) return dbP;
     dbP = new Promise((res, rej) => {
       let r;
-      try { r = indexedDB.open(DB, 1); } catch(e){ return rej(e); }
+      try { r = indexedDB.open(DB, 2); } catch(e){ return rej(e); }
       r.onupgradeneeded = () => {
         if(!r.result.objectStoreNames.contains(LADEN)) r.result.createObjectStore(LADEN);
+        if(!r.result.objectStoreNames.contains(SONST)) r.result.createObjectStore(SONST);
       };
       r.onsuccess = () => res(r.result);
       r.onerror   = () => rej(r.error);
     });
     return dbP;
   }
-  const vorgang = (art, fn) => offen().then(db => new Promise((res, rej) => {
-    const t = db.transaction(LADEN, art), s = t.objectStore(LADEN);
+  const vorgang = (laden, art, fn) => offen().then(db => new Promise((res, rej) => {
+    const t = db.transaction(laden, art), s = t.objectStore(laden);
     const a = fn(s);
     t.oncomplete = () => res(a ? a.result : undefined);
     t.onerror = t.onabort = () => rej(t.error);
   }));
   return {
-    lesen: fid => vorgang('readonly',  s => s.get(fid)),
-    legen: (fid, blob) => vorgang('readwrite', s => s.put(blob, fid)),
-    weg:   fid => vorgang('readwrite', s => s.delete(fid))
+    lesen: fid => vorgang(LADEN, 'readonly',  s => s.get(fid)),
+    legen: (fid, blob) => vorgang(LADEN, 'readwrite', s => s.put(blob, fid)),
+    weg:   fid => vorgang(LADEN, 'readwrite', s => s.delete(fid)),
+    /* Für alles, was zu groß für den localStorage ist – derzeit die Ablage. */
+    datenLesen: k => vorgang(SONST, 'readonly',  s => s.get(k)),
+    datenLegen: (k, v) => vorgang(SONST, 'readwrite', s => s.put(v, k))
   };
 })();
 
@@ -4854,6 +4912,18 @@ async function fotoHoch(pid, f){
    gehen dabei vor den Originalen, und was gerade aufgenommen wurde, ganz nach
    vorn. */
 let qVor = [], qOrig = [], qLaeuft = false;
+/* Was gerade übertragen wird und was noch wartet – für die Anzeige auf der
+   Kachel. Die Datenbank meldet beim Schreiben keinen Zwischenstand, einen
+   Prozentbalken gibt es also nicht; sichtbar ist der Platz in der Schlange. */
+let qAktiv = null;                      // fid, das gerade dran ist
+function qLage(fid){
+  if(qAktiv === fid) return {art:'laeuft', pos:0};
+  const i = qOrig.findIndex(x => x.f.fid === fid);
+  if(i >= 0) return {art:'wartet', pos:i + 1};
+  const j = qVor.findIndex(x => x.f.fid === fid);
+  if(j >= 0) return {art:'wartet', pos:j + 1};
+  return null;
+}
 
 async function vorschauSichern(pid, f){
   if(f.vor) return;
@@ -4870,10 +4940,35 @@ async function vorschauSichern(pid, f){
   if(await vorschauHoch(pid, f, v)) fotoStandSichern(pid);
 }
 
+/* Zeigt auf den Kacheln des aufnehmenden Geräts, was noch hinausgeht. Baut die
+   Kacheln NICHT neu auf – sonst würden die Bilder bei jedem Schritt neu aus dem
+   Speicher geholt und die Ansicht flackerte. */
+function fotoStatusZeigen(){
+  const ps = (PROJ && PROJ.photos) || [];
+  $$('[data-fotoi]').forEach(kachel => {
+    const f = ps[+kachel.dataset.fotoi];
+    const alt = kachel.querySelector('.foto-status');
+    const lage = f && f.fid ? qLage(f.fid) : null;
+    if(!lage){ if(alt) alt.remove(); return; }
+    const text = lage.art === 'laeuft' ? '' : String(lage.pos);
+    if(alt){
+      alt.className = 'foto-status ' + lage.art;
+      alt.textContent = text;
+      return;
+    }
+    const s = document.createElement('div');
+    s.className = 'foto-status ' + lage.art;
+    s.textContent = text;
+    s.title = lage.art === 'laeuft' ? 'wird übertragen' : 'wartet auf Übertragung';
+    kachel.insertBefore(s, kachel.firstChild);
+  });
+}
+
 function fotoEinreihen(pid, f, vorn){
   if(!f || !f.fid) return;
   if(!f.vor  && !qVor.some(x => x.f === f))  (vorn ? qVor.unshift  : qVor.push ).call(qVor,  {pid, f});
   if(!f.hoch && !qOrig.some(x => x.f === f)) (vorn ? qOrig.unshift : qOrig.push).call(qOrig, {pid, f});
+  fotoStatusZeigen();
   qAbarbeiten();
 }
 async function qAbarbeiten(){
@@ -4882,10 +4977,14 @@ async function qAbarbeiten(){
   try {
     while(qVor.length || qOrig.length){
       if(!fbProjEin || !netzAn) break;          // ohne Verbindung später weiter
-      if(qVor.length){ const a = qVor.shift();  await vorschauSichern(a.pid, a.f); }
-      else           { const a = qOrig.shift(); await fotoHoch(a.pid, a.f); }
+      const vorschau = qVor.length > 0;
+      const a = vorschau ? qVor.shift() : qOrig.shift();
+      qAktiv = a.f.fid; fotoStatusZeigen();
+      if(vorschau) await vorschauSichern(a.pid, a.f);
+      else         await fotoHoch(a.pid, a.f);
+      qAktiv = null; fotoStatusZeigen();
     }
-  } finally { qLaeuft = false; }
+  } finally { qLaeuft = false; qAktiv = null; fotoStatusZeigen(); }
 }
 function fotosNachschieben(){
   if(PROJ) (PROJ.photos || []).forEach(f => fotoEinreihen(PROJ.id, f, true));   // offenes Projekt zuerst
@@ -4941,6 +5040,7 @@ function renderPhotos(){
       img.onclick = () => fvOeffnen(+kachel.dataset.fotoi);
     }).catch(() => fotoFehltZeigen(kachel, f));
   });
+  fotoStatusZeigen();
 }
 /* Kommt das Projekt von einem anderen Gerät, ist die Kennung da, das Bild aber
    noch nicht. Liegt es im Abgleich, lässt es sich holen. */
@@ -6244,7 +6344,7 @@ async function ablegen(wahl, nochmal){
   }
   /* Beim Wiederholen aus der Ablage heraus wird nichts erneut abgelegt – das
      Projekt ist längst abgeschlossen. */
-  if(!nochmal) archiveNow();          // Projekt gilt damit als abgeschlossen
+  if(!nochmal){ await archLadenP; archiveNow(); }   // erst wenn die Ablage geladen ist
   toast(nochmal ? 'Erneut gesichert' : 'Daten exportiert');
 }
 /* Im Abschluss ist die Auswahl schon in der Ansicht getroffen – der Export
