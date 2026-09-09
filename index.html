@@ -10,6 +10,21 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.59 09.09.2026  Die offenen Projekte laufen jetzt ueber alle Geraete
+                    synchron. Uebertragen wird JSON als Text unter
+                    projekte/<id>/kopf und projekte/<id>/kreise/<cid>, je Kreis
+                    ein eigener Pfad; jeder Kreis hat dafuer eine eigene
+                    Kennung cid bekommen. Fotos bleiben vorerst lokal und
+                    gehen nicht mit. In der Fortsetzen-Liste steht, von wem ein
+                    Projekt stammt und wer es zuletzt angefasst hat; eigene
+                    stehen oben, darin nach Datum. Loeschen entfernt das
+                    Projekt fuer alle, ebenso das Ablegen. Aenderungen von
+                    anderen Geraeten werden nicht in eine laufende Eingabe
+                    hineingeschrieben - sie warten, bis der Kreis verlassen
+                    ist. Beim ersten Verbinden schiebt jedes Geraet seinen
+                    Bestand hinauf. Neue Projektkennungen tragen einen
+                    Zufallsanteil, die Uhrzeit allein war nicht eindeutig
+                    genug.
   v1.58 09.09.2026  Der Platz ganz rechts in der Kopfzeile zeigt jetzt den
                     Verbindungszustand: gruen verbunden, bernstein nicht
                     verbunden. In den meisten Ansichten faerbt sich dazu das
@@ -1721,7 +1736,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.58';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.59';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -1822,6 +1837,10 @@ function migrateProject(P){
   P.mode = P.mode || 'wdh';
   P.checks = P.checks || {};
   P.items = P.items.filter(i => i.kind === 'circuit');                // alte Reihenwechsel entfernen
+  /* Jeder Kreis braucht eine eigene, unveränderliche Kennung: sie ist sein Pfad
+     im Abgleich. Die Nummer taugt dafür nicht – sie ändert sich beim Einfügen
+     und darf bei abweichender Nummerierung sogar leer sein. */
+  P.items.forEach(c => { if(!c.cid) c.cid = neueKennung('K'); });
   P.items.forEach(c => { if(c.special === 'SPD'){ c.special = 'Überspannungsableiter'; c.breaker = c.special; } });
   /* Der Schalter hieß in v1.49 noch "bestandsNr" – Projekte von damals behalten
      ihren Haken. */
@@ -1856,15 +1875,25 @@ const $  = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 
 const saveCfg  = () => Store.set('cfg', CFG);
+/* Kennungen müssen über alle Geräte hinweg eindeutig sein: die Uhrzeit allein
+   reicht nicht, wenn zwei Personen im selben Moment einen Kreis anlegen.
+   Bewusst eine Deklaration – migrateProject läuft weiter oben schon beim Start. */
+function neueKennung(v){ return v + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 const saveProj = () => {
   if(!PROJ) return true;
   PROJ.updatedAt = Date.now();
   const i = PROJECTS.findIndex(p => p.id === PROJ.id);
   if(i < 0) PROJECTS.push(PROJ); else PROJECTS[i] = PROJ;
-  return saveProjects();
+  const ok = saveProjects();
+  fbProjHoch(PROJ);
+  return ok;
 };
+/* Projekte ohne Kennung stammen aus der Zeit vor dem Abgleich – die gelten als
+   eigene, sonst rutschten sie grundlos nach unten. */
+const eigenes = p => !p.owner || p.owner === FB.uid;
 const openProjects = mode => PROJECTS.filter(p => (p.mode || 'wdh') === mode)
-                                     .sort((a, b) => (b.updatedAt || b.startedAt) - (a.updatedAt || a.startedAt));
+                                     .sort((a, b) => (eigenes(b) - eigenes(a)) ||
+                                       ((b.updatedAt || b.startedAt) - (a.updatedAt || a.startedAt)));
 const saveArch = () => Store.set('archive', ARCH);
 
 /* Die Fußleiste ist je nach Ansicht unterschiedlich hoch – von einer Zeile bis
@@ -2148,6 +2177,9 @@ function go(name, push = true){
     $('#sheetPaper').innerHTML = '';
   }
   current = name;
+  /* Änderungen von anderen Geräten werden nicht mitten in eine Eingabe
+     hineingeschrieben – sie warten, bis der Kreis verlassen ist. */
+  if(name !== 'circuit' && name !== 'feed') fbNachtragAnwenden();
   $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
   modusZeigen(name);
   $('#title').textContent = TITLES[name] || 'E-Assistent';
@@ -2235,9 +2267,15 @@ function renderResume(){
   const list = openProjects(resumeMode);
   $('#resumeBody').innerHTML = list.length ? list.map(p => {
     const n = (p.items || []).length;
+    /* Wer hat es angelegt, wer zuletzt angefasst? Ohne Kennung stammt der
+       Eintrag aus der Zeit vor dem Abgleich – dann steht nur das Datum da. */
+    const wer = !p.owner ? ''
+      : (eigenes(p) ? 'Von dir' : `Von ${esc(p.ownerName || 'jemand anderem')}`)
+        + (p.lastBy && p.lastBy !== p.owner ? `, zuletzt ${p.lastBy === FB.uid ? 'von dir' : 'von ' + esc(p.lastByName || 'jemand anderem')}` : '')
+        + ' · ';
     return `<div class="card">
       <div><strong>${esc((p.address || '').split('\n')[0] || 'Ohne Adresse')}${p.flat ? ' · ' + esc(flatLabel(p.flat)) : ''}</strong></div>
-      <div class="muted small">Zuletzt bearbeitet ${dstr(p.updatedAt || p.startedAt)} ${tstr(p.updatedAt || p.startedAt)} · ${n} Kreis${n===1?'':'e'}</div>
+      <div class="muted small">${wer}${dstr(p.updatedAt || p.startedAt)} ${tstr(p.updatedAt || p.startedAt)} · ${n} Kreis${n===1?'':'e'}</div>
       <div class="btn-row" style="margin-top:10px">
         <button class="btn primary" data-open="${esc(p.id)}">Fortsetzen</button>
         <button class="btn danger" data-del="${esc(p.id)}">Löschen</button>
@@ -2250,10 +2288,13 @@ function renderResume(){
   });
   $$('#resumeBody [data-del]').forEach(b => b.onclick = () => {
     const p = PROJECTS.find(x => x.id === b.dataset.del); if(!p) return;
-    showDialog({title:'Löschen', body:`„${(p.address || '').split('\n')[0] || 'Ohne Adresse'}" wird endgültig entfernt.`,
+    showDialog({title:'Löschen',
+      body:`„${(p.address || '').split('\n')[0] || 'Ohne Adresse'}" wird endgültig entfernt`
+        + (eigenes(p) ? '.' : ` – auch bei ${esc(p.ownerName || 'dem Kollegen')}, dem es gehört.`),
       ok:'Löschen', danger:true,
       onOk:() => {
         PROJECTS = PROJECTS.filter(x => x.id !== p.id); saveProjects();
+        fbProjWeg(p.id);                      // gilt für alle Geräte
         /* War es der letzte Eintrag, bleibt hier nichts mehr zu tun –
            statt einer leeren Liste geht es eine Ebene zurück. */
         if(!openProjects(resumeMode).length){ go(stack.pop() || 'mode', false); return; }
@@ -2450,7 +2491,8 @@ $('#btnCreate').onclick = () => {
     return;
   }
   PROJ = {
-    id: 'P' + Date.now(),
+    id: neueKennung('P'),
+    owner: FB.uid || null, ownerName: $('#npTester').value.trim() || FB.konto || '',
     mode: newMode,
     docs: Object.assign({}, MODES[newMode].docs),
     address: $('#npAddress').value.trim(),
@@ -5591,7 +5633,9 @@ function archiveNow(){
   if(slim.unterschrift) slim.unterschrift.bild = null;
   slim.abgelegtAm = Date.now();
   ARCH.unshift(slim); ARCH = ARCH.slice(0, 30); saveArch();
+  const weg = PROJ.id;
   PROJECTS = PROJECTS.filter(p => p.id !== PROJ.id); saveProjects();
+  fbProjWeg(weg);        // sonst käme die abgeschlossene Prüfung als offene zurück
   PROJ = null;
   stack = []; homeMode = null; go('home', false);
 }
@@ -5769,7 +5813,138 @@ FB.bereit.then(() => {
     }));
     fbStatusZeigen();
   }).catch(() => { fbEin = false; fbStatusZeigen(); });
+
+  /* Projekte: erst den eigenen Bestand hinaufschieben, dann lauschen. So
+     gehen Stände, die auf diesem Gerät entstanden sind, nicht verloren. */
+  fbProjEin = true;
+  PROJECTS.forEach(P => fbProjHoch(P));
+  try { onValue(ref(FB.db, 'projekte'), s => fbProjekteRein(s.val())); } catch(e){}
 });
+
+/* ============================================================
+   ABGLEICH DER OFFENEN PROJEKTE
+
+   Übertragen wird JSON als Text, nicht als Baum: die Datenbank verschluckt
+   leere Listen und null-Werte und macht aus Zahlenschlüsseln Reihungen. Als
+   Text kommt genau das an, was losgeschickt wurde.
+
+   Je Kreis ein eigener Pfad unter kreise/<cid>. Treffen zwei Personen doch
+   einmal aufeinander, kostet es höchstens den einen Kreis, den beide
+   gleichzeitig angefasst haben, nicht den ganzen Nachmittag.
+
+   Fotos bleiben vorerst lokal und gehen nie hinauf; sie werden beim Übernehmen
+   fremder Stände auch nicht überschrieben.
+   ============================================================ */
+const fbSchatten = {};        // id -> {kopf, kreise:{cid:text}} – zuletzt gesehener Stand
+let fbProjEin  = false;
+let fbNachtrag = [];          // Änderungen am offenen Kreis, zurückgestellt
+
+/* Der Kopf ist das Projekt ohne seine Kreise und ohne Fotos. */
+function projKopf(P){
+  const k = {};
+  Object.keys(P).forEach(s => { if(s !== 'items' && s !== 'photos') k[s] = P[s]; });
+  return k;
+}
+
+function fbProjHoch(P){
+  if(!fbProjEin || !P || !P.id) return;
+  const {ref, set} = FB.fn;
+  /* Wer ein Projekt offline anlegt, hat noch keine Kennung – sie wird beim
+     ersten Hochschieben nachgetragen. */
+  if(!P.owner && FB.uid){ P.owner = FB.uid; P.ownerName = CFG.tester || FB.konto; }
+  if(FB.uid){ P.lastBy = FB.uid; P.lastByName = CFG.tester || FB.konto; }
+  const s = fbSchatten[P.id] || (fbSchatten[P.id] = {kopf:null, kreise:{}});
+  try {
+    const kopf = JSON.stringify(projKopf(P));
+    if(kopf !== s.kopf){ set(ref(FB.db, 'projekte/' + P.id + '/kopf'), kopf); s.kopf = kopf; }
+    const da = {};
+    (P.items || []).forEach(c => {
+      if(!c.cid) c.cid = neueKennung('K');
+      da[c.cid] = true;
+      const t = JSON.stringify(c);
+      if(t !== s.kreise[c.cid]){ set(ref(FB.db, 'projekte/' + P.id + '/kreise/' + c.cid), t); s.kreise[c.cid] = t; }
+    });
+    Object.keys(s.kreise).forEach(cid => {           // gelöschte Kreise mitnehmen
+      if(!da[cid]){ set(ref(FB.db, 'projekte/' + P.id + '/kreise/' + cid), null); delete s.kreise[cid]; }
+    });
+  } catch(e){}
+}
+
+/* Löschen gilt für alle – so abgesprochen. Wird auch beim Ablegen gerufen:
+   ein abgeschlossenes Projekt darf nicht als offenes zurückkommen. */
+function fbProjWeg(id){
+  delete fbSchatten[id];
+  if(!fbProjEin || !id) return;
+  try { FB.fn.set(FB.fn.ref(FB.db, 'projekte/' + id), null); } catch(e){}
+}
+
+function projAnwenden(id, kopfText, kreiseRoh){
+  let kopf;
+  try { kopf = JSON.parse(kopfText); } catch(e){ return; }
+  const s = fbSchatten[id] || (fbSchatten[id] = {kopf:null, kreise:{}});
+  let P = PROJECTS.find(p => p.id === id);
+  if(!P){ P = {id}; PROJECTS.push(P); }
+  const fotos = P.photos;                            // Fotos sind Sache des Geräts
+  Object.keys(kopf).forEach(k => { P[k] = kopf[k]; });
+  if(fotos) P.photos = fotos;
+  const items = [];
+  Object.keys(kreiseRoh || {}).forEach(cid => {
+    let c;
+    try { c = JSON.parse(kreiseRoh[cid]); } catch(e){ return; }
+    c.cid = cid; items.push(c);
+    s.kreise[cid] = kreiseRoh[cid];
+  });
+  P.items = items;
+  Object.keys(s.kreise).forEach(cid => { if(!(kreiseRoh || {})[cid]) delete s.kreise[cid]; });
+  migrateProject(P);                                 // sortiert und zieht Altstände nach
+  s.kopf = JSON.stringify(projKopf(P));
+  saveProjects();
+  if(PROJ && PROJ.id === id && current === 'board') renderBoard();
+  if(current === 'resume') renderResume();
+  if(current === 'home')   renderHome();
+}
+
+function fbNachtragAnwenden(){
+  if(!fbNachtrag.length) return;
+  const liste = fbNachtrag; fbNachtrag = [];
+  liste.forEach(e => projAnwenden(e.id, e.kopf, e.kreise));
+}
+
+function fbProjekteRein(alle){
+  alle = alle || {};
+  Object.keys(alle).forEach(id => {
+    const roh = alle[id];
+    if(!roh || !roh.kopf) return;
+    const s = fbSchatten[id];
+    /* Nichts Neues: weder Kopf noch ein Kreis hat sich geändert. */
+    if(s && s.kopf === roh.kopf){
+      const k = roh.kreise || {}, alt = s.kreise;
+      const gleich = Object.keys(k).every(c => alt[c] === k[c]) &&
+                     Object.keys(alt).every(c => k[c] === alt[c]);
+      if(gleich) return;
+    }
+    /* Steht gerade ein Kreis oder die Zuleitung offen, wird nicht in die
+       laufende Eingabe hineingeschrieben – der Stand wartet. */
+    if(PROJ && PROJ.id === id && (current === 'circuit' || current === 'feed')){
+      fbNachtrag = fbNachtrag.filter(e => e.id !== id);
+      fbNachtrag.push({id, kopf:roh.kopf, kreise:roh.kreise || {}});
+      return;
+    }
+    projAnwenden(id, roh.kopf, roh.kreise || {});
+  });
+  /* Anderswo gelöscht: nur, was hier auch schon einmal abgeglichen war.
+     Ein rein lokal angelegtes Projekt bleibt unangetastet. */
+  const weg = PROJECTS.filter(p => fbSchatten[p.id] && !alle[p.id]);
+  if(weg.length){
+    const ids = weg.map(p => p.id);
+    if(PROJ && ids.includes(PROJ.id)){ PROJ = null; stack = []; go('home', false); }
+    PROJECTS = PROJECTS.filter(p => !ids.includes(p.id));
+    ids.forEach(id => delete fbSchatten[id]);
+    saveProjects();
+    if(current === 'resume') renderResume();
+    if(current === 'home')   renderHome();
+  }
+}
 
 /* ---------- Start ---------- */
 window.addEventListener('resize', () => { if(current === 'finish') initPad(); });
