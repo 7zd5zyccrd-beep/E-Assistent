@@ -10,6 +10,17 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.60 09.09.2026  Weicher Hinweis statt Sperre: wer ein Projekt offen hat,
+                    schreibt sich unter bearbeitung/<id> und frischt den
+                    Eintrag alle 45 Sekunden auf; nach drei Minuten ohne
+                    Auffrischung verfaellt er. In der Fortsetzen-Liste steht
+                    dann "<Name> sitzt gerade daran", und beim Oeffnen kommt
+                    eine Rueckfrage - kein Riegel, oeffnen laesst es sich
+                    trotzdem. Bewusst nicht ueber onDisconnect geloest: das
+                    haette den Vermerk im Keller ohne Empfang fallen lassen,
+                    also genau beim Weitermessen. Beim Weglegen der App
+                    (pagehide) wird der Vermerk sofort geraeumt, ebenso beim
+                    Loeschen und Ablegen.
   v1.59 09.09.2026  Die offenen Projekte laufen jetzt ueber alle Geraete
                     synchron. Uebertragen wird JSON als Text unter
                     projekte/<id>/kopf und projekte/<id>/kreise/<cid>, je Kreis
@@ -1736,7 +1747,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.59';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.60';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -2180,6 +2191,7 @@ function go(name, push = true){
   /* Änderungen von anderen Geräten werden nicht mitten in eine Eingabe
      hineingeschrieben – sie warten, bis der Kreis verlassen ist. */
   if(name !== 'circuit' && name !== 'feed') fbNachtragAnwenden();
+  praesenzSetzen(PROJ && PROJECT_VIEWS.includes(name) ? PROJ.id : null);
   $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
   modusZeigen(name);
   $('#title').textContent = TITLES[name] || 'E-Assistent';
@@ -2273,24 +2285,24 @@ function renderResume(){
       : (eigenes(p) ? 'Von dir' : `Von ${esc(p.ownerName || 'jemand anderem')}`)
         + (p.lastBy && p.lastBy !== p.owner ? `, zuletzt ${p.lastBy === FB.uid ? 'von dir' : 'von ' + esc(p.lastByName || 'jemand anderem')}` : '')
         + ' · ';
+    const f = fremdeArbeit(p.id);
     return `<div class="card">
       <div><strong>${esc((p.address || '').split('\n')[0] || 'Ohne Adresse')}${p.flat ? ' · ' + esc(flatLabel(p.flat)) : ''}</strong></div>
       <div class="muted small">${wer}${dstr(p.updatedAt || p.startedAt)} ${tstr(p.updatedAt || p.startedAt)} · ${n} Kreis${n===1?'':'e'}</div>
+      ${f ? `<div class="small" style="color:var(--signal);margin-top:4px">${esc(f.name || 'Ein Kollege')} sitzt gerade daran</div>` : ''}
       <div class="btn-row" style="margin-top:10px">
         <button class="btn primary" data-open="${esc(p.id)}">Fortsetzen</button>
         <button class="btn danger" data-del="${esc(p.id)}">Löschen</button>
       </div></div>`;
   }).join('') : `<div class="rail-empty">Keine offenen ${resumeMode === 'neu' ? 'Projekte' : 'Prüfungen'}.</div>`;
   $$('#resumeBody [data-open]').forEach(b => b.onclick = () => {
-    PROJ = PROJECTS.find(p => p.id === b.dataset.open);
-    if(!PROJ) return;
-    stack = ['home']; go('board', false);
+    projektOeffnen(PROJECTS.find(p => p.id === b.dataset.open));
   });
   $$('#resumeBody [data-del]').forEach(b => b.onclick = () => {
     const p = PROJECTS.find(x => x.id === b.dataset.del); if(!p) return;
     showDialog({title:'Löschen',
       body:`„${(p.address || '').split('\n')[0] || 'Ohne Adresse'}" wird endgültig entfernt`
-        + (eigenes(p) ? '.' : ` – auch bei ${esc(p.ownerName || 'dem Kollegen')}, dem es gehört.`),
+        + (eigenes(p) ? '.' : ` – auch bei ${p.ownerName || 'dem Kollegen'}, dem es gehört.`),
       ok:'Löschen', danger:true,
       onOk:() => {
         PROJECTS = PROJECTS.filter(x => x.id !== p.id); saveProjects();
@@ -5819,6 +5831,13 @@ FB.bereit.then(() => {
   fbProjEin = true;
   PROJECTS.forEach(P => fbProjHoch(P));
   try { onValue(ref(FB.db, 'projekte'), s => fbProjekteRein(s.val())); } catch(e){}
+  try { onValue(ref(FB.db, 'bearbeitung'), s => {
+    const roh = s.val() || {}, neu = {};
+    Object.keys(roh).forEach(id => { try { neu[id] = JSON.parse(roh[id]); } catch(e){} });
+    fbArbeit = neu;
+    if(current === 'resume') renderResume();
+  }); } catch(e){}
+  if(praesenzId) praesenzSchreiben();      // Projekt war schon offen, als die Verbindung kam
 });
 
 /* ============================================================
@@ -5876,6 +5895,7 @@ function fbProjWeg(id){
   delete fbSchatten[id];
   if(!fbProjEin || !id) return;
   try { FB.fn.set(FB.fn.ref(FB.db, 'projekte/' + id), null); } catch(e){}
+  try { FB.fn.set(FB.fn.ref(FB.db, 'bearbeitung/' + id), null); } catch(e){}
 }
 
 function projAnwenden(id, kopfText, kreiseRoh){
@@ -5944,6 +5964,74 @@ function fbProjekteRein(alle){
     if(current === 'resume') renderResume();
     if(current === 'home')   renderHome();
   }
+}
+
+/* ============================================================
+   WER SITZT GERADE DARAN
+
+   Kein Riegel, sondern ein Vermerk: wer ein Projekt offen hat, schreibt sich
+   unter bearbeitung/<id> und frischt den Eintrag im Takt auf. Bleibt die
+   Auffrischung aus, verfällt er von selbst.
+
+   Bewusst NICHT über onDisconnect gelöst: Firebase kann "App zu" nicht von
+   "Keller ohne Empfang" unterscheiden und würde den Vermerk ausgerechnet dann
+   fallen lassen, wenn weitergemessen wird.
+   ============================================================ */
+const PRAESENZ_TAKT = 45000;         // so oft wird aufgefrischt
+const PRAESENZ_ALT  = 180000;        // danach gilt der Vermerk als verfallen
+let praesenzId    = null;
+let praesenzTimer = null;
+let fbArbeit      = {};              // id -> {uid, name, zeit}
+
+function praesenzSchreiben(){
+  if(!fbProjEin || !praesenzId || !FB.uid) return;
+  try {
+    FB.fn.set(FB.fn.ref(FB.db, 'bearbeitung/' + praesenzId),
+      JSON.stringify({uid:FB.uid, name:CFG.tester || FB.konto, zeit:Date.now()}));
+  } catch(e){}
+}
+function praesenzLoeschen(id){
+  if(!fbProjEin || !id) return;
+  try { FB.fn.set(FB.fn.ref(FB.db, 'bearbeitung/' + id), null); } catch(e){}
+}
+function praesenzSetzen(id){
+  if(praesenzId === id) return;
+  if(praesenzId) praesenzLoeschen(praesenzId);
+  if(praesenzTimer){ clearInterval(praesenzTimer); praesenzTimer = null; }
+  praesenzId = id || null;
+  if(!praesenzId) return;
+  praesenzSchreiben();
+  praesenzTimer = setInterval(praesenzSchreiben, PRAESENZ_TAKT);
+}
+/* Wird die App weggelegt, soll der Vermerk nicht bis zum Verfall stehen
+   bleiben. pagehide ist das, worauf bei iOS Verlass ist. */
+window.addEventListener('pagehide', () => { if(praesenzId) praesenzLoeschen(praesenzId); });
+window.addEventListener('pageshow', () => { if(praesenzId) praesenzSchreiben(); });
+
+/* Arbeitet gerade jemand anderes daran? Liefert den Eintrag oder nichts. */
+function fremdeArbeit(id){
+  const e = fbArbeit[id];
+  if(!e || !e.uid || e.uid === FB.uid) return null;
+  if(Date.now() - (e.zeit || 0) > PRAESENZ_ALT) return null;
+  return e;
+}
+function seitWann(ts){
+  const m = Math.round((Date.now() - (ts || 0)) / 60000);
+  if(m < 1) return 'gerade eben';
+  return `vor ${m} Minute${m === 1 ? '' : 'n'}`;
+}
+/* Öffnen mit Rückfrage, wenn ein anderer daran sitzt. */
+function projektOeffnen(p){
+  if(!p) return;
+  const f = fremdeArbeit(p.id);
+  const rein = () => { PROJ = p; stack = ['home']; go('board', false); };
+  if(!f) return rein();
+  showDialog({
+    title:'Wird gerade bearbeitet',
+    body:`${f.name || 'Ein Kollege'} hat dieses Projekt offen (${seitWann(f.zeit)}). `
+       + `Arbeitet ihr gleichzeitig daran, gewinnt beim selben Kreis der spätere Stand.`,
+    ok:'Trotzdem öffnen', cancel:'Abbrechen',
+    onOk: rein});
 }
 
 /* ---------- Start ---------- */
