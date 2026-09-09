@@ -10,6 +10,29 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.68 09.09.2026  Vorschaubilder. Neben dem Original wird beim Aufnehmen ein
+                    kleines Bild von rund 40 KB erzeugt (480 px, JPEG) und
+                    zuerst hochgeschoben - es ist in Sekunden da und fuellt die
+                    Kachel, waehrend das Original noch unterwegs ist. Auf dem
+                    zweiten Geraet zeigt die Kachel damit sofort das Bild, das
+                    Original bleibt eine Antippung entfernt ("Original laden").
+                    Fuer Fotos aus der Zeit davor wird die Vorschau beim ersten
+                    Anzeigen aus dem Original nachgerechnet und mit
+                    hochgeschoben. Vorschauen liegen unter
+                    vorschau/<projekt>/<fid> und werden beim Loeschen eines
+                    Fotos, eines Projekts und beim Kuerzen der Ablage
+                    mitgeraeumt.
+  v1.67 09.09.2026  Drei Nachbesserungen am Bildbetrachter. Die Rueckfrage beim
+                    Loeschen lag hinter dem Vollbild (Ebene 80 gegen 4500) und
+                    erschien erst nach dem Verlassen - der Dialog liegt jetzt
+                    darueber. Der Zoom haelt den Bildpunkt unter den Fingern
+                    fest, statt immer zur Bildmitte zu ziehen; die zwei Finger
+                    verschieben dabei zugleich. Beim Wischen zieht das Bild mit
+                    dem Finger mit und schiebt sich zur Seite hinaus, am ersten
+                    und letzten Bild nur gebremst. Dazu heisst die Kachel eines
+                    noch nicht hochgeschobenen Fotos jetzt "Wird noch
+                    uebertragen" statt "Liegt auf einem anderen Geraet" - sie
+                    baut sich von selbst um, sobald die Uebertragung durch ist.
   v1.66 09.09.2026  Bildbetrachter: Antippen einer Fotokachel oeffnet das Bild
                     bildschirmfuellend auf dunklem Grund. Vergroessert wird mit
                     zwei Fingern (kein Doppeltipp - den schaltet die App seit
@@ -519,7 +542,16 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
 /* Fotos zur Verteilerdokumentation: kleine Vorschau mit Löschknopf darunter */
 .fotos{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
 #photoBody .rail-empty{margin-bottom:10px}   /* gleicher Abstand zum Knopf wie bei vorhandenen Fotos */
-.foto{width:104px}
+.foto{width:104px;position:relative}
+.foto img.nur-vorschau{opacity:.82}
+.foto-marke{
+  position:absolute; left:0; right:0; top:78px; z-index:2;
+  border:0; margin:0; padding:5px 4px; cursor:pointer;
+  background:rgba(26,31,22,.82); color:#fff;
+  font-family:var(--f-body); font-size:11px; line-height:1.2;
+  border-bottom-left-radius:12px; border-bottom-right-radius:12px;
+}
+.foto-marke:disabled{opacity:.7;cursor:default}
 .foto img{width:104px;height:104px;object-fit:cover;display:block;
   border:1.5px solid var(--field-border);border-radius:var(--r)}
 .foto .btn{margin-top:6px;min-height:38px;font-size:15px;padding:0 8px}
@@ -771,7 +803,9 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
 
 /* ---------- Quittierungspflichtiges Popup ---------- */
 #modal{
-  position:fixed;inset:0;z-index:80;background:rgba(8,11,13,.6);
+  /* Muss über dem Bildbetrachter liegen (4500), sonst erscheint die Rückfrage
+     erst, wenn das Vollbild verlassen wird. */
+  position:fixed;inset:0;z-index:4600;background:rgba(8,11,13,.6);
   display:flex;align-items:center;justify-content:center;padding:20px;
 }
 .modal-box{
@@ -1867,7 +1901,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.66';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.68';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4534,11 +4568,11 @@ async function fotosUmziehen(){
    Seite vergrößerte. Verschoben wird mit einem Finger, sobald vergrößert ist;
    in Originalgröße wischt derselbe Finger zum nächsten Bild.
    ============================================================ */
-const FV = {offen:false, i:0, url:null, s:1, x:0, y:0};
+const FV = {offen:false, i:0, url:null, s:1, x:0, y:0, w:0};
 
 function fvSetzen(){
   const b = $('#fvBild');
-  b.style.transform = `translate(-50%,-50%) translate(${FV.x}px, ${FV.y}px) scale(${FV.s})`;
+  b.style.transform = `translate(-50%,-50%) translate(${FV.x + FV.w}px, ${FV.y}px) scale(${FV.s})`;
 }
 /* Nicht ins Leere schieben: verschoben wird höchstens so weit, wie das Bild
    über die Bühne hinausragt. */
@@ -4550,20 +4584,28 @@ function fvGrenzen(){
   FV.x = Math.max(-uebX, Math.min(uebX, FV.x));
   FV.y = Math.max(-uebY, Math.min(uebY, FV.y));
 }
-function fvZeigen(i){
+function fvZeigen(i, versatz){
   const ps = (PROJ && PROJ.photos) || [];
   if(!ps.length){ fvSchliessen(); return; }
   FV.i = Math.max(0, Math.min(ps.length - 1, i));
-  FV.s = 1; FV.x = 0; FV.y = 0;
+  FV.s = 1; FV.x = 0; FV.y = 0; FV.w = versatz || 0;
   const f = ps[FV.i];
   $('#fvZaehler').textContent = ps.length > 1 ? `${FV.i + 1} von ${ps.length}` : '';
   if(FV.url){ try { URL.revokeObjectURL(FV.url); } catch(e){} FV.url = null; }
   const b = $('#fvBild');
+  b.style.transition = 'none';
   b.removeAttribute('src');
   Bilder.lesen(f.fid).then(blob => {
     if(!blob || !FV.offen) return;
     FV.url = URL.createObjectURL(blob);
     b.src = FV.url;
+    if(FV.w){                                  // von der Seite hereinschieben
+      requestAnimationFrame(() => {
+        b.style.transition = 'transform .2s ease-out';
+        FV.w = 0; fvSetzen();
+        setTimeout(() => { b.style.transition = 'none'; }, 220);
+      });
+    }
   }).catch(() => {});
   fvSetzen();
 }
@@ -4591,7 +4633,7 @@ $('#fvWeg').onclick = () => {
     onOk:() => {
       const pid = PROJ.id;
       PROJ.photos.splice(FV.i, 1);
-      if(f.fid){ Bilder.weg(f.fid).catch(() => {}); fotoWeg(pid, f.fid); }
+      if(f.fid){ Bilder.weg(f.fid).catch(() => {}); fotoWeg(pid, f.fid); vorschauWeg(pid, f.fid); }
       saveProj(); renderPhotos();
       if(!PROJ.photos.length) fvSchliessen(); else fvZeigen(Math.min(FV.i, PROJ.photos.length - 1));
     }});
@@ -4600,12 +4642,23 @@ $('#fvWeg').onclick = () => {
 (() => {
   const buehne = $('#fvBuehne');
   let art = null;                 // 'zoom' | 'schieben' | 'wischen'
-  let d0 = 0, s0 = 1, x0 = 0, y0 = 0, px = 0, py = 0, bewegt = false;
+  let d0 = 0, s0 = 1, x0 = 0, y0 = 0, mx0 = 0, my0 = 0;
+  let px = 0, py = 0, bewegt = false;
   const abstand = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  /* Mitte zwischen zwei Fingern, gemessen ab dem Mittelpunkt der Bühne –
+     dort sitzt auch der Nullpunkt der Verschiebung. */
+  const mitte = t => {
+    const r = buehne.getBoundingClientRect();
+    return {x:(t[0].clientX + t[1].clientX) / 2 - (r.left + r.width  / 2),
+            y:(t[0].clientY + t[1].clientY) / 2 - (r.top  + r.height / 2)};
+  };
 
   buehne.addEventListener('touchstart', e => {
+    $('#fvBild').style.transition = 'none';
     if(e.touches.length === 2){
+      const m = mitte(e.touches);
       art = 'zoom'; d0 = abstand(e.touches); s0 = FV.s;
+      x0 = FV.x; y0 = FV.y; mx0 = m.x; my0 = m.y;
     } else if(e.touches.length === 1){
       art = FV.s > 1.01 ? 'schieben' : 'wischen';
       px = e.touches[0].clientX; py = e.touches[0].clientY;
@@ -4616,8 +4669,13 @@ $('#fvWeg').onclick = () => {
   buehne.addEventListener('touchmove', e => {
     if(art === 'zoom' && e.touches.length === 2){
       e.preventDefault();
-      const d = abstand(e.touches);
+      const d = abstand(e.touches), m = mitte(e.touches);
       if(d0 > 0) FV.s = Math.max(1, Math.min(6, s0 * d / d0));
+      /* Der Bildpunkt unter den Fingern bleibt stehen: sonst zieht jeder Zoom
+         zur Bildmitte, und man verliert genau die Stelle, die man ansehen will. */
+      const k = FV.s / s0;
+      FV.x = m.x - k * (mx0 - x0);
+      FV.y = m.y - k * (my0 - y0);
       if(FV.s <= 1.01){ FV.s = 1; FV.x = 0; FV.y = 0; }
       fvGrenzen(); fvSetzen();
     } else if(art === 'schieben' && e.touches.length === 1){
@@ -4627,23 +4685,95 @@ $('#fvWeg').onclick = () => {
       bewegt = true;
       fvGrenzen(); fvSetzen();
     } else if(art === 'wischen' && e.touches.length === 1){
-      if(Math.abs(e.touches[0].clientX - px) > 10) bewegt = true;
+      const dx = e.touches[0].clientX - px;
+      if(Math.abs(dx) > 8){
+        bewegt = true;
+        /* Das Bild zieht mit dem Finger mit; am ersten und letzten Bild nur
+           gebremst, damit spürbar ist, dass dort Schluss ist. */
+        const ps = (PROJ && PROJ.photos) || [];
+        const ende = (dx < 0 && FV.i >= ps.length - 1) || (dx > 0 && FV.i <= 0);
+        FV.w = ende ? dx * 0.25 : dx;
+        fvSetzen();
+      }
     }
   }, {passive:false});
 
   buehne.addEventListener('touchend', e => {
+    const b = $('#fvBild');
     if(art === 'wischen' && bewegt && e.changedTouches.length){
       const dx = e.changedTouches[0].clientX - px;
       const dy = e.changedTouches[0].clientY - py;
       const ps = (PROJ && PROJ.photos) || [];
-      if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) && ps.length > 1){
-        fvZeigen(FV.i + (dx < 0 ? 1 : -1));
+      const weiter = dx < 0 ? FV.i + 1 : FV.i - 1;
+      if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) && weiter >= 0 && weiter < ps.length){
+        const breite = buehne.clientWidth || 400;
+        b.style.transition = 'transform .18s ease-in';
+        FV.w = dx < 0 ? -breite : breite;              // erst ganz hinausschieben
+        fvSetzen();
+        setTimeout(() => fvZeigen(weiter, dx < 0 ? breite : -breite), 180);
+      } else {
+        b.style.transition = 'transform .18s ease-out';
+        FV.w = 0; fvSetzen();
+        setTimeout(() => { b.style.transition = 'none'; }, 200);
       }
     }
     if(!e.touches.length) art = null;
   }, {passive:true});
 })();
 
+
+/* Vorschau: neben dem Original liegt ein kleines Bild von etwa 40 KB. Es ist in
+   Sekunden übertragen und füllt die Kachel, während das Original noch unterwegs
+   ist oder gar nicht erst geholt wird. Schlüssel im Bildspeicher ist "V"+Kennung,
+   in der Datenbank vorschau/<projekt>/<fid>. */
+const VOR = fid => 'V' + fid;
+
+function vorschauBauen(datei, kante = 480, guete = 0.72){
+  return new Promise((res, rej) => {
+    const u = URL.createObjectURL(datei);
+    const img = new Image();
+    img.onload = () => {
+      const f = Math.min(1, kante / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width  = Math.max(1, Math.round(img.width  * f));
+      c.height = Math.max(1, Math.round(img.height * f));
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(u);
+      c.toBlob(b => b ? res(b) : rej(new Error('leer')), 'image/jpeg', guete);
+    };
+    img.onerror = () => { URL.revokeObjectURL(u); rej(new Error('bild')); };
+    img.src = u;
+  });
+}
+async function vorschauHoch(pid, fid, blob){
+  if(!fbProjEin || !pid || !fid) return;
+  try { await FB.fn.set(FB.fn.ref(FB.db, 'vorschau/' + pid + '/' + fid), await blobDataUrl(blob)); }
+  catch(e){}
+}
+/* Vorschau besorgen: erst aus dem Bildspeicher, sonst aus der Datenbank, sonst
+   aus dem Original hier auf dem Gerät (Altbestand ohne Vorschau). */
+async function vorschauHolen(pid, fid){
+  try { const v = await Bilder.lesen(VOR(fid)); if(v) return v; } catch(e){}
+  if(fbProjEin) try {
+    const snap = await FB.fn.get(FB.fn.ref(FB.db, 'vorschau/' + pid + '/' + fid));
+    const txt = snap.val();
+    if(txt){ const b = dataUrlBlob(txt); await Bilder.legen(VOR(fid), b); return b; }
+  } catch(e){}
+  try {
+    const gross = await Bilder.lesen(fid);
+    if(gross){
+      const v = await vorschauBauen(gross);
+      await Bilder.legen(VOR(fid), v);
+      vorschauHoch(pid, fid, v);                 // nachträglich auch für die anderen
+      return v;
+    }
+  } catch(e){}
+  return null;
+}
+function vorschauWeg(pid, fid){
+  Bilder.weg(VOR(fid)).catch(() => {});
+  if(fbProjEin) try { FB.fn.set(FB.fn.ref(FB.db, 'vorschau/' + pid + '/' + fid), null); } catch(e){}
+}
 
 /* Fotos gehen einen eigenen Weg: sie liegen unter fotos/<projekt>/<fid> und
    nicht am Projekt, damit sie nicht bei jedem Messwert mitgeschickt werden.
@@ -4706,7 +4836,7 @@ function renderPhotos(){
   $$('[data-fotodel]').forEach(b => b.onclick = () => {
     const i = +b.dataset.fotodel, f = PROJ.photos[i], pid = PROJ.id;
     PROJ.photos.splice(i, 1);
-    if(f && f.fid){ Bilder.weg(f.fid).catch(() => {}); fotoWeg(pid, f.fid); }
+    if(f && f.fid){ Bilder.weg(f.fid).catch(() => {}); fotoWeg(pid, f.fid); vorschauWeg(pid, f.fid); }
     saveProj(); renderPhotos();
   });
   $$('[data-fotoi]').forEach(kachel => {
@@ -4726,22 +4856,48 @@ function renderPhotos(){
    noch nicht. Liegt es im Abgleich, lässt es sich holen. */
 function fotoFehltZeigen(kachel, f){
   const img = kachel.querySelector('img');
-  if(img) img.remove();
-  const p = document.createElement(f.hoch ? 'button' : 'div');
-  p.className = 'foto-fehlt';
-  if(!f.hoch){
-    p.textContent = 'Liegt auf einem anderen Gerät';
-  } else {
-    p.type = 'button';
-    p.textContent = 'Foto laden';
-    p.onclick = () => {
-      p.textContent = 'lädt …'; p.disabled = true;
-      fotoHolen(PROJ.id, f.fid)
-        .then(b => { if(b) renderPhotos(); else { p.textContent = 'nicht gefunden'; } })
-        .catch(() => { p.textContent = 'Foto laden'; p.disabled = false; toast('Ohne Verbindung geht das nicht'); });
-    };
-  }
-  kachel.insertBefore(p, kachel.firstChild);
+  const pid = PROJ && PROJ.id;
+  /* Erst die Vorschau: sie ist klein und meist sofort da. Das Original wiegt
+     gut drei Megabyte und wird nur auf ausdrückliches Antippen geholt. */
+  vorschauHolen(pid, f.fid).then(v => {
+    if(v && img){
+      const u = URL.createObjectURL(v);
+      fotoUrls.push(u);
+      img.src = u;
+      img.classList.add('nur-vorschau');
+      const marke = document.createElement('button');
+      marke.type = 'button';
+      marke.className = 'foto-marke';
+      marke.textContent = 'Original laden';
+      marke.onclick = () => {
+        marke.textContent = 'lädt …'; marke.disabled = true;
+        fotoHolen(pid, f.fid)
+          .then(b => { if(b) renderPhotos(); else { marke.textContent = 'nicht da'; } })
+          .catch(() => { marke.textContent = 'Original laden'; marke.disabled = false;
+                         toast('Ohne Verbindung geht das nicht'); });
+      };
+      kachel.insertBefore(marke, kachel.firstChild);
+      return;
+    }
+    if(img) img.remove();
+    const p = document.createElement(f.hoch ? 'button' : 'div');
+    p.className = 'foto-fehlt';
+    if(!f.hoch){
+      /* Das Bild ist auf dem anderen Gerät noch unterwegs. Die Kachel baut sich
+         von selbst um, sobald die Übertragung durch ist. */
+      p.textContent = 'Wird noch übertragen';
+    } else {
+      p.type = 'button';
+      p.textContent = 'Foto laden';
+      p.onclick = () => {
+        p.textContent = 'lädt …'; p.disabled = true;
+        fotoHolen(pid, f.fid)
+          .then(b => { if(b) renderPhotos(); else { p.textContent = 'nicht gefunden'; } })
+          .catch(() => { p.textContent = 'Foto laden'; p.disabled = false; toast('Ohne Verbindung geht das nicht'); });
+      };
+    }
+    kachel.insertBefore(p, kachel.firstChild);
+  });
 }
 
 const fotoAufnehmen = () => {
@@ -4767,6 +4923,11 @@ $('#photoFile').onchange = async e => {
   const eintrag = {fid, typ: datei.type || 'image/jpeg', groesse: datei.size, zeit: Date.now()};
   PROJ.photos.push(eintrag);
   saveProj();
+  /* Vorschau zuerst: sie ist in Sekunden oben und füllt die Kachel beim
+     Kollegen, während das Original noch unterwegs ist. */
+  vorschauBauen(datei)
+    .then(v => Bilder.legen(VOR(fid), v).then(() => vorschauHoch(PROJ.id, fid, v)))
+    .catch(() => {});
   fotoHoch(PROJ.id, eintrag);              // im Hintergrund, ohne die Ansicht aufzuhalten
   renderPhotos();
   /* Wird das Foto erst im Abschluss aufgenommen, muss es auch hinausgehen. Der
@@ -6030,8 +6191,13 @@ function ablageKuerzen(){
   if(ARCH.length <= ABLAGE_MAX) return;
   ARCH.slice(ABLAGE_MAX).forEach(e => {
     const st = archStand(e);
-    ((st && st.photos) || []).forEach(f => { if(f && f.fid) Bilder.weg(f.fid).catch(() => {}); });
-    if(st && st.id && fbProjEin) try { FB.fn.set(FB.fn.ref(FB.db, 'fotos/' + st.id), null); } catch(x){}
+    ((st && st.photos) || []).forEach(f => {
+      if(f && f.fid){ Bilder.weg(f.fid).catch(() => {}); Bilder.weg(VOR(f.fid)).catch(() => {}); }
+    });
+    if(st && st.id && fbProjEin){
+      try { FB.fn.set(FB.fn.ref(FB.db, 'fotos/' + st.id), null); } catch(x){}
+      try { FB.fn.set(FB.fn.ref(FB.db, 'vorschau/' + st.id), null); } catch(x){}
+    }
   });
   ARCH = ARCH.slice(0, ABLAGE_MAX);
 }
@@ -6087,8 +6253,13 @@ function renderArchive(){
       body:'Damit ist auch die Sicherung dieser Prüfung weg – ein fehlgeschlagener Export lässt sich danach nicht mehr wiederholen.',
       onOk:() => {
         const st = archStand(e);
-        ((st && st.photos) || []).forEach(f => { if(f && f.fid) Bilder.weg(f.fid).catch(() => {}); });
-        if(st && st.id && fbProjEin) try { FB.fn.set(FB.fn.ref(FB.db, 'fotos/' + st.id), null); } catch(x){}
+        ((st && st.photos) || []).forEach(f => {
+          if(f && f.fid){ Bilder.weg(f.fid).catch(() => {}); Bilder.weg(VOR(f.fid)).catch(() => {}); }
+        });
+        if(st && st.id && fbProjEin){
+          try { FB.fn.set(FB.fn.ref(FB.db, 'fotos/' + st.id), null); } catch(x){}
+          try { FB.fn.set(FB.fn.ref(FB.db, 'vorschau/' + st.id), null); } catch(x){}
+        }
         ARCH.splice(+b.dataset.adel, 1); saveArch(); renderArchive();
       }});
   });
@@ -6347,7 +6518,10 @@ function fbProjWeg(id, mitFotos){
   if(!fbProjEin || !id) return;
   try { FB.fn.set(FB.fn.ref(FB.db, 'projekte/' + id), null); } catch(e){}
   try { FB.fn.set(FB.fn.ref(FB.db, 'bearbeitung/' + id), null); } catch(e){}
-  if(mitFotos) try { FB.fn.set(FB.fn.ref(FB.db, 'fotos/' + id), null); } catch(e){}
+  if(mitFotos){
+    try { FB.fn.set(FB.fn.ref(FB.db, 'fotos/' + id), null); } catch(e){}
+    try { FB.fn.set(FB.fn.ref(FB.db, 'vorschau/' + id), null); } catch(e){}
+  }
 }
 
 /* Fotolisten zusammenführen. Der Stand vom Server gilt – nur ein Bild, das hier
