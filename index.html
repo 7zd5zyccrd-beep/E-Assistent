@@ -10,6 +10,16 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.61 09.09.2026  Der Vermerk "sitzt gerade daran" blieb in der offenen
+                    Fortsetzen-Liste stehen: verfaellt er durch blossen
+                    Zeitablauf, aendert sich in der Datenbank nichts, es kommt
+                    also kein Ereignis und die Liste baute sich nicht neu auf.
+                    Sie frischt sich jetzt alle 20 Sekunden selbst auf, solange
+                    sie offen steht. Dazu wird der eigene Vermerk beim Loeschen
+                    sofort auch oertlich ausgetragen, ohne auf die Antwort des
+                    Servers zu warten, und beim Wegblenden der App
+                    (visibilitychange) geraeumt - iOS schickt pagehide nicht
+                    zuverlaessig.
   v1.60 09.09.2026  Weicher Hinweis statt Sperre: wer ein Projekt offen hat,
                     schreibt sich unter bearbeitung/<id> und frischt den
                     Eintrag alle 45 Sekunden auf; nach drei Minuten ohne
@@ -1747,7 +1757,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.60';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.61';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -2192,6 +2202,7 @@ function go(name, push = true){
      hineingeschrieben – sie warten, bis der Kreis verlassen ist. */
   if(name !== 'circuit' && name !== 'feed') fbNachtragAnwenden();
   praesenzSetzen(PROJ && PROJECT_VIEWS.includes(name) ? PROJ.id : null);
+  resumeTickerSetzen(name === 'resume');
   $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
   modusZeigen(name);
   $('#title').textContent = TITLES[name] || 'E-Assistent';
@@ -2269,6 +2280,17 @@ function renderModeMenu(){
     ${offen ? '' : `<p class="muted small" style="margin-top:12px">Derzeit nichts Offenes zum Fortsetzen.</p>`}`;
   $('#btnModeNew').onclick    = () => startProject(homeMode);
   $('#btnModeResume').onclick = () => { resumeMode = homeMode; go('resume'); };
+}
+
+/* Ein Vermerk kann auch durch bloßen Zeitablauf verfallen – dabei ändert sich
+   in der Datenbank nichts, es kommt also kein Ereignis. Solange die Liste offen
+   steht, baut sie sich deshalb selbst nach. */
+let resumeTicker = null;
+function resumeTickerSetzen(an){
+  if(an && !resumeTicker) resumeTicker = setInterval(() => {
+    if(current === 'resume') renderResume(); else resumeTickerSetzen(false);
+  }, 20000);
+  else if(!an && resumeTicker){ clearInterval(resumeTicker); resumeTicker = null; }
 }
 
 /* --- offene Prüfungen: nach Adresse benannt, zuletzt bearbeitete zuerst --- */
@@ -5992,7 +6014,12 @@ function praesenzSchreiben(){
 }
 function praesenzLoeschen(id){
   if(!fbProjEin || !id) return;
-  try { FB.fn.set(FB.fn.ref(FB.db, 'bearbeitung/' + id), null); } catch(e){}
+  try {
+    FB.fn.set(FB.fn.ref(FB.db, 'bearbeitung/' + id), null);
+    /* Der eigene Stand wird sofort nachgeführt, ohne auf die Antwort des
+       Servers zu warten – sonst hinge die eigene Liste am Netz. */
+    delete fbArbeit[id];
+  } catch(e){}
 }
 function praesenzSetzen(id){
   if(praesenzId === id) return;
@@ -6007,6 +6034,12 @@ function praesenzSetzen(id){
    bleiben. pagehide ist das, worauf bei iOS Verlass ist. */
 window.addEventListener('pagehide', () => { if(praesenzId) praesenzLoeschen(praesenzId); });
 window.addEventListener('pageshow', () => { if(praesenzId) praesenzSchreiben(); });
+/* iOS schickt beim Wegwischen nicht immer pagehide, wohl aber diesen Wechsel. */
+document.addEventListener('visibilitychange', () => {
+  if(!praesenzId) return;
+  if(document.visibilityState === 'hidden') praesenzLoeschen(praesenzId);
+  else praesenzSchreiben();
+});
 
 /* Arbeitet gerade jemand anderes daran? Liefert den Eintrag oder nichts. */
 function fremdeArbeit(id){
