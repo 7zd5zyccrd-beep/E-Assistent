@@ -10,6 +10,21 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.62 09.09.2026  Fotos in voller Qualitaet. Das Bild wird nicht mehr auf
+                    1024 Pixel und Guete 0,6 gerechnet, sondern unveraendert
+                    abgelegt, wie es aus der Kamera kommt - vorher war auf dem
+                    Verteiler keine Beschriftung mehr zu entziffern. Dafuer
+                    liegen die Bilder jetzt als Blob in IndexedDB statt im
+                    localStorage, dessen fuenf Megabyte fuer ein einziges
+                    Original kaum reichen; das Projekt merkt sich nur noch
+                    Kennung, Typ und Groesse. Vorhandene Fotos ziehen beim
+                    ersten Start um. Hoechstzahl je Projekt von drei auf sechs.
+                    Der Export an den Kurzbefehl holt die Bilder aus dem
+                    Bildspeicher und waehlt die Endung nach dem Typ (.heic,
+                    .png, .jpeg) statt immer .jpeg. Fotos reisen NICHT mehr in
+                    der Weitergabe-Datei mit - sechs Originale haetten sie auf
+                    zwanzig Megabyte gebracht; wo das Bild fehlt, steht eine
+                    Platzhalterkachel.
   v1.61 09.09.2026  Der Vermerk "sitzt gerade daran" blieb in der offenen
                     Fortsetzen-Liste stehen: verfaellt er durch blossen
                     Zeitablauf, aendert sich in der Datenbank nichts, es kommt
@@ -463,6 +478,12 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
 .foto img{width:104px;height:104px;object-fit:cover;display:block;
   border:1.5px solid var(--field-border);border-radius:var(--r)}
 .foto .btn{margin-top:6px;min-height:38px;font-size:15px;padding:0 8px}
+.foto-fehlt{
+  width:104px;height:104px;box-sizing:border-box;display:flex;align-items:center;
+  justify-content:center;text-align:center;padding:8px;border-radius:12px;
+  background:var(--enclosure);border:1px dashed #B9C3AB;color:#6C7563;
+  font-size:11px;line-height:1.35;
+}
 .chk{
   display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;
   border:1.5px solid var(--field-border);border-radius:var(--r-btn);   /* wie die Buttons */
@@ -1757,7 +1778,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.61';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.62';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4351,48 +4372,113 @@ const HANDOVER_FORMAT = 'pruefassistent-projekt-v1';
 
 
 /* --- Fotos zur Verteilerdokumentation ---------------------------------------
-   Rein intern: sie gehen nicht ins Protokoll, reisen aber in der Weitergabe-
-   Datei mit. Aus der Kamera kommen drei bis fünf Megabyte, in den Speicher des
-   Browsers passen insgesamt nur etwa fünf – deshalb wird jedes Bild vor dem
-   Ablegen auf 1024 Pixel Kantenlänge gerechnet und als JPEG gespeichert, was
-   rund hundert Kilobyte ergibt. */
-const FOTO_MAX = 3;
+   Rein intern: sie gehen nicht ins Protokoll, wandern aber beim Ablegen mit in
+   den Ordner. Seit v1.62 wird das Bild NICHT mehr umgerechnet, sondern so
+   gespeichert, wie es aus der Kamera kommt – bei 1024 Pixeln und Güte 0,6 war
+   auf dem Verteiler keine Beschriftung mehr zu entziffern.
 
-function bildVerkleinern(datei, kante, guete){
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onerror = () => rej(new Error('lesen'));
-    r.onload  = () => {
-      const img = new Image();
-      img.onerror = () => rej(new Error('bild'));
-      img.onload  = () => {
-        const f = Math.min(1, kante / Math.max(img.width, img.height));
-        const c = document.createElement('canvas');
-        c.width  = Math.round(img.width  * f);
-        c.height = Math.round(img.height * f);
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        res(c.toDataURL('image/jpeg', guete));
+   Das geht nur außerhalb des localStorage: dort ist bei etwa 5 MB für alles
+   zusammen Schluss, ein einziges Original braucht schon die Hälfte davon. Die
+   Bilder liegen deshalb als Blob in IndexedDB, das Projekt merkt sich nur noch
+   Kennung, Typ und Größe. */
+const FOTO_MAX = 6;
+
+const Bilder = (() => {
+  const DB = 'bds-fotos', LADEN = 'fotos';
+  let dbP = null;
+  function offen(){
+    if(dbP) return dbP;
+    dbP = new Promise((res, rej) => {
+      let r;
+      try { r = indexedDB.open(DB, 1); } catch(e){ return rej(e); }
+      r.onupgradeneeded = () => {
+        if(!r.result.objectStoreNames.contains(LADEN)) r.result.createObjectStore(LADEN);
       };
-      img.src = r.result;
-    };
-    r.readAsDataURL(datei);
-  });
+      r.onsuccess = () => res(r.result);
+      r.onerror   = () => rej(r.error);
+    });
+    return dbP;
+  }
+  const vorgang = (art, fn) => offen().then(db => new Promise((res, rej) => {
+    const t = db.transaction(LADEN, art), s = t.objectStore(LADEN);
+    const a = fn(s);
+    t.oncomplete = () => res(a ? a.result : undefined);
+    t.onerror = t.onabort = () => rej(t.error);
+  }));
+  return {
+    lesen: fid => vorgang('readonly',  s => s.get(fid)),
+    legen: (fid, blob) => vorgang('readwrite', s => s.put(blob, fid)),
+    weg:   fid => vorgang('readwrite', s => s.delete(fid))
+  };
+})();
+
+/* Altbestand: Fotos lagen als Text im Projekt. Sie ziehen einmalig um. */
+async function fotosUmziehen(){
+  let geaendert = false;
+  for(const P of PROJECTS){
+    if(!Array.isArray(P.photos)) continue;
+    for(let i = 0; i < P.photos.length; i++){
+      const v = P.photos[i];
+      if(typeof v !== 'string') continue;
+      try {
+        const blob = dataUrlBlob(v);
+        const fid  = neueKennung('F');
+        await Bilder.legen(fid, blob);
+        P.photos[i] = {fid, typ: blob.type || 'image/jpeg', groesse: blob.size, zeit: Date.now()};
+      } catch(e){ P.photos[i] = null; }
+      geaendert = true;
+    }
+    P.photos = P.photos.filter(Boolean);
+  }
+  if(geaendert){
+    saveProjects();
+    if(PROJ) fbProjHoch(PROJ);
+    renderPhotos();
+  }
 }
 
 /* Fotos stehen an zwei Stellen: im Verteiler und im Abschluss. Beide zeigen
-   dieselben Bilder und dieselben Löschknöpfe. */
+   dieselben Bilder und dieselben Löschknöpfe. Die Bilder werden aus dem
+   Bildspeicher nachgereicht; die Adressen dazu gelten nur, solange die Seite
+   steht, und werden beim nächsten Aufbau wieder freigegeben. */
+let fotoUrls = [];
 function renderPhotos(){
   const ps = (PROJ && PROJ.photos) || [];
+  fotoUrls.forEach(u => { try { URL.revokeObjectURL(u); } catch(e){} });
+  fotoUrls = [];
   const html = ps.length
-    ? `<div class="fotos">` + ps.map((src, i) =>
-        `<div class="foto"><img src="${src}" alt="Foto ${i + 1}">
+    ? `<div class="fotos">` + ps.map((f, i) =>
+        `<div class="foto"><img data-fid="${esc((f && f.fid) || '')}" alt="Foto ${i + 1}">
            <button class="btn danger" data-fotodel="${i}">Löschen</button></div>`).join('') + `</div>`
     : `<div class="rail-empty">Noch kein Foto</div>`;
   ['#photoBody', '#finishPhotos'].forEach(sel => { const b = $(sel); if(b) b.innerHTML = html; });
   $$('[data-fotodel]').forEach(b => b.onclick = () => {
+    const f = PROJ.photos[+b.dataset.fotodel];
     PROJ.photos.splice(+b.dataset.fotodel, 1);
+    if(f && f.fid) Bilder.weg(f.fid).catch(() => {});
     saveProj(); renderPhotos();
   });
+  $$('img[data-fid]').forEach(img => {
+    const fid = img.dataset.fid;
+    if(!fid) return;
+    Bilder.lesen(fid).then(blob => {
+      if(!blob){ fotoFehltZeigen(img); return; }
+      const u = URL.createObjectURL(blob);
+      fotoUrls.push(u);
+      img.src = u;
+    }).catch(() => fotoFehltZeigen(img));
+  });
+}
+/* Kommt das Projekt von einem anderen Gerät, ist die Kennung da, das Bild aber
+   noch nicht – der Abgleich der Fotos folgt erst. */
+function fotoFehltZeigen(img){
+  const k = img.parentElement;
+  if(!k) return;
+  img.remove();
+  const p = document.createElement('div');
+  p.className = 'foto-fehlt';
+  p.textContent = 'Liegt auf einem anderen Gerät';
+  k.insertBefore(p, k.firstChild);
 }
 
 const fotoAufnehmen = () => {
@@ -4406,17 +4492,17 @@ $('#photoFile').onchange = async e => {
   const datei = e.target.files && e.target.files[0];
   e.target.value = '';                       // dasselbe Bild soll erneut wählbar sein
   if(!datei || !PROJ) return;
-  let bild;
-  try { bild = await bildVerkleinern(datei, 1024, 0.6); }
-  catch(_){ toast('Foto konnte nicht verarbeitet werden'); return; }
-  PROJ.photos = PROJ.photos || [];
-  PROJ.photos.push(bild);
-  if(!saveProj()){                           // Platz reicht nicht: Foto zurücknehmen
-    PROJ.photos.pop(); saveProj();
-    showDialog({title:'Speicher voll', danger:true, ok:'Verstanden',
-      body:'Das Foto passt nicht mehr in den Speicher des Browsers. Lösche nicht mehr benötigte Projekte oder Fotos und versuche es erneut.'});
+  const fid = neueKennung('F');
+  try { await Bilder.legen(fid, datei); }    // unverändert, so wie es die Kamera liefert
+  catch(_){
+    showDialog({title:'Foto nicht gesichert', danger:true, ok:'Verstanden',
+      body:'Das Bild ließ sich nicht ablegen. Meist ist der Speicher des Geräts voll – '
+         + 'nicht mehr benötigte Projekte oder Fotos löschen und es erneut versuchen.'});
     return;
   }
+  PROJ.photos = PROJ.photos || [];
+  PROJ.photos.push({fid, typ: datei.type || 'image/jpeg', groesse: datei.size, zeit: Date.now()});
+  saveProj();
   renderPhotos();
   /* Wird das Foto erst im Abschluss aufgenommen, muss es auch hinausgehen. Der
      Fingerabdruck wird gleich fortgeschrieben, damit die Vorwahl beim nächsten
@@ -5605,13 +5691,20 @@ async function ablegen(wahl){
   if(wahl.protokoll)    blatt('protokoll',    'Protokoll');
   if(wahl.beschriftung) blatt('beschriftung', 'Beschreibung');
   if(wahl.material)     blatt('material',     'Material');
-  if(wahl.fotos) (p.photos || []).forEach((src, i) => {
-    const blob = dataUrlBlob(src);
-    /* Die Fotonummer sitzt im Typ, nicht am Ende: so bleibt der Ordnername
-       auch bei Fotos der letzte Abschnitt. */
-    const name = expName(p, `Foto${i + 1}`, '.jpeg');
-    dateien.push(new File([blob], name, {type: blob.type || 'image/jpeg'}));
-  });
+  if(wahl.fotos){
+    const ENDUNG = {'image/heic':'.heic', 'image/heif':'.heic', 'image/png':'.png', 'image/jpeg':'.jpeg'};
+    const liste = p.photos || [];
+    for(let i = 0; i < liste.length; i++){
+      const f = liste[i];
+      let blob = null;
+      try { blob = typeof f === 'string' ? dataUrlBlob(f) : await Bilder.lesen(f.fid); } catch(e){}
+      if(!blob) continue;                    // liegt auf einem anderen Gerät
+      /* Die Fotonummer sitzt im Typ, nicht am Ende: so bleibt der Ordnername
+         auch bei Fotos der letzte Abschnitt. */
+      const name = expName(p, `Foto${i + 1}`, ENDUNG[blob.type] || '.jpeg');
+      dateien.push(new File([blob], name, {type: blob.type || 'image/jpeg'}));
+    }
+  }
   if(!dateien.length){ toast('Nichts ausgewählt'); return; }
 
   /* iOS meldet beim Teilen an einen Kurzbefehl auch dann einen Abbruch, wenn der
@@ -6068,6 +6161,7 @@ function projektOeffnen(p){
 }
 
 /* ---------- Start ---------- */
+fotosUmziehen().catch(() => {});      // Altfotos aus dem localStorage in den Bildspeicher
 window.addEventListener('resize', () => { if(current === 'finish') initPad(); });
 renderHome();
 go('home', false);
