@@ -10,6 +10,20 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.65 09.09.2026  Die Ablage taugt jetzt als Sicherheitsnetz. Bisher warf sie
+                    beim Ablegen Fotos und Unterschriftsbild weg und loeschte
+                    den Eintrag nach dreissig Tagen - fuer den Zweck die
+                    denkbar unguenstigste Frist, der Eintrag verschwand
+                    ungefaehr dann, wenn er bei der Abrechnung gebraucht wurde.
+                    Jetzt liegt der vollstaendige Projektstand darin, die Frist
+                    ist weg, begrenzt wird ueber die Anzahl (60, rund drei
+                    Monate). "Erneut sichern" ist kein JSON-Download mehr,
+                    sondern derselbe Export ueber den Kurzbefehl wie im
+                    Abschluss: dieselben Dateien, dieselben Namen. Faellt ein
+                    Eintrag ueber die Hoechstzahl hinaus oder wird er geloescht,
+                    gehen auch seine Bilder. Alteintraege ohne vollstaendigen
+                    Stand bleiben lesbar und lassen sich weiterhin als Datei
+                    sichern.
   v1.64 09.09.2026  Fehler aus v1.63: die Fotoliste war vom Abgleich des
                     Projektkopfs ausgenommen - richtig, solange die Bilder rein
                     oertlich lagen, seit dem Fotoabgleich aber falsch. Auf dem
@@ -1802,7 +1816,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.64';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.65';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -5619,8 +5633,6 @@ $('#btnSheets').onclick = () => {
    fertig als Ordnername verwendbar – der Kurzbefehl muss ihn nur abtrennen.
    Deshalb tragen auch Fotos ihre Nummer im Typ und nicht am Ende.
    ============================================================ */
-const ABLAGE_TAGE = 30;
-
 /* Leerzeichen bleiben erhalten – getrennt wird allein mit Unterstrichen, damit
    der Kurzbefehl den Namen sauber in seine vier Felder zerlegen kann. */
 const nameTeil = t => String(t || '')
@@ -5744,7 +5756,7 @@ function ablageDialog(){
   $('#modal').hidden = false;
   $('#modalOk').focus();
 }
-async function ablegen(wahl){
+async function ablegen(wahl, nochmal){
   const p = PROJ, dateien = [];
   /* Was hinausgeht, wird im Projekt vermerkt – und zwar VOR dem Bauen der
      Dateien, damit der Vermerk in der Weitergabe-Datei mitreist. Der Kollege,
@@ -5807,8 +5819,10 @@ async function ablegen(wahl){
   }catch(e){
     toast('Übergabe nicht möglich'); return;
   }
-  archiveNow();                       // Projekt gilt damit als abgeschlossen
-  toast('Daten exportiert');
+  /* Beim Wiederholen aus der Ablage heraus wird nichts erneut abgelegt – das
+     Projekt ist längst abgeschlossen. */
+  if(!nochmal) archiveNow();          // Projekt gilt damit als abgeschlossen
+  toast(nochmal ? 'Erneut gesichert' : 'Daten exportiert');
 }
 /* Im Abschluss ist die Auswahl schon in der Ansicht getroffen – der Export
    nimmt sie unverändert und legt die Projektdaten immer mit dazu. */
@@ -5820,26 +5834,53 @@ $('#btnExportDocs').onclick = () => {
            material:!!d.material, fotos:!!d.fotos});
 };
 
-/* Ablage aufräumen: was länger als 30 Tage liegt, wird beim Start entfernt.
-   Ältere Einträge ohne Zeitstempel bekommen ihn jetzt, laufen also ab heute. */
-function ablageAufraeumen(){
-  const jetzt = Date.now(), frist = ABLAGE_TAGE * 24 * 60 * 60 * 1000;
-  let geaendert = false;
-  ARCH.forEach(e => { if(!e.abgelegtAm){ e.abgelegtAm = jetzt; geaendert = true; } });
-  const rest = ARCH.filter(e => jetzt - e.abgelegtAm < frist);
-  if(geaendert || rest.length !== ARCH.length){ ARCH = rest; saveArch(); }
-}
-ablageAufraeumen();
-
 /* --- In die Ablage legen ---
-   Die Ablage bekommt den Projektstand ohne Fotos und ohne Unterschriftsbild:
-   beides ist groß und liegt nach dem Export ohnehin beim Kurzbefehl. */
+   Die Ablage ist das Sicherheitsnetz: geht beim Export etwas schief und fällt
+   es erst bei der Abrechnung einen Monat später auf, muss sich der Vorgang von
+   hier aus wiederholen lassen. Deshalb liegt der VOLLSTÄNDIGE Projektstand
+   darin, samt Fotoliste und Unterschriftsbild – ohne die käme kein Protokoll
+   mehr zustande. Der Bericht mit den lesbaren Feldnamen liegt daneben.
+
+   Begrenzt wird über die Anzahl, nicht über eine Frist: dreißig Tage waren für
+   diesen Zweck die denkbar ungünstigste Zahl, der Eintrag verschwand ungefähr
+   dann, wenn er gebraucht wurde. */
+const ABLAGE_MAX = 60;                       // rund drei Monate bei zwanzig Wohnungen
+
+const archStand   = e => e && e.stand ? e.stand : null;
+const archAdresse = e => archStand(e) ? (e.stand.address || '') : ((e.projekt || {}).adresse || '');
+const archWohnung = e => archStand(e) ? (e.stand.flat || '')    : ((e.projekt || {}).wohnung || '');
+const archKreise  = e => archStand(e) ? (e.stand.items || []).length : ((e.stromkreise || []).length);
+const archDatum   = e => e.abgelegtAm
+  || (archStand(e) ? (e.stand.finishedAt || e.stand.startedAt) : Date.parse((e.projekt || {}).beginn)) || 0;
+
+/* Was über die Höchstzahl hinausfällt, verliert auch seine Bilder – sie sind
+   der Grund, warum die Zahl überhaupt begrenzt ist. */
+function ablageKuerzen(){
+  if(ARCH.length <= ABLAGE_MAX) return;
+  ARCH.slice(ABLAGE_MAX).forEach(e => {
+    const st = archStand(e);
+    ((st && st.photos) || []).forEach(f => { if(f && f.fid) Bilder.weg(f.fid).catch(() => {}); });
+    if(st && st.id && fbProjEin) try { FB.fn.set(FB.fn.ref(FB.db, 'fotos/' + st.id), null); } catch(x){}
+  });
+  ARCH = ARCH.slice(0, ABLAGE_MAX);
+}
+
 function archiveNow(){
   PROJ.finishedAt = PROJ.finishedAt || Date.now();
-  const slim = exportObj();
-  if(slim.unterschrift) slim.unterschrift.bild = null;
-  slim.abgelegtAm = Date.now();
-  ARCH.unshift(slim); ARCH = ARCH.slice(0, 30); saveArch();
+  const eintrag = {
+    ablage: 1,
+    id: PROJ.id,
+    abgelegtAm: Date.now(),
+    owner: PROJ.owner || null,
+    ownerName: PROJ.ownerName || '',
+    ablegerName: CFG.tester || FB.konto || '',
+    stand: JSON.parse(JSON.stringify(PROJ)),   // vollständig, damit sich der Export wiederholen lässt
+    bericht: exportObj()
+  };
+  ARCH = ARCH.filter(e => (e.id || '') !== PROJ.id);
+  ARCH.unshift(eintrag);
+  ablageKuerzen();
+  saveArch();
   const weg = PROJ.id;
   PROJECTS = PROJECTS.filter(p => p.id !== PROJ.id); saveProjects();
   fbProjWeg(weg, false); // sonst käme die abgeschlossene Prüfung als offene zurück; Fotos bleiben
@@ -5851,27 +5892,63 @@ function archiveNow(){
    ARCHIV
    ============================================================ */
 function renderArchive(){
-  $('#archiveBody').innerHTML = ARCH.length ? ARCH.map((p, i) => `
+  $('#archiveBody').innerHTML = ARCH.length ? ARCH.map((e, i) => {
+    const st  = archStand(e);
+    const whg = archWohnung(e);
+    const fotos = st ? (st.photos || []).length : 0;
+    return `
     <div class="card">
-      <div><strong>${esc((p.projekt.adresse || '').split('\n')[0] || 'Ohne Adresse')}${p.projekt.wohnung ? ' · ' + esc(flatLabel(p.projekt.wohnung)) : ''}</strong></div>
-      <div class="muted small">${dstr(p.projekt.beginn)} · ${p.stromkreise.length} Kreise${
-        (p.projekt.dokumente || []).length ? ' · ' + esc(p.projekt.dokumente.join(', ')) : ''}</div>
+      <div><strong>${esc((archAdresse(e) || '').split('\n')[0] || 'Ohne Adresse')}${whg ? ' · ' + esc(flatLabel(whg)) : ''}</strong></div>
+      <div class="muted small">${dstr(archDatum(e))} · ${archKreise(e)} Kreise${
+        fotos ? ' · ' + fotos + ' Foto' + (fotos === 1 ? '' : 's') : ''}${
+        e.ablegerName ? ' · abgelegt von ' + esc(e.ablegerName) : ''}</div>
+      ${st ? '' : '<div class="muted small" style="margin-top:4px">Alter Eintrag – nur als Datei zu sichern</div>'}
       <div class="btn-row" style="margin-top:10px">
         <button class="btn ghost" data-arch="${i}">Erneut sichern</button>
         <button class="btn danger" data-adel="${i}">Löschen</button>
       </div>
-    </div>`).join('') : `<div class="rail-empty">Noch nichts abgelegt.</div>`;
-  $$('[data-arch]').forEach(b => b.onclick = () => {
-    const p = ARCH[+b.dataset.arch];
-    const blob = new Blob([JSON.stringify(p, null, 2)], {type:'application/json'});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = 'Pruefung_' + (p.projekt.beginn || '').slice(0,10) + '.json';
-    document.body.appendChild(a); a.click(); a.remove();
-  });
+    </div>`;
+  }).join('') : `<div class="rail-empty">Noch nichts abgelegt.</div>`;
+  $$('[data-arch]').forEach(b => b.onclick = () => erneutSichern(ARCH[+b.dataset.arch], b));
   $$('[data-adel]').forEach(b => b.onclick = () => {
+    const e = ARCH[+b.dataset.adel];
     showDialog({title:'Endgültig löschen?', ok:'Löschen', danger:true,
-      onOk:() => { ARCH.splice(+b.dataset.adel, 1); saveArch(); renderArchive(); }});
+      body:'Damit ist auch die Sicherung dieser Prüfung weg – ein fehlgeschlagener Export lässt sich danach nicht mehr wiederholen.',
+      onOk:() => {
+        const st = archStand(e);
+        ((st && st.photos) || []).forEach(f => { if(f && f.fid) Bilder.weg(f.fid).catch(() => {}); });
+        if(st && st.id && fbProjEin) try { FB.fn.set(FB.fn.ref(FB.db, 'fotos/' + st.id), null); } catch(x){}
+        ARCH.splice(+b.dataset.adel, 1); saveArch(); renderArchive();
+      }});
   });
+}
+
+/* "Erneut sichern" nimmt denselben Weg wie der Export im Abschluss: dieselben
+   Dateien, derselbe Kurzbefehl, dieselben Namen. Der abgelegte Stand wird dafür
+   kurz zum laufenden Projekt gemacht und danach zurückgetauscht – ein
+   JSON-Download hätte den fehlgeschlagenen Vorgang nicht wiederholt. */
+async function erneutSichern(e, knopf){
+  const st = archStand(e);
+  if(!st){                                  // Alteintrag ohne vollständigen Stand
+    const blob = new Blob([JSON.stringify(e, null, 2)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'Pruefung_' + new Date(archDatum(e)).toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    return;
+  }
+  const merk = PROJ;
+  const text = knopf ? knopf.textContent : '';
+  if(knopf){ knopf.textContent = 'baut …'; knopf.disabled = true; }
+  try {
+    PROJ = JSON.parse(JSON.stringify(st));
+    const d = PROJ.docs || {};
+    await ablegen({projekt:true, protokoll:true, beschriftung:!!d.beschriftung,
+                   material:!!d.material, fotos:(PROJ.photos || []).length > 0}, true);
+  } catch(x){ toast('Sichern nicht möglich'); }
+  finally {
+    PROJ = merk;
+    if(knopf){ knopf.textContent = text; knopf.disabled = false; }
+  }
 }
 
 /* ============================================================
