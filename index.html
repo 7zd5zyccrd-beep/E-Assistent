@@ -10,6 +10,24 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.56 09.09.2026  Erster Schritt des Firebase-Abgleichs. Der Zugang laeuft
+                    jetzt ueber ein Konto je Pruefer statt ueber die
+                    PBKDF2-Pruefsumme: auf dem Schlossbildschirm stehen Name und
+                    Passwort, die Adresse setzt die App aus dem Namen zusammen
+                    (<name>@bds.local). Die Zeile ZUGANG und das Werkzeug zum
+                    Passwortrechnen sind entfallen. Ein einmal angemeldetes
+                    Geraet oeffnet die App SOFORT aus dem localStorage, ohne auf
+                    Firebase zu warten - im Keller ohne Empfang wird
+                    weitergearbeitet, nur ohne Abgleich. Abgeglichen werden die
+                    betrieblichen Einstellungen (Messgeraete, Charakteristiken,
+                    Nennstroeme, FI-Typen, sonstige Geraete, Kabelarten,
+                    Material-Stamm, Auftraggeber, Auftragnehmer), je Liste ein
+                    eigener Pfad unter "betrieb/". Pruefername und Reihenfolge
+                    im Messen-Modus bleiben persoenlich und liegen nur lokal;
+                    der Name wandert einmal nach "nutzer/<uid>/name", damit
+                    spaeter auf den Projekten "Hagen" steht und nicht die
+                    Kennung. Ist der Ast "betrieb/" noch leer, schiebt das erste
+                    angemeldete Geraet seine Einstellungen hinauf.
   v1.55 08.09.2026  Der Zoom per Doppeltipp ist abgeschaltet (touch-action:
                     manipulation auf html und body): schnelles Tippen
                     nacheinander vergroesserte sonst die Seite. Wischen und
@@ -951,31 +969,9 @@ html.locked, html.locked body { overflow:hidden; height:100%; }
 .lock-dots{ display:flex; gap:9px; justify-content:center; margin-top:34px; }
 .lock-dots i{ width:7px; height:7px; border-radius:50%; background:var(--brand); }
 .lock-dots i.o{ background:none; box-shadow:inset 0 0 0 1.5px var(--brand); }
-/* Werkzeug: rechnet aus einem Passwort die fertige Zeile ZUGANG */
-.lock-link{
-  display:block; width:100%; margin:18px 0 0; padding:6px 0;
-  background:none; border:0; cursor:pointer;
-  font-family:var(--f-body); font-size:13px; color:#96A088;
-  text-decoration:underline; text-underline-offset:3px;
-}
-.lock-tool{ margin-top:16px; text-align:left; }
-.lock-tool[hidden]{ display:none; }
-.lock-tool p{ font-size:12px; color:#96A088; margin:0 0 12px; line-height:1.5; }
-#lockCalc{
-  width:100%; height:var(--tap); cursor:pointer;
-  background:#232A1E; color:#fff; border:1px solid #454E3E; border-radius:var(--r-btn);
-  font-family:var(--f-label); font-weight:600; font-size:16px;
-  letter-spacing:.05em; text-transform:uppercase;
-}
-#lockCalc:active{ background:#2C3327; }
-#lockOut{
-  width:100%; box-sizing:border-box; margin-top:12px; padding:10px 12px;
-  background:#232A1E; color:#D9E4CB;
-  border:1px solid #454E3E; border-radius:var(--r-btn);
-  font-family:var(--f-data); font-size:12px; line-height:1.55;
-  word-break:break-all; -webkit-user-select:text; user-select:text;
-}
-#lockOut[hidden]{ display:none; }
+/* Hinweiszeile unter dem Knopf: "wird geprüft", "kein Netz" und dergleichen */
+.lock-info{ font-size:12px; color:#96A088; margin:14px 0 0; line-height:1.5; }
+.lock-info[hidden]{ display:none; }
 @media (prefers-reduced-motion:no-preference){
   #lockScreen.shake .lock-card{ animation:lockShake .3s; }
 }
@@ -989,24 +985,17 @@ html.locked, html.locked body { overflow:hidden; height:100%; }
     <div class="lock-mark" role="img" aria-label="BDS"></div>
     <h2>E-Assistent</h2>
     <p class="lock-note">Zugang nur für Mitarbeiter.</p>
+    <label class="lock-field"><span>Name</span>
+      <input type="text" id="lockUser" autocomplete="username" enterkeyhint="next"
+             autocapitalize="off" autocorrect="off" spellcheck="false">
+    </label>
     <label class="lock-field"><span>Passwort</span>
       <input type="password" id="lockPw" autocomplete="current-password" enterkeyhint="go"
              autocapitalize="off" autocorrect="off" spellcheck="false">
     </label>
-    <p class="lock-err" id="lockErr" hidden>Passwort stimmt nicht.</p>
+    <p class="lock-err" id="lockErr" hidden>Name oder Passwort stimmt nicht.</p>
     <button id="lockGo" type="button">Öffnen</button>
-    <button class="lock-link" id="lockToolBtn" type="button">Passwort festlegen</button>
-    <div class="lock-tool" id="lockTool" hidden>
-      <p>Rechnet aus dem gewünschten Passwort die Zeile für die Datei. Sie ersetzt
-         dort die Zeile, die mit <b>var ZUGANG</b> beginnt. Danach fragt die App auf
-         allen Geräten wieder nach.</p>
-      <label class="lock-field"><span>Neues Passwort</span>
-        <input type="text" id="lockNew" autocomplete="off"
-               autocapitalize="off" autocorrect="off" spellcheck="false">
-      </label>
-      <button id="lockCalc" type="button">Zeile berechnen</button>
-      <div id="lockOut" hidden></div>
-    </div>
+    <p class="lock-info" id="lockInfo" hidden></p>
     <div class="lock-dots" aria-hidden="true">
       <i></i><i></i><i></i><i class="o"></i><i></i><i class="o"></i><i></i><i></i>
     </div>
@@ -1022,141 +1011,223 @@ window.addEventListener('error', e => {
 </script>
 <script>
 /* ============================================================
-   Zugangssperre
-   Das Passwort steht nicht in dieser Datei, nur ein Prüfwert:
-   PBKDF2-SHA-256 über 250.000 Runden mit eigenem Salz. Ein neues
-   Passwort bedeutet einen neuen Prüfwert – dann fragt die App auf
-   allen Geräten wieder nach. Die Zeile unten wird mit dem Werkzeug
-   auf dem Schlossbildschirm berechnet und hier eingesetzt; solange
-   sie leer ist, bleibt die App zu.
-   Ein Schild, kein Schloss: wer den Quelltext liest, kommt daran vorbei.
+   Zugang und Firebase-Anbindung
+
+   Jeder Prüfer hat ein eigenes Konto. Getippt wird nur der Name,
+   die Adresse setzt die App daraus zusammen (<name>@bds.local).
+   Die Anmeldung bleibt je Gerät gemerkt.
+
+   Der Schlüssel unten ist kein Passwort, sondern eine Projekt-
+   kennung, und gehört in den Quelltext. Geschützt wird über die
+   Anmeldung und die Regeln der Datenbank; deshalb darf in
+   Authentication niemand Konten selbst anlegen können.
+
+   WICHTIG: ein Gerät, das sich schon einmal angemeldet hat, öffnet
+   die App SOFORT aus dem localStorage, ohne auf Firebase zu warten.
+   Im Verteilerraum ohne Empfang lädt das SDK gar nicht - gearbeitet
+   wird trotzdem, nur ohne Abgleich. Der localStorage bleibt führend,
+   Firebase ist der Spiegel.
    ============================================================ */
 (function(){
-  var ZUGANG = { salz:'4a1d2b0f3b055bc44511ec1b3bb636d7', pruef:'eaf6658ba06f8522cddee7ac5830f30651aebf521be2fa49b274be7b8e56e4aa', runden:250000 };
+  var CONF = {
+    apiKey: "AIzaSyAPKUz3tTVGbB1QulZjIo6EgHJV-XaOsuY",
+    authDomain: "e-assistent.firebaseapp.com",
+    databaseURL: "https://e-assistent-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "e-assistent",
+    storageBucket: "e-assistent.firebasestorage.app",
+    messagingSenderId: "835912510732",
+    appId: "1:835912510732:web:d5f2e98c58f9f0a0146d29"
+  };
+  var DOMAENE = '@bds.local';
+  var SDK     = 'https://www.gstatic.com/firebasejs/10.12.2/';
+  var K_OFFEN = 'bds.offen';      // dieses Gerät war schon angemeldet
+  var K_KONTO = 'bds.konto';      // gemerkter Kontoname
 
-  var KEY  = 'bds.zugang';
-  var root = document.documentElement;
+  var root  = document.documentElement;
+  var offen = false;
 
-  function stored(){ try { return localStorage.getItem(KEY); } catch(e){ return null; } }
-  function open_(){
+  function les(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+  function merk(k, v){
+    try { if(v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){}
+  }
+  /* Name säubern: klein, ohne Leerzeichen, Umlaute ausgeschrieben. Wer
+     "Hagen " tippt, soll dasselbe Konto treffen wie "hagen". */
+  function kontoName(s){
+    return String(s || '').trim().toLowerCase()
+      .replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
+      .replace(/[^a-z0-9._-]/g,'');
+  }
+
+  function oeffnen(){
+    if(offen) return;
+    offen = true;
     root.classList.remove('locked');
     var s = document.getElementById('lockScreen');
-    if (s) s.hidden = true;
+    if(s) s.hidden = true;
   }
-  function lock(){
-    try { localStorage.removeItem(KEY); } catch(e){}
-    location.reload();
+  function zeigen(){
+    offen = false;
+    root.classList.add('locked');
+    var s = document.getElementById('lockScreen');
+    if(s) s.hidden = false;
   }
-  window.bdsLock = lock;
 
-  /* Ein einmal entsperrtes Gerät bleibt offen: verglichen wird der gemerkte
-     Prüfwert, gerechnet wird dabei nichts. */
-  if (ZUGANG.pruef && stored() === ZUGANG.pruef){ open_(); return; }
+  /* "Gerät sperren": abmelden und neu laden. Die Projektdaten im
+     localStorage bleiben unangetastet. */
+  function sperren(){
+    merk(K_OFFEN, null);
+    var fertig = function(){ location.reload(); };
+    try {
+      if(FB.auth && FB.fn && FB.fn.signOut) FB.fn.signOut(FB.auth).then(fertig, fertig);
+      else fertig();
+    } catch(e){ fertig(); }
+  }
+  window.bdsLock = sperren;
+
+  var loeser;
+  var FB = window.FB = {
+    bereit: new Promise(function(res){ loeser = res; }),   // löst erst nach der Anmeldung
+    konto:  les(K_KONTO) || '',
+    uid:    null,
+    auth:   null,
+    db:     null,
+    fn:     null,
+    lage:   'lädt'      // 'lädt' | 'an' | 'offline' | 'ab'
+  };
+
   root.classList.add('locked');
+  if(les(K_OFFEN) === '1') oeffnen();          // schon angemeldet: nicht warten
 
-  var subtle = (window.crypto && window.crypto.subtle) ? window.crypto.subtle : null;
+  var domBereit = new Promise(function(res){
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', res);
+    else res();
+  });
 
-  function hex(buf){
-    var b = new Uint8Array(buf), s = '';
-    for (var i = 0; i < b.length; i++) s += ('0' + b[i].toString(16)).slice(-2);
-    return s;
-  }
-  function bytes(hexStr){
-    var a = [];
-    for (var i = 0; i + 1 < hexStr.length; i += 2) a.push(parseInt(hexStr.substr(i, 2), 16));
-    return new Uint8Array(a);
-  }
-  function rechne(wort, salzHex, runden){
-    return subtle.importKey('raw', new TextEncoder().encode(wort), 'PBKDF2', false, ['deriveBits'])
-      .then(function(k){
-        return subtle.deriveBits(
-          { name:'PBKDF2', salt:bytes(salzHex), iterations:runden, hash:'SHA-256' }, k, 256);
-      })
-      .then(hex);
+  /* Das SDK kommt als Modul von gstatic und wird dynamisch geladen: ohne Netz
+     schlägt das fehl, und genau dann soll die App trotzdem laufen. */
+  var laden = Promise.all([
+    import(SDK + 'firebase-app.js'),
+    import(SDK + 'firebase-auth.js'),
+    import(SDK + 'firebase-database.js')
+  ]).then(function(m){
+    var app  = m[0].initializeApp(CONF);
+    var auth = m[1].getAuth(app);
+    FB.auth  = auth;
+    FB.db    = m[2].getDatabase(app);
+    FB.fn = {
+      signIn:  m[1].signInWithEmailAndPassword,
+      signOut: m[1].signOut,
+      ref:     m[2].ref,
+      get:     m[2].get,
+      set:     m[2].set,
+      onValue: m[2].onValue
+    };
+    return m[1].setPersistence(auth, m[1].browserLocalPersistence)
+      .catch(function(){})                        // Persistenz ist Kür, nicht Pflicht
+      .then(function(){
+        return new Promise(function(res){
+          var ab = m[1].onAuthStateChanged(auth, function(u){ if(ab) ab(); res(u || null); },
+                                                 function(){ if(ab) ab(); res(null); });
+        });
+      });
+  });
+
+  function angemeldet(user){
+    FB.uid  = user.uid;
+    FB.lage = 'an';
+    merk(K_OFFEN, '1');
+    if(FB.konto) merk(K_KONTO, FB.konto);
+    oeffnen();
+    loeser(FB);
   }
 
-  document.addEventListener('DOMContentLoaded', function(){
+  Promise.all([laden, domBereit]).then(function(a){
+    var user = a[0];
     var pw   = document.getElementById('lockPw');
+    var nm   = document.getElementById('lockUser');
     var err  = document.getElementById('lockErr');
+    var info = document.getElementById('lockInfo');
     var go   = document.getElementById('lockGo');
     var scr  = document.getElementById('lockScreen');
-    var tBtn = document.getElementById('lockToolBtn');
-    var tool = document.getElementById('lockTool');
-    var neu  = document.getElementById('lockNew');
-    var calc = document.getElementById('lockCalc');
-    var out  = document.getElementById('lockOut');
-    if (!pw || !go) return;
 
-    function meldung(text){ err.textContent = text; err.hidden = false; }
-
-    /* PBKDF2 läuft über crypto.subtle, und das gibt es nur über https.
-       Direkt vom Gerät geöffnet, fehlt es – dann hilft nur die Adresse. */
-    if (!subtle){
-      meldung('Bitte die App über ihre Adresse öffnen (https). Direkt vom Gerät geöffnet, lässt sie sich nicht entsperren.');
-      go.disabled = true;
-      if (tBtn) tBtn.hidden = true;
+    if(user){
+      /* Der Kontoname steckt in der Adresse; so steht er auch nach einem
+         geleerten localStorage wieder richtig da. */
+      FB.konto = String(user.email || '').split('@')[0] || FB.konto;
+      angemeldet(user);
       return;
     }
-    if (!ZUGANG.pruef){
-      meldung('In dieser Datei ist noch kein Passwort hinterlegt. Unten festlegen und die berechnete Zeile in die Datei übernehmen.');
-      go.disabled = true;
+
+    /* Nicht angemeldet. War das Gerät vorher offen, ist das Konto inzwischen
+       gelöscht oder das Passwort geändert worden - dann wieder zumachen. */
+    if(les(K_OFFEN) === '1'){
+      merk(K_OFFEN, null);
+      zeigen();
+      if(info){ info.hidden = false;
+        info.textContent = 'Die Anmeldung dieses Geräts gilt nicht mehr. Bitte neu anmelden.'; }
+    }
+    FB.lage = 'ab';
+    if(!pw || !go || !nm) return;
+
+    nm.value = FB.konto;
+    if(nm.value) pw.focus(); else nm.focus();
+
+    function meldung(text){ err.textContent = text; err.hidden = false; }
+    function ruettel(){
+      scr.classList.add('shake');
+      setTimeout(function(){ scr.classList.remove('shake'); }, 320);
     }
 
     var laeuft = false;
-    function tryOpen(){
-      if (laeuft || !ZUGANG.pruef) return;
+    function anmelden(){
+      if(laeuft) return;
+      var name = kontoName(nm.value);
+      if(!name){ meldung('Bitte den Namen eintragen.'); nm.focus(); return; }
+      if(!pw.value){ meldung('Bitte das Passwort eintragen.'); pw.focus(); return; }
       laeuft = true;
       var beschriftung = go.textContent;
-      go.textContent = 'prüft …'; go.disabled = true;
-      rechne(pw.value, ZUGANG.salz, ZUGANG.runden).then(function(wert){
+      go.textContent = 'meldet an …'; go.disabled = true;
+      err.hidden = true;
+      FB.fn.signIn(FB.auth, name + DOMAENE, pw.value).then(function(c){
+        FB.konto = name;
+        pw.value = '';
+        angemeldet(c.user);
+      }).catch(function(e){
         laeuft = false; go.textContent = beschriftung; go.disabled = false;
-        if (wert === ZUGANG.pruef){
-          try { localStorage.setItem(KEY, ZUGANG.pruef); } catch(e){}
-          open_();
-          pw.value = '';
-        } else {
-          meldung('Passwort stimmt nicht.');
-          scr.classList.add('shake');
-          setTimeout(function(){ scr.classList.remove('shake'); }, 320);
-          pw.select();
-        }
-      }).catch(function(){
-        laeuft = false; go.textContent = beschriftung; go.disabled = false;
-        meldung('Das Passwort ließ sich nicht prüfen.');
+        var c = (e && e.code) || '';
+        if(c === 'auth/network-request-failed')
+          meldung('Keine Verbindung. Zum ersten Anmelden auf diesem Gerät wird Netz gebraucht.');
+        else if(c === 'auth/too-many-requests')
+          meldung('Zu viele Versuche. Bitte später noch einmal.');
+        else if(c === 'auth/invalid-email')
+          meldung('Der Name passt nicht. Nur der Vorname, ohne Adresse.');
+        else { meldung('Name oder Passwort stimmt nicht.'); ruettel(); pw.select(); }
       });
     }
-    go.addEventListener('click', tryOpen);
-    pw.addEventListener('keydown', function(e){ if (e.key === 'Enter') tryOpen(); });
-    pw.addEventListener('input', function(){ if (ZUGANG.pruef) err.hidden = true; });
+    go.addEventListener('click', anmelden);
+    nm.addEventListener('keydown', function(e){ if(e.key === 'Enter') pw.focus(); });
+    pw.addEventListener('keydown', function(e){ if(e.key === 'Enter') anmelden(); });
+    pw.addEventListener('input', function(){ err.hidden = true; });
+    nm.addEventListener('input', function(){ err.hidden = true; });
 
-    /* Werkzeug: aus einem Passwort die fertige Zeile für die Datei rechnen */
-    if (tBtn) tBtn.addEventListener('click', function(){
-      tool.hidden = !tool.hidden;
-      tBtn.textContent = tool.hidden ? 'Passwort festlegen' : 'Werkzeug schließen';
-      if (!tool.hidden && neu) neu.focus();
-    });
-    if (calc) calc.addEventListener('click', function(){
-      var wort = (neu.value || '').trim();
-      out.hidden = false;
-      if (!wort){ out.textContent = 'Bitte ein Passwort eintippen.'; return; }
-      var salz = hex(crypto.getRandomValues(new Uint8Array(16)));
-      var beschriftung = calc.textContent;
-      calc.textContent = 'rechnet …'; calc.disabled = true;
-      out.textContent = '…';
-      rechne(wort, salz, 250000).then(function(wert){
-        calc.textContent = beschriftung; calc.disabled = false;
-        out.textContent = "  var ZUGANG = { salz:'" + salz + "', pruef:'" + wert + "', runden:250000 };";
-      }).catch(function(){
-        calc.textContent = beschriftung; calc.disabled = false;
-        out.textContent = 'Die Berechnung ist fehlgeschlagen.';
-      });
+  }).catch(function(){
+    /* Das SDK ließ sich nicht laden - kein Netz oder gesperrt. */
+    FB.lage = 'offline';
+    if(les(K_OFFEN) === '1') return;            // schon offen, es wird lokal gearbeitet
+    domBereit.then(function(){
+      var go   = document.getElementById('lockGo');
+      var info = document.getElementById('lockInfo');
+      if(go) go.disabled = true;
+      if(info){ info.hidden = false;
+        info.textContent = 'Keine Verbindung zur Anmeldung. Auf einem Gerät, das sich noch nie ' +
+                           'angemeldet hat, lässt sich die App ohne Netz nicht öffnen.'; }
     });
   });
 
   /* "Gerät sperren" in den Einstellungen */
   document.addEventListener('click', function(e){
     var t = e.target && e.target.closest ? e.target.closest('#btnLock') : null;
-    if (t) lock();
+    if(t) sperren();
   });
 })();
 </script>
@@ -1449,6 +1520,7 @@ window.addEventListener('error', e => {
     <section class="view" id="view-settings">
       <div class="panes">
         <div class="pane">                     <!-- zweispaltig links: Vorgaben -->
+          <p class="muted small" style="margin:0 0 14px">Prüfer und Reihenfolge im Messen-Modus gelten nur auf diesem Gerät. Alles Übrige – Adressen und Listen – ist für alle gleich und wird abgeglichen.</p>
           <label class="field"><span>Prüfer (Vorgabe)</span><input id="setTester"></label>
           <label class="field"><span>Messgerät (Vorgabe)</span><select id="setDevice"></select></label>
           <label class="field"><span>Reihenfolge im Messen-Modus</span><select id="setMessfolge">
@@ -1472,8 +1544,9 @@ window.addEventListener('error', e => {
           <p class="muted small" style="margin:0 0 14px">Feste TE-Breite optional mit Komma anhängen, z.B. „Hauptschalter, 3".</p>
           <label class="field"><span>Kabelarten</span><textarea id="setCables"></textarea></label>
           <label class="field"><span>Material-Stamm</span><textarea id="setMaterial" style="min-height:200px"></textarea></label>
-          <div class="eyebrow">Zugang</div>
-          <p class="muted small">Sperrt die App auf diesem Gerät. Beim nächsten Öffnen wird das Passwort wieder abgefragt. „App neu laden“ holt die Datei frisch vom Server, ohne die Daten anzurühren.</p>
+          <div class="eyebrow">Zugang und Abgleich</div>
+          <p class="muted small" id="fbStatus" style="margin-bottom:6px"></p>
+          <p class="muted small">„Gerät sperren“ meldet dieses Gerät ab; beim nächsten Öffnen werden Name und Passwort wieder abgefragt. Die Projekte auf dem Gerät bleiben erhalten. „App neu laden“ holt die Datei frisch vom Server, ohne die Daten anzurühren.</p>
           <div class="row" style="margin-bottom:14px">
             <button class="btn ghost" id="btnLock">Gerät sperren</button>
             <button class="btn ghost" id="btnReload">App neu laden</button>
@@ -1597,8 +1670,8 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.55';                    // siehe Änderungsliste im Dateikopf
-const BUILD        = VERSION + ' · 08.09.2026';
+const VERSION      = 'v1.56';                    // siehe Änderungsliste im Dateikopf
+const BUILD        = VERSION + ' · 09.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
 const DAUER_WARN   = 100;                        // zu lang: unplausibel im Protokoll
@@ -3785,7 +3858,7 @@ function renderMaterial(){
         showDialog({title:'Aus der Liste entfernen?', body:esc(n), ok:'Entfernen', danger:true,
           onOk:() => {
             CFG.material = CFG.material.filter(x => x !== n);   // bleibt gestrichen, auch künftig
-            saveCfg();
+            saveCfg(); fbHoch();
             delete matDraft[n];
             renderMaterial();
           }});
@@ -5515,6 +5588,7 @@ function renderSettings(){
   $('#setSpecials').value = CFG.specials.join('\n');
   $('#setCables').value   = CFG.cables.join('\n');
   $('#setMaterial').value = CFG.material.join('\n');
+  fbStatusZeigen();
 }
 const lines = el => el.value.split('\n').map(s => s.trim()).filter(Boolean);
 $('#btnSaveSettings').onclick = () => {
@@ -5533,7 +5607,10 @@ $('#btnSaveSettings').onclick = () => {
   CFG.material = lines($('#setMaterial'));
   const sel = $('#setDevice').value;
   if(sel && CFG.devices.includes(sel)) CFG.devices = [sel, ...CFG.devices.filter(d => d !== sel)];
-  saveCfg(); toast('Einstellungen gespeichert'); go('home');
+  saveCfg();
+  fbHoch(); fbNameHoch();          // betriebliche Listen und Adressen für alle
+  fbFremd = false;
+  toast('Einstellungen gespeichert'); go('home');
 };
 
 /* GitHub Pages lässt den Browser zehn Minuten lang nicht beim Server nachfragen.
@@ -5541,6 +5618,81 @@ $('#btnSaveSettings').onclick = () => {
 $('#btnReload').onclick = () => {
   location.replace(location.pathname + '?v=' + Date.now());
 };
+
+/* ============================================================
+   ABGLEICH DER BETRIEBLICHEN EINSTELLUNGEN
+
+   Betrieblich heißt: für alle gleich. Prüfername und Reihenfolge im
+   Messen-Modus bleiben persönlich, sie gehen nie hinauf – die Messfolge ist
+   auf die Arbeitsweise des Einzelnen zugeschnitten.
+
+   Je Liste ein eigener Pfad unter "betrieb/", nicht ein Block: ändert einer
+   die Kabelarten, während ein anderer am Auftraggeber ist, stören sie sich
+   nicht. Übertragen wird zeilenweiser Text – genau die Form, die auch in den
+   Feldern steht. Das erspart das Gestolper über leere Listen, die in der
+   Datenbank sonst als null ankämen und nicht von "nichts geändert" zu
+   unterscheiden wären.
+
+   Ohne Netz passiert hier gar nichts; gearbeitet wird aus dem localStorage.
+   ============================================================ */
+const FB_LISTEN = ['devices','chars','rated','rcds','specials','cables','material'];
+const FB_TEXTE  = ['auftraggeber','auftragnehmer'];
+const FB_ALLE   = [...FB_LISTEN, ...FB_TEXTE];
+let fbEin      = false;      // Abgleich läuft
+let fbEmpfang  = false;      // gerade wird empfangen: nicht gleich zurückschreiben
+let fbFremd    = false;      // während die Einstellungen offen standen, kam eine Änderung
+
+const fbWert = k => FB_LISTEN.includes(k) ? (CFG[k] || []).join('\n') : (CFG[k] || '');
+function fbSetz(k, txt){
+  if(FB_LISTEN.includes(k)) CFG[k] = String(txt).split('\n').map(s => s.trim()).filter(Boolean);
+  else CFG[k] = String(txt);
+}
+
+function fbStatusZeigen(){
+  const p = $('#fbStatus');
+  if(!p) return;
+  if(fbEin) p.textContent = fbFremd
+    ? `Angemeldet als ${FB.konto}. Ein Kollege hat Einstellungen geändert – sichtbar, sobald du diese Ansicht verlässt.`
+    : `Abgleich läuft, angemeldet als ${FB.konto}.`;
+  else if(FB.lage === 'offline') p.textContent = 'Kein Netz – es wird nur auf diesem Gerät gearbeitet. Der Abgleich holt später auf.';
+  else p.textContent = 'Abgleich noch nicht verbunden – es wird auf diesem Gerät gearbeitet.';
+}
+
+/* Eigene Einstellungen hinaufschieben. Wird beim Speichern gerufen und beim
+   allerersten Mal, solange der Ast "betrieb/" noch leer ist. */
+function fbHoch(){
+  if(!fbEin || fbEmpfang) return;
+  const {ref, set} = FB.fn;
+  FB_ALLE.forEach(k => { try { set(ref(FB.db, 'betrieb/' + k), fbWert(k)); } catch(e){} });
+}
+/* Der eigene Name, damit später auf den Projekten "Hagen" steht und nicht die
+   Kennung. Er wird geschrieben, nie von anderen Geräten zurückgelesen. */
+function fbNameHoch(){
+  if(!fbEin) return;
+  const {ref, set} = FB.fn;
+  try { set(ref(FB.db, 'nutzer/' + FB.uid + '/name'), CFG.tester || FB.konto); } catch(e){}
+}
+
+FB.bereit.then(() => {
+  const {ref, get, set, onValue} = FB.fn;
+  fbEin = true;
+  fbNameHoch();
+  get(ref(FB.db, 'betrieb')).then(snap => {
+    if(!snap.exists()) fbHoch();                 // erste Inbetriebnahme
+    FB_ALLE.forEach(k => onValue(ref(FB.db, 'betrieb/' + k), s => {
+      const v = s.val();
+      if(v == null || v === fbWert(k)) return;
+      fbEmpfang = true;
+      fbSetz(k, v);
+      saveCfg();
+      fbEmpfang = false;
+      /* Steht die Einstellungsansicht gerade offen, wird sie NICHT neu
+         aufgebaut – das würde eine begonnene Eingabe wegwischen. */
+      if(current === 'settings'){ fbFremd = true; fbStatusZeigen(); }
+    }));
+    fbStatusZeigen();
+  }).catch(() => { fbEin = false; fbStatusZeigen(); });
+});
 
 /* ---------- Start ---------- */
 window.addEventListener('resize', () => { if(current === 'finish') initPad(); });
