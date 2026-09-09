@@ -10,6 +10,15 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.70 09.09.2026  Fehler aus v1.69: die Nachschiebe-Runde stiess alle Fotos
+                    der Ablage gleichzeitig an - bei sechzig Eintraegen also
+                    hundert Uebertragungen zu je drei Megabyte auf einmal, und
+                    ein frisch aufgenommenes Bild stand hinter allen anderen.
+                    Es laeuft jetzt nacheinander ueber eine Warteschlange, die
+                    kleinen Vorschauen vor den Originalen, das offene Projekt
+                    vor der Ablage und ein gerade aufgenommenes Foto ganz vorn.
+                    Ohne Verbindung ruht die Schlange und laeuft weiter, sobald
+                    das Netz zurueck ist.
   v1.69 09.09.2026  Zwei Luecken beim Hochschieben geschlossen. Die
                     Nachschiebe-Runde ging nur ueber die offenen Projekte: ein
                     Foto, das beim Ablegen noch nicht oben war, waere fuer immer
@@ -1919,7 +1928,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.69';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.70';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4837,21 +4846,53 @@ async function fotoHoch(pid, f){
 /* Nach einer Funkpause und bei jedem Start nachholen, was liegengeblieben ist –
    auch in der Ablage. Ein Foto, das beim Ablegen noch nicht oben war, wäre
    sonst für immer nur auf diesem Gerät, und genau das soll die Ablage
-   verhindern. Die Vorschau hängt am selben Mechanismus. */
+   verhindern.
+
+   Das läuft NACHEINANDER, nicht alles auf einmal: bei sechzig Ablage-Einträgen
+   kämen sonst hundert Übertragungen zu je drei Megabyte gleichzeitig, und ein
+   frisch aufgenommenes Bild stünde hinter allen anderen. Die kleinen Vorschauen
+   gehen dabei vor den Originalen, und was gerade aufgenommen wurde, ganz nach
+   vorn. */
+let qVor = [], qOrig = [], qLaeuft = false;
+
+async function vorschauSichern(pid, f){
+  if(f.vor) return;
+  let v = null;
+  try { v = await Bilder.lesen(VOR(f.fid)); } catch(e){}
+  if(!v){
+    try {
+      const gross = await Bilder.lesen(f.fid);
+      if(!gross) return;                        // liegt hier gar nicht
+      v = await vorschauBauen(gross);
+      await Bilder.legen(VOR(f.fid), v);
+    } catch(e){ return; }
+  }
+  if(await vorschauHoch(pid, f, v)) fotoStandSichern(pid);
+}
+
+function fotoEinreihen(pid, f, vorn){
+  if(!f || !f.fid) return;
+  if(!f.vor  && !qVor.some(x => x.f === f))  (vorn ? qVor.unshift  : qVor.push ).call(qVor,  {pid, f});
+  if(!f.hoch && !qOrig.some(x => x.f === f)) (vorn ? qOrig.unshift : qOrig.push).call(qOrig, {pid, f});
+  qAbarbeiten();
+}
+async function qAbarbeiten(){
+  if(qLaeuft) return;
+  qLaeuft = true;
+  try {
+    while(qVor.length || qOrig.length){
+      if(!fbProjEin || !netzAn) break;          // ohne Verbindung später weiter
+      if(qVor.length){ const a = qVor.shift();  await vorschauSichern(a.pid, a.f); }
+      else           { const a = qOrig.shift(); await fotoHoch(a.pid, a.f); }
+    }
+  } finally { qLaeuft = false; }
+}
 function fotosNachschieben(){
-  const runde = (pid, f) => {
-    if(!f || !f.fid) return;
-    if(!f.hoch) fotoHoch(pid, f);
-    if(!f.vor) Bilder.lesen(VOR(f.fid))
-      .then(v => v ? v : Bilder.lesen(f.fid).then(g => g ? vorschauBauen(g)
-        .then(nv => Bilder.legen(VOR(f.fid), nv).then(() => nv)) : null))
-      .then(v => { if(v) return vorschauHoch(pid, f, v).then(ok => { if(ok) fotoStandSichern(pid); }); })
-      .catch(() => {});
-  };
-  PROJECTS.forEach(P => (P.photos || []).forEach(f => runde(P.id, f)));
+  if(PROJ) (PROJ.photos || []).forEach(f => fotoEinreihen(PROJ.id, f, true));   // offenes Projekt zuerst
+  PROJECTS.forEach(P => (P.photos || []).forEach(f => fotoEinreihen(P.id, f)));
   ARCH.forEach(e => {
     const st = archStand(e);
-    if(st && st.id) (st.photos || []).forEach(f => runde(st.id, f));
+    if(st && st.id) (st.photos || []).forEach(f => fotoEinreihen(st.id, f));
   });
 }
 async function fotoHolen(pid, fid){
@@ -4973,13 +5014,12 @@ $('#photoFile').onchange = async e => {
   const eintrag = {fid, typ: datei.type || 'image/jpeg', groesse: datei.size, zeit: Date.now()};
   PROJ.photos.push(eintrag);
   saveProj();
-  /* Vorschau zuerst: sie ist in Sekunden oben und füllt die Kachel beim
-     Kollegen, während das Original noch unterwegs ist. */
+  /* Vorschau zuerst örtlich bauen, damit die Kachel sofort steht. Das
+     Hochschieben übernimmt die Warteschlange – vorn, vor allem Nachzügler. */
   vorschauBauen(datei)
-    .then(v => Bilder.legen(VOR(fid), v).then(() => vorschauHoch(PROJ.id, eintrag, v)))
-    .then(ok => { if(ok) fotoStandSichern(PROJ.id); })
-    .catch(() => {});
-  fotoHoch(PROJ.id, eintrag);              // im Hintergrund, ohne die Ansicht aufzuhalten
+    .then(v => Bilder.legen(VOR(fid), v))
+    .catch(() => {})
+    .then(() => fotoEinreihen(PROJ.id, eintrag, true));
   renderPhotos();
   /* Wird das Foto erst im Abschluss aufgenommen, muss es auch hinausgehen. Der
      Fingerabdruck wird gleich fortgeschrieben, damit die Vorwahl beim nächsten
