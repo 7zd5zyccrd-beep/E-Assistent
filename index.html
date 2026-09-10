@@ -10,6 +10,24 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.78 09.09.2026  Aufgeraeumt, was der Abgleich ueberfluessig gemacht hat. Der
+                    Knopf "Pruefdaten ablegen" im Verteiler ist weg, samt
+                    Auswahlfenster: er stand unter "Weitergeben", legte aber
+                    tatsaechlich ab - also am Abschluss vorbei, ohne
+                    Unterschrift und ohne die Angaben zur Bewertung. Weitergeben
+                    erledigt jetzt der Abgleich. "Projekt aus Datei uebernehmen"
+                    bleibt, damit sich alte Weitergabe-Dateien noch oeffnen
+                    lassen. Der Hinweis auf der Startseite zeigt nur noch die
+                    Warnung fuer Browser ohne dauerhaften Speicher; dass die
+                    Daten nur oertlich liegen, stimmt seit dem Abgleich nicht
+                    mehr.
+  v1.77 09.09.2026  Zwei Nachbesserungen am Ansehen aus der Ablage. Nach dem
+                    Export blieb die Ansicht im Abschluss stehen - sie kehrt
+                    jetzt in die Ablage zurueck, denn dort kam man her (abgelegt
+                    wird dabei weiterhin nichts, der Eintrag liegt ja schon
+                    dort). Und der Zurueck-Pfeil in der Ablage war danach tot:
+                    der Stapel enthielt nur "archive" und war nach dem
+                    Zurueckgehen leer. Er traegt jetzt "home" darunter.
   v1.76 09.09.2026  In der Ablage steht zwischen "Erneut sichern" und "Loeschen"
                     jetzt "Ansehen": der abgelegte Stand laesst sich oeffnen und
                     nachbessern, ohne dass der Eintrag die Ablage verlaesst.
@@ -1641,8 +1659,6 @@ window.addEventListener('error', e => {
       <div class="eyebrow" id="boardDocTitle">Dokumente</div>
       <div class="chk-grid" id="boardDocOpts"></div>
       <div id="boardDocActions" style="margin-top:10px"></div>
-      <div class="eyebrow">Weitergeben</div>
-      <button class="btn ghost" id="btnHandover">Prüfdaten ablegen</button>
       <div class="actionbar"><div class="inner">
         <button class="btn accent" id="btnAddCircuit">Hinzufügen</button>
         <button class="btn primary" id="btnToFinish" style="margin-top:10px">Abschluss</button>
@@ -2017,7 +2033,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.76';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.78';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -2569,9 +2585,12 @@ function renderHome(){
   $$('#homeMain [data-mode]').forEach(b => b.onclick = () => { homeMode = b.dataset.mode; go('mode'); });
 
   $('#buildTag').textContent = BUILD;
-  $('#storeHint').textContent = Store.persistent
-    ? 'Daten liegen lokal auf diesem Gerät. Beim Ablegen gehen sie an den Kurzbefehl und wandern in die Ablage.'
-    : 'Achtung: Dieser Browser speichert nichts dauerhaft – Daten gehen beim Schließen verloren. Auf einem echten Webserver funktioniert die Sicherung.';
+  /* Im Normalfall steht hier nichts: dass die Daten „lokal auf diesem Gerät"
+     liegen, stimmt seit dem Abgleich nicht mehr. Die Warnung bleibt – trifft
+     sie zu, gehen vor allem die Fotos beim Schließen verloren, denn die liegen
+     ausschließlich auf dem Gerät. */
+  $('#storeHint').textContent = Store.persistent ? ''
+    : 'Achtung: Dieser Browser speichert nichts dauerhaft – Fotos und offene Eingaben gehen beim Schließen verloren. Über die richtige Adresse aufgerufen funktioniert die Sicherung.';
 }
 
 /* --- Untermenü je Hauptoption --- */
@@ -5258,8 +5277,6 @@ $('#photoFile').onchange = async e => {
   toast('Foto gesichert');
 };
 
-$('#btnHandover').onclick = () => ablageDialog();
-
 $('#btnImport').onclick = () => $('#importFile').click();
 $('#importFile').onchange = e => {
   const f = e.target.files && e.target.files[0];
@@ -6371,39 +6388,6 @@ function dataUrlBlob(u){
 }
 const alsDatei = (inhalt, name, typ) => new File([new Blob([inhalt], {type: typ})], name, {type: typ});
 
-/* Auswahlfenster: welche Unterlagen sollen mit? */
-const ABLAGE_TEILE = [
-  {k:'projekt',      label:'Projektdaten'},
-  {k:'beschriftung', label:'Verteilerbeschreibung'},
-  {k:'material',     label:'Materialliste'},
-  {k:'fotos',        label:'Fotos'}
-];
-function ablageDialog(){
-  if(!PROJ) return;
-  saveProj();
-  const teile = ABLAGE_TEILE;
-  resetModal(false);
-  $('#modalTitle').textContent = 'Prüfdaten ablegen';
-  /* Bei der Wiederholungsprüfung sind nur die Projektdaten vorgewählt, bei der
-     Neuinstallation gehören Beschreibung und Materialliste dazu. */
-  const alles = (PROJ.mode || 'wdh') === 'neu';
-  const an = t => alles || t.k === 'projekt';
-  $('#modalBody').innerHTML = `<div class="chk-grid">` + teile.map(t =>
-    `<label class="chk${an(t) ? ' on' : ''}"><input type="checkbox" data-exp="${t.k}"${an(t) ? ' checked' : ''}><span>${esc(t.label)}</span></label>`
-  ).join('') + `</div>`;
-  $$('#modalBody [data-exp]').forEach(i => i.onchange = () =>
-    i.closest('.chk').classList.toggle('on', i.checked));
-  $('#modalFoot').hidden = true;
-  $('#modalOk').textContent   = 'Ausgewählte ablegen';
-  $('#modalBack').textContent = 'Abbrechen';
-  pendingAck = () => {
-    const wahl = {};
-    $$('#modalBody [data-exp]').forEach(i => wahl[i.dataset.exp] = i.checked);
-    ablegen(wahl);
-  };
-  $('#modal').hidden = false;
-  $('#modalOk').focus();
-}
 async function ablegen(wahl, nochmal){
   const p = PROJ, dateien = [];
   /* Was hinausgeht, wird im Projekt vermerkt – und zwar VOR dem Bauen der
@@ -6479,9 +6463,12 @@ $('#btnExportDocs').onclick = () => {
   saveProj();
   const d = PROJ.docs || {};
   /* Aus der Ablage heraus wird nur exportiert, nicht noch einmal abgelegt –
-     der Eintrag liegt schon dort. */
+     der Eintrag liegt schon dort. Zurück geht es dann in die Ablage statt auf
+     den Startbildschirm, denn dort kam man her. */
+  const ausAblage = !!archOffen;
   ablegen({projekt:true, protokoll:!!d.protokoll, beschriftung:!!d.beschriftung,
-           material:!!d.material, fotos:!!d.fotos}, !!archOffen);
+           material:!!d.material, fotos:!!d.fotos}, ausAblage)
+    .then(() => { if(ausAblage){ stack = ['home']; go('archive', false); } });
 };
 
 /* --- In die Ablage legen ---
@@ -6693,7 +6680,7 @@ async function archAnsehen(e, knopf){
     archOffen = e.id;
     PROJ = st;
     sigMode = 'later';
-    stack = ['archive'];               // der Zurück-Pfeil führt in die Ablage
+    stack = ['home', 'archive'];       // Zurück führt in die Ablage, von dort weiter nach Hause
     go('board', false);
   } catch(x){ toast('Öffnen nicht möglich'); }
   finally { if(knopf){ knopf.textContent = text; knopf.disabled = false; } }
