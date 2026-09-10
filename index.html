@@ -10,6 +10,27 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.79 10.09.2026  Materialbestand. Auf der Startseite steht unter "Lager" ein
+                    eigener Knopf. Das Lager fuehrt ausgewaehlte Artikel aus dem
+                    Material-Stamm und freies Verbrauchsmaterial, je mit Einheit,
+                    Melde- und Sollbestand, VPE und Artikelnummer. Der Bestand
+                    ist keine Zahl, die jeder ueberschreibt, sondern die Summe
+                    einer Buchungsliste unter "lager/" (jede Bewegung ein eigener
+                    Eintrag, "Zaehlen" setzt ihn fest) - so gehen gleichzeitige
+                    Entnahmen und Buchungen ohne Netz nicht verloren. Projekte
+                    buchen ihre Materialliste beim ersten Export ab, nach einer
+                    Nachbesserung ueber "Ansehen" nur die Differenz; "Erneut
+                    sichern" bucht nichts. Ein Projekt bucht einen Artikel nur,
+                    wenn es nach dessen Anlage begonnen wurde - was vorher lief,
+                    war beim ersten Zaehlen schon aus dem Regal. Ring am Knopf:
+                    rot unter Meldebestand, gelb sobald alles Knappe bestellt
+                    ist, aus nach der Lieferung. Bestellliste bis zum Soll,
+                    aufgerundet auf volle VPE, als Text ueber das Teilen-Menue;
+                    die Bestellung bleibt offen, bis die Lieferung eingebucht
+                    ist, auch in Teillieferungen. Solange eine Teillieferung
+                    offen ist, bleibt der Ring gelb.
+                    Nebenbei: der Hinweis in der Ablage nannte noch die
+                    30-Tage-Frist von vor v1.65; er nennt jetzt die Hoechstzahl.
   v1.78 09.09.2026  Aufgeraeumt, was der Abgleich ueberfluessig gemacht hat. Der
                     Knopf "Pruefdaten ablegen" im Verteiler ist weg, samt
                     Auswahlfenster: er stand unter "Weitergeben", legte aber
@@ -926,6 +947,39 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
 .mat button[disabled]{opacity:.35}
 .mat.zero{opacity:.55}
 
+/* ---------- Materialbestand ---------- */
+#view-lager{padding-bottom:28px}
+/* Der Warnring sitzt mit etwas Luft um den Knopf, sonst verschwimmt er mit dessen
+   Rand. Die Lücke trägt die Farbe des Seitengrunds, im dunklen Modus also dunkel.
+   Rot und Gelb sind dieselben wie bei den Stromkreisen: handeln bzw. läuft schon. */
+#btnLager.ring-rot {box-shadow:0 0 0 3px var(--enclosure),0 0 0 6px var(--fault);
+  border-color:var(--fault);color:var(--ink)}
+#btnLager.ring-gelb{box-shadow:0 0 0 3px var(--enclosure),0 0 0 6px var(--signal);
+  border-color:var(--signal);color:var(--ink)}
+.lg-menge{font-family:var(--f-data);font-size:18px;font-weight:600;white-space:nowrap}
+.lg-menge em,.lg-bestand em{font-style:normal;font-family:var(--f-body);font-size:13px;
+  font-weight:400;color:var(--ink-soft);margin-left:4px}
+.lg-best{border-left:5px solid var(--signal)}
+.lg-kopf.state-red{border-left:5px solid var(--fault);background:var(--warn-bg)}
+.lg-kopf.state-yellow{border-left:5px solid var(--signal);background:var(--sig-bg)}
+.lg-name{font-weight:700;font-size:18px}
+.lg-bestand{font-family:var(--f-data);font-size:34px;font-weight:600;margin:10px 0 2px}
+.lg-akt{margin-bottom:10px}
+.lg-akt .btn{padding:0 6px;font-size:16px}
+.lg-akt .btn[aria-pressed="true"]{background:var(--strong);color:var(--on-strong);border-color:var(--strong)}
+.lg-panel .mat{border:0;padding:0;background:none;margin-bottom:12px}
+.mat input.lg-zahl{width:92px;flex:0 0 92px;text-align:center;padding:0 6px;height:48px}
+.lg-unter{display:block;font-family:var(--f-data);font-size:12px;color:var(--ink-soft);margin-top:3px}
+.lg-bew{display:flex;gap:10px;align-items:baseline;padding:9px 2px;border-bottom:1px solid var(--line);font-size:14px}
+.lg-bew .w{flex:1;min-width:0}
+.lg-bew .w small{display:block;color:var(--ink-soft);font-size:12px;margin-top:2px}
+.lg-bew .m{font-family:var(--f-data);font-weight:600;white-space:nowrap}
+.lg-wahl{display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer}
+.lg-wahl input[type="checkbox"]{          /* globale Feldregel gezielt aufheben */
+  width:22px;height:22px;min-height:0;flex:0 0 22px;margin:0;padding:0;border:0;border-radius:0;
+  background:none;appearance:auto;-webkit-appearance:auto;accent-color:var(--ink)}
+.lg-verw{display:block;width:fit-content;margin:10px 0 0 auto;font-size:14px}
+
 /* ---------- Toast ---------- */
 #toast{
   position:fixed;left:50%;transform:translateX(-50%) translateY(20px);z-index:90;
@@ -1606,6 +1660,8 @@ window.addEventListener('error', e => {
     <section class="view active" id="view-home">
       <div class="eyebrow">Was steht an?</div>
       <div id="homeMain"></div>
+      <div class="eyebrow">Lager</div>
+      <button class="btn ghost" id="btnLager">Materialbestand</button>
       <div class="eyebrow">Ablage</div>
       <button class="btn ghost" data-go="archive">Ablage</button>
       <button class="btn ghost" id="btnImport">Projekt aus Datei übernehmen</button>
@@ -1866,8 +1922,30 @@ window.addEventListener('error', e => {
 
     <!-- ========== ARCHIV ========== -->
     <section class="view" id="view-archive">
-      <p class="muted small">Abgelegte Projekte werden nach 30 Tagen automatisch gelöscht.</p>
+      <p class="muted small" id="archHint"></p>
       <div id="archiveBody"></div>
+    </section>
+
+    <!-- ========== MATERIALBESTAND ========== -->
+    <section class="view" id="view-lager"><div id="lagerBody"></div></section>
+
+    <section class="view" id="view-lagerart">
+      <div id="lagerArtBody"></div>
+      <div class="actionbar"><div class="inner">
+        <button class="btn primary" id="btnLagerArtSave">Angaben speichern</button>
+      </div></div>
+    </section>
+
+    <section class="view" id="view-lagerbest">
+      <div id="lagerBestBody"></div>
+      <div class="actionbar"><div class="inner">
+        <button class="btn primary" id="btnBestAufgeben">Bestellung aufgeben</button>
+      </div></div>
+    </section>
+
+    <section class="view" id="view-lagerein">
+      <div id="lagerEinBody"></div>
+      <div class="actionbar"><div class="inner" id="lagerEinBar"></div></div>
     </section>
 
     <!-- ========== EINSTELLUNGEN ========== -->
@@ -2033,8 +2111,8 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.78';                    // siehe Änderungsliste im Dateikopf
-const BUILD        = VERSION + ' · 09.09.2026';
+const VERSION      = 'v1.79';                    // siehe Änderungsliste im Dateikopf
+const BUILD        = VERSION + ' · 10.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
 const DAUER_WARN   = 100;                        // zu lang: unplausibel im Protokoll
@@ -2454,7 +2532,8 @@ const TITLES = {
   home:'E-Assistent', new:'Neues Projekt', board:'Verteiler', circuit:'Stromkreis',
   feed:'Zuleitung', material:'Material', finish:'Abschluss',
   mode:'Auswahl', resume:'Fortsetzen', archive:'Ablage', settings:'Einstellungen',
-  sheets:'Blätter', checks:'Angaben'
+  sheets:'Blätter', checks:'Angaben',
+  lager:'Materialbestand', lagerart:'Artikel', lagerbest:'Bestellliste', lagerein:'Lieferung'
 };
 const PROJECT_VIEWS = ['board','circuit','feed','material','finish','sheets','checks'];
 /* Die Ansicht "Neues Projekt" dient auch zum Nachbessern eines laufenden
@@ -2554,6 +2633,10 @@ function go(name, push = true){
   if(name === 'sheets')   renderSheets();
   if(name === 'archive')  renderArchive();
   if(name === 'settings') renderSettings();
+  if(name === 'lager')     renderLager();
+  if(name === 'lagerart')  renderLagerArt();
+  if(name === 'lagerbest') renderLagerBest();
+  if(name === 'lagerein')  renderLagerEin();
   syncSplit();
   keepAwake(PROJECT_VIEWS.includes(name));
 }
@@ -2585,6 +2668,7 @@ function renderHome(){
   $$('#homeMain [data-mode]').forEach(b => b.onclick = () => { homeMode = b.dataset.mode; go('mode'); });
 
   $('#buildTag').textContent = BUILD;
+  lagerKnopf();                                  // Warnring am Materialbestand
   /* Im Normalfall steht hier nichts: dass die Daten „lokal auf diesem Gerät"
      liegen, stimmt seit dem Abgleich nicht mehr. Die Warnung bleibt – trifft
      sie zu, gehen vor allem die Fotos beim Schließen verloren, denn die liegen
@@ -2862,6 +2946,10 @@ $('#btnCreate').onclick = () => {
     device: $('#npDevice').value,
     abwNr: newMode !== 'neu' && $('#npAbwNr').checked,
     startedAt: Date.now(), finishedAt: null,
+    /* Fester Anlagezeitpunkt – startedAt wandert mit dem ersten Messwert und ist
+       von Hand änderbar. Der Materialbestand entscheidet daran, ob ein Artikel
+       schon im Lager geführt wurde, als das Projekt begann. */
+    angelegt: Date.now(),
     items: [], material: {}, signature: null, feed: blankFeed(),
     checks: {}, checksDone: false
   };
@@ -6390,6 +6478,19 @@ const alsDatei = (inhalt, name, typ) => new File([new Blob([inhalt], {type: typ}
 
 async function ablegen(wahl, nochmal){
   const p = PROJ, dateien = [];
+  /* Materialbestand: gebucht wird beim ersten Export und beim Export nach einer
+     Nachbesserung über "Ansehen" (dann ist archOffen gesetzt), nie beim bloßen
+     "Erneut sichern". Der Vermerk, was schon abging, steht wie "exportiert" VOR
+     dem Bauen der Dateien im Projekt, damit er in der Projektdatei und in der
+     Ablage mitreist. Abgebucht wird erst, wenn die Übergabe stattgefunden hat;
+     schlägt sie fehl, wird der Vermerk zurückgenommen. Ein Fehler hier darf den
+     Export nie aufhalten – dann wird eben nicht gebucht. */
+  const lagerVorher = p.lager;
+  let lagerPlan = null;
+  try { if(!nochmal || archOffen) lagerPlan = lagerProjektPlan(p); } catch(e){ lagerPlan = null; }
+  if(lagerPlan && !lagerPlan.buchungen.length && lagerVorher) lagerPlan = null;   // nichts Neues
+  if(lagerPlan) p.lager = {a: lagerPlan.a, am: Date.now()};
+  const lagerZurueck = () => { if(!lagerPlan) return; if(lagerVorher) p.lager = lagerVorher; else delete p.lager; };
   /* Was hinausgeht, wird im Projekt vermerkt – und zwar VOR dem Bauen der
      Dateien, damit der Vermerk in der Weitergabe-Datei mitreist. Der Kollege,
      der sie einliest, sieht im Abschluss dann nur noch, was wirklich fehlt.
@@ -6429,7 +6530,7 @@ async function ablegen(wahl, nochmal){
       dateien.push(new File([blob], name, {type: blob.type || 'image/jpeg'}));
     }
   }
-  if(!dateien.length){ toast('Nichts ausgewählt'); return; }
+  if(!dateien.length){ lagerZurueck(); toast('Nichts ausgewählt'); return; }
 
   /* iOS meldet beim Teilen an einen Kurzbefehl auch dann einen Abbruch, wenn der
      Kurzbefehl in Wirklichkeit durchläuft. Auf diese Rückmeldung ist deshalb kein
@@ -6449,7 +6550,12 @@ async function ablegen(wahl, nochmal){
       }, i * 400));
     }
   }catch(e){
+    lagerZurueck();
     toast('Übergabe nicht möglich'); return;
+  }
+  if(lagerPlan){
+    try { lagerProjektBuchen(p, lagerPlan.buchungen); } catch(e){}
+    if(nochmal) saveProj();              // "Ansehen": Vermerk in den Ablage-Eintrag
   }
   /* Beim Wiederholen aus der Ablage heraus wird nichts erneut abgelegt – das
      Projekt ist längst abgeschlossen. */
@@ -6624,6 +6730,9 @@ async function ablageVollHolen(id){
 
 
 function renderArchive(){
+  /* Der Satz kommt aus der Höchstzahl selbst – bis v1.78 stand hier fest noch
+     die 30-Tage-Frist, die mit v1.65 entfallen war. */
+  $('#archHint').textContent = `Die Ablage behält die letzten ${ABLAGE_MAX} Projekte, ältere werden automatisch gelöscht.`;
   $('#archiveBody').innerHTML = ARCH.length ? ARCH.map((e, i) => {
     const whg = archWohnung(e), fotos = archFotos(e);
     const wer = !e.owner ? '' :
@@ -6811,6 +6920,7 @@ function netzSetzen(an){
     clearTimeout(netzTimer); netzTimer = null;
     document.body.dataset.netz = 'an';
     if(!vorher && fbProjEin){ fotosNachschieben(); ablageNachschieben(); }   // Funkpause vorbei
+    if(!vorher) lagerNachschieben();
   } else if(!netzTimer){
     netzTimer = setTimeout(() => { netzTimer = null; document.body.dataset.netz = 'ab'; }, NETZ_VERZUG);
   }
@@ -7127,7 +7237,714 @@ function projektOeffnen(p){
     onOk: rein});
 }
 
+/* ============================================================
+   MATERIALBESTAND (Lager)
+
+   Der Bestand steht nirgends als Zahl, die jeder überschreibt, sondern ergibt
+   sich aus einer Buchungsliste: jede Bewegung ist ein eigener Eintrag unter
+   lager/buchungen/<id> und wird danach nicht mehr angefasst. Zwei Entnahmen zur
+   selben Zeit, oder eine, die erst Stunden später aus dem Keller hinaufgeht,
+   kommen so beide an – bei einem Zählerstand gewönne, wer zuletzt schreibt.
+
+   Summiert wird in zeitlicher Folge; "Zählen" setzt den Bestand fest, alles
+   davor ist damit erledigt. Eine Buchung, die ohne Netz VOR dem Zählen entstand
+   und erst danach eintrifft, fällt deshalb richtig heraus – im Regal war sie
+   beim Zählen schon berücksichtigt.
+
+   Artikel und Bestellungen liegen je als eigener Eintrag daneben:
+     lager/artikel/<id>       Name, Einheit, Melde- und Sollbestand, VPE, Art.-Nr.
+     lager/buchungen/<id>     eine Bewegung
+     lager/bestellungen/<id>  eine offene Bestellung; abgeschlossen = gelöscht
+   Übertragen wird wie bei den Projekten JSON als Text.
+
+   Örtlich liegt der Spiegel in IndexedDB – die Buchungsliste wächst, der
+   localStorage soll den offenen Projekten bleiben. Noch nicht bestätigte
+   Schreibvorgänge stehen in einem kleinen Ausgangskorb im localStorage, der
+   beim Start und nach jeder Funkpause nachgeschoben wird. Doppelt ankommen
+   kann dabei nichts: jede Buchung hat ihre feste Kennung.
+
+   Die Zustände stehen mit var statt let: renderHome fragt den Knopf ab und
+   könnte laufen, bevor dieser Abschnitt erreicht ist. Ein let wäre in dieser
+   Lücke ein Absturz, ein var ist nur leer. Aus demselben Grund sind die
+   Hilfsfunktionen Deklarationen und keine Pfeilkonstanten.
+   ============================================================ */
+var LAGER            = null;        // {artikel:{}, buchungen:{}, bestellungen:{}}
+var LAGER_STAND      = {};          // Artikel-Kennung -> Bestand
+var LAGER_AUS        = {};          // Pfad -> Text, null heißt löschen; noch nicht bestätigt
+var LAGER_ZWEIGE     = ['artikel', 'buchungen', 'bestellungen'];
+var lagerFbEin       = false;
+var lagerAbgewiesen  = false;       // Firebase lässt "lager/" nicht zu
+var lagerUnterwegs   = {};          // Pfad -> Zeitpunkt des Absendens
+var lagerSichernT    = null;
+var lagerLadenP      = null;
+var lagerArtId       = null;        // geöffneter Artikel; null = neuer Artikel
+var lagerPanelArt    = null;        // 'entnahme' | 'zugang' | 'zaehlen' | null
+var lagerBestEntwurf = null;        // Bestellliste in Arbeit
+var lagerEinId       = null;        // Bestellung, deren Lieferung eingebucht wird
+var lagerEinTeil     = false;       // Teillieferung gewählt
+
+function lagerWer(){ return CFG.tester || FB.konto || ''; }
+function lagerNorm(s){ return String(s || '').trim().replace(/\s+/g, ' ').toLowerCase(); }
+function lagerImStamm(n){ const k = lagerNorm(n); return CFG.material.some(m => lagerNorm(m) === k); }
+function lagerArtikelZuName(n){
+  const k = lagerNorm(n);
+  return Object.values(LAGER.artikel).find(a => lagerNorm(a.name) === k) || null;
+}
+function lagerEinheit(a){ return (a && a.einheit) || 'Stk.'; }
+
+/* ---------- Rechnen ---------- */
+function lagerRechnen(){
+  const proArtikel = {};
+  Object.values(LAGER.buchungen).forEach(b => {
+    if(b && b.a) (proArtikel[b.a] || (proArtikel[b.a] = [])).push(b);
+  });
+  const st = {};
+  Object.keys(LAGER.artikel).forEach(id => {
+    let s = 0;
+    (proArtikel[id] || [])
+      .sort((x, y) => ((x.t || 0) - (y.t || 0)) || String(x.id).localeCompare(String(y.id)))
+      .forEach(b => { const m = +b.menge || 0; s = b.art === 'zaehlen' ? m : s + m; });
+    st[id] = s;
+  });
+  LAGER_STAND = st;
+}
+/* Was von einem Artikel noch unterwegs ist: bestellt, aber nicht geliefert. */
+function lagerOffen(aid){
+  let n = 0;
+  Object.values(LAGER.bestellungen).forEach(o => (o.zeilen || []).forEach(z => {
+    if(z.a === aid) n += Math.max(0, (+z.menge || 0) - (+z.geliefert || 0));
+  }));
+  return n;
+}
+/* rot = unter Meldebestand und nicht bestellt · gelb = unter Meldebestand, aber
+   unterwegs · leer = ausreichend. Ohne Meldebestand gibt es keine Warnung. */
+function lagerZustand(a){
+  const melde = +a.melde || 0;
+  if(melde > 0 && (LAGER_STAND[a.id] || 0) < melde) return lagerOffen(a.id) > 0 ? 'gelb' : 'rot';
+  return '';
+}
+function lagerKnopf(){
+  const k = document.getElementById('btnLager');
+  if(!k) return;
+  let rot = 0, gelb = 0;
+  if(LAGER) Object.values(LAGER.artikel).forEach(a => {
+    const z = lagerZustand(a);
+    if(z === 'rot') rot++; else if(z === 'gelb') gelb++;
+  });
+  k.classList.toggle('ring-rot', rot > 0);
+  k.classList.toggle('ring-gelb', !rot && gelb > 0);
+  k.textContent = 'Materialbestand' + (rot ? ` · ${rot} knapp` : gelb ? ' · bestellt' : '');
+}
+/* Reihenfolge: Artikel aus dem Material-Stamm in dessen Reihenfolge, danach das
+   Verbrauchsmaterial nach dem Alphabet. */
+function lagerSortiert(){
+  const platz = n => {
+    const k = lagerNorm(n), i = CFG.material.findIndex(m => lagerNorm(m) === k);
+    return i < 0 ? 1e6 : i;
+  };
+  return Object.values(LAGER.artikel).sort((x, y) =>
+    ((y.stamm ? 1 : 0) - (x.stamm ? 1 : 0)) || (platz(x.name) - platz(y.name))
+    || String(x.name).localeCompare(String(y.name), 'de'));
+}
+/* Bestellvorschlag: alles unter Sollbestand, abzüglich dessen, was schon
+   bestellt ist, aufgerundet auf volle Verpackungseinheiten. */
+function lagerVorschlag(){
+  return lagerSortiert().map(a => {
+    const soll = +a.soll || 0, vpe = Math.max(1, +a.vpe || 1);
+    const fehl = soll - (LAGER_STAND[a.id] || 0) - lagerOffen(a.id);
+    return fehl > 0 ? {a: a.id, fehl, menge: Math.ceil(fehl / vpe) * vpe} : null;
+  }).filter(Boolean);
+}
+
+/* ---------- Speichern und Abgleich ---------- */
+function lagerSichern(){
+  clearTimeout(lagerSichernT);
+  lagerSichernT = setTimeout(() => { Bilder.datenLegen('lager', LAGER).catch(() => {}); }, 300);
+}
+function lagerSchreiben(zweig, id, obj){
+  const pfad = 'lager/' + zweig + '/' + id;
+  if(obj == null) delete LAGER[zweig][id]; else LAGER[zweig][id] = obj;
+  LAGER_AUS[pfad] = obj == null ? null : JSON.stringify(obj);
+  Store.set('lagerAus', LAGER_AUS);
+  lagerSenden(pfad);
+}
+function lagerSenden(pfad){
+  if(!lagerFbEin || !(pfad in LAGER_AUS)) return;
+  /* Was schon unterwegs ist, hält das SDK selbst in seiner Warteschlange. Erst
+     nach einer Minute ohne Antwort geht es noch einmal los – dieselbe Kennung,
+     also kein doppelter Eintrag. */
+  if(lagerUnterwegs[pfad] && Date.now() - lagerUnterwegs[pfad] < 60000) return;
+  const text = LAGER_AUS[pfad];
+  lagerUnterwegs[pfad] = Date.now();
+  try {
+    FB.fn.set(FB.fn.ref(FB.db, pfad), text).then(() => {
+      delete lagerUnterwegs[pfad];
+      if(LAGER_AUS[pfad] === text){ delete LAGER_AUS[pfad]; Store.set('lagerAus', LAGER_AUS); }
+      else if(pfad in LAGER_AUS) lagerSenden(pfad);          // inzwischen neuer Stand
+    }, e => { delete lagerUnterwegs[pfad]; lagerFehler(e); });
+  } catch(e){ delete lagerUnterwegs[pfad]; }
+}
+function lagerNachschieben(){ if(LAGER_AUS) Object.keys(LAGER_AUS).forEach(lagerSenden); }
+function lagerFehler(e){
+  const t = String((e && (e.code || e.message)) || '').toLowerCase();
+  if(t.includes('permission')){ lagerAbgewiesen = true; if(current === 'lager') renderLager(); }
+}
+/* Eigene, noch nicht bestätigte Schreibvorgänge liegen obenauf – sonst träte
+   eine offline gebuchte Entnahme beim ersten Stand vom Server kurz zurück. */
+function lagerAusObenauf(zweig, ziel){
+  Object.keys(LAGER_AUS).forEach(p => {
+    const t = p.split('/');
+    if(t[1] !== zweig) return;
+    if(LAGER_AUS[p] == null) delete ziel[t[2]];
+    else { try { ziel[t[2]] = JSON.parse(LAGER_AUS[p]); } catch(e){} }
+  });
+}
+function lagerRein(zweig, roh){
+  lagerAbgewiesen = false;
+  const neu = {};
+  Object.keys(roh || {}).forEach(id => {
+    try { const v = JSON.parse(roh[id]); if(v && typeof v === 'object') neu[id] = v; } catch(e){}
+  });
+  lagerAusObenauf(zweig, neu);
+  LAGER[zweig] = neu;
+  lagerGeaendert(true);
+}
+/* Nach jeder Änderung: neu rechnen, sichern, Anzeigen nachführen. Ansichten mit
+   Eingabefeldern werden dabei nicht neu aufgebaut – das wischte eine begonnene
+   Eingabe weg; dort wird nur nachgetragen, was sich ohne Felder zeigen lässt. */
+function lagerGeaendert(fremd){
+  lagerRechnen();
+  lagerSichern();
+  lagerKnopf();
+  if(current === 'lager') renderLager();
+  else if(current === 'lagerart') lagerArtAuffrischen();
+  else if(current === 'lagerein' && fremd && lagerEinId && !LAGER.bestellungen[lagerEinId]){
+    lagerEinId = null;
+    toast('Diese Bestellung ist inzwischen erledigt');
+    zurueckStapel();
+  }
+}
+function lagerBuchung(b, t){
+  const e = Object.assign({id: neueKennung('M'), t: t || Date.now(), von: lagerWer()}, b);
+  lagerSchreiben('buchungen', e.id, e);
+  return e;
+}
+function lagerLaden(){
+  LAGER_AUS = Store.get('lagerAus', {}) || {};
+  LAGER = {artikel:{}, buchungen:{}, bestellungen:{}};
+  lagerLadenP = Bilder.datenLesen('lager').then(v => {
+    if(v && typeof v === 'object')
+      LAGER_ZWEIGE.forEach(k => { if(v[k] && typeof v[k] === 'object') LAGER[k] = v[k]; });
+  }).catch(() => {}).then(() => {
+    LAGER_ZWEIGE.forEach(k => lagerAusObenauf(k, LAGER[k]));
+    lagerGeaendert(false);
+  });
+  return lagerLadenP;
+}
+FB.bereit.then(() => (lagerLadenP || Promise.resolve()).then(() => {
+  const {ref, onValue} = FB.fn;
+  lagerFbEin = true;
+  LAGER_ZWEIGE.forEach(k => {
+    try { onValue(ref(FB.db, 'lager/' + k), s => lagerRein(k, s.val()), e => lagerFehler(e)); } catch(e){}
+  });
+  lagerNachschieben();
+}));
+
+/* ---------- Projekte buchen ab ----------
+   Ein Projekt bucht einen Artikel nur, wenn es nach dessen Anlage begonnen
+   wurde. Was vorher schon lief, hatte sein Material beim ersten Zählen meist
+   schon aus dem Regal – es fehlte sonst doppelt. Das gilt ebenso für Artikel,
+   die später dazukommen.
+   Projekte von vor v1.79 tragen noch kein "angelegt"; ihre Kennung beginnt aber
+   mit dem Zeitstempel zur Basis 36 (siehe neueKennung). Lässt sich gar kein
+   Zeitpunkt ermitteln, wird nicht gebucht. */
+function lagerProjektAb(P){
+  if(P && P.angelegt) return P.angelegt;
+  const m = /^P([0-9a-z]{8})/.exec((P && P.id) || '');
+  const t = m ? parseInt(m[1], 36) : 0;
+  return t > 1.5e12 && t < 4e12 ? t : 0;
+}
+/* Vergleicht die Materialliste mit dem, was das Projekt schon abgebucht hat
+   (P.lager.a, je Artikel-Kennung – ein umbenannter Artikel bleibt so derselbe).
+   Liefert den neuen Vermerk und die Buchungen für die Differenz. Nach einer
+   Nachbesserung mit weniger Material geht die Differenz zurück ins Lager. */
+function lagerProjektPlan(P){
+  const ab = lagerProjektAb(P);
+  if(!ab || !LAGER) return null;
+  const jetzt = {};
+  materialListe(P.material).forEach(t => {
+    const a = lagerArtikelZuName(t.name);
+    if(a && (a.angelegt || 0) <= ab) jetzt[a.id] = (jetzt[a.id] || 0) + (+t.count || 0);
+  });
+  const alt = (P.lager && P.lager.a) || {};
+  const buchungen = [];
+  new Set([...Object.keys(jetzt), ...Object.keys(alt)]).forEach(aid => {
+    const d = (jetzt[aid] || 0) - (+alt[aid] || 0);
+    if(d && LAGER.artikel[aid]) buchungen.push({a: aid, menge: -d});
+  });
+  Object.keys(jetzt).forEach(k => { if(!jetzt[k]) delete jetzt[k]; });
+  return {a: jetzt, buchungen};
+}
+function lagerProjText(P){
+  const str = String(P.address || '').split('\n')[0].trim() || 'Ohne Adresse';
+  const w = flatLabel(P.flat);
+  return str + (w ? ' · ' + w : '');
+}
+function lagerProjektBuchen(P, buchungen){
+  if(!buchungen.length) return;
+  const t = Date.now();
+  buchungen.forEach(b => lagerBuchung({a: b.a, art: 'projekt', menge: b.menge,
+                                        proj: {id: P.id, text: lagerProjText(P)}}, t));
+  lagerGeaendert(false);
+}
+
+/* ---------- Ansicht: Materialbestand ---------- */
+$('#btnLager').onclick = () => go('lager');
+
+function renderLager(){
+  if(!LAGER) return;
+  const arts = lagerSortiert();
+  const bestellungen = Object.values(LAGER.bestellungen).sort((x, y) => (x.t || 0) - (y.t || 0));
+  const vorschlag = lagerVorschlag();
+  let h = '';
+  if(lagerAbgewiesen) h += `<div class="warn"><strong>Kein Abgleich</strong>Firebase weist den Bereich
+    „lager“ ab. Gebucht wird trotzdem, aber nur auf diesem Gerät, bis er in der
+    Datenbankregel freigegeben ist.</div>`;
+
+  bestellungen.forEach(o => {
+    const n = (o.zeilen || []).length;
+    const teil = (o.zeilen || []).filter(z => (+z.geliefert || 0) > 0).length;
+    h += `<div class="card lg-best">
+      <div><strong>Bestellung vom ${dstr(o.t)}</strong></div>
+      <div class="muted small">${o.von ? esc(o.von) + ' · ' : ''}${n} Position${n === 1 ? '' : 'en'}${
+        teil ? ` · ${teil} teilweise geliefert` : ''}</div>
+      <button class="btn" data-ein="${esc(o.id)}" style="margin-top:10px">Lieferung einbuchen</button>
+      <button class="linkbtn lg-verw" data-verw="${esc(o.id)}">verwerfen</button>
+    </div>`;
+  });
+
+  if(arts.length){
+    h += `<button class="btn accent" id="btnLagerBest"${vorschlag.length ? '' : ' disabled'}>Bestellliste erstellen${
+      vorschlag.length ? ` · ${vorschlag.length} Artikel` : ''}</button>`;
+    if(!vorschlag.length) h += `<p class="muted small" style="margin-top:8px">Alles auf Sollbestand oder schon bestellt.</p>`;
+  }
+
+  const zeile = a => {
+    const z = lagerZustand(a), off = lagerOffen(a.id);
+    const s = [];
+    if(+a.melde) s.push('Melde ' + a.melde);
+    if(+a.soll)  s.push('Soll ' + a.soll);
+    if(off)      s.push('bestellt ' + off);
+    if(a.stamm && !lagerImStamm(a.name)) s.push('nicht im Material-Stamm');
+    return `<button class="list-item${z === 'rot' ? ' state-red' : z === 'gelb' ? ' state-yellow' : ''}" data-la="${esc(a.id)}">
+      <div class="body"><div class="t">${esc(a.name)}</div><div class="s">${esc(s.join(' · ') || 'ohne Meldebestand')}</div></div>
+      <div class="lg-menge">${LAGER_STAND[a.id] || 0}<em>${esc(lagerEinheit(a))}</em></div>
+    </button>`;
+  };
+  const knapp = arts.filter(a => lagerZustand(a));
+  knapp.sort((x, y) => (lagerZustand(x) === 'rot' ? 0 : 1) - (lagerZustand(y) === 'rot' ? 0 : 1));
+  const rest = arts.filter(a => !lagerZustand(a));
+  if(knapp.length) h += `<div class="eyebrow">Unter Meldebestand</div>` + knapp.map(zeile).join('');
+  const stamm = rest.filter(a => a.stamm), frei = rest.filter(a => !a.stamm);
+  if(stamm.length) h += `<div class="eyebrow">Aus der Materialliste</div>` + stamm.map(zeile).join('');
+  if(frei.length)  h += `<div class="eyebrow">Verbrauchsmaterial</div>` + frei.map(zeile).join('');
+  if(!arts.length) h += `<div class="rail-empty">Noch keine Artikel im Lager. Lege an, was geführt werden
+    soll – aus dem Material-Stamm oder als Verbrauchsmaterial.</div>`;
+  h += `<button class="btn ghost" id="btnLagerNeu" style="margin-top:14px">Artikel hinzufügen</button>`;
+  $('#lagerBody').innerHTML = h;
+
+  $$('#lagerBody [data-la]').forEach(b => b.onclick = () => {
+    lagerArtId = b.dataset.la; lagerPanelArt = null; go('lagerart');
+  });
+  $('#btnLagerNeu').onclick = () => { lagerArtId = null; lagerPanelArt = null; go('lagerart'); };
+  const bb = $('#btnLagerBest');
+  if(bb) bb.onclick = () => { lagerBestEntwurf = null; go('lagerbest'); };
+  $$('#lagerBody [data-ein]').forEach(b => b.onclick = () => {
+    lagerEinId = b.dataset.ein; lagerEinTeil = false; go('lagerein');
+  });
+  $$('#lagerBody [data-verw]').forEach(b => b.onclick = () => {
+    const o = LAGER.bestellungen[b.dataset.verw];
+    if(!o) return;
+    showDialog({title:'Bestellung verwerfen?', ok:'Verwerfen', danger:true,
+      body:`Die Bestellung vom ${dstr(o.t)} wird gelöscht, gebucht wird dabei nichts. `
+         + 'Gedacht für eine Liste, die doch nicht hinausging.',
+      onOk:() => { lagerSchreiben('bestellungen', o.id, null); lagerGeaendert(false); toast('Bestellung verworfen'); }});
+  });
+}
+
+/* ---------- Ansicht: Artikel ----------
+   Oben Bestand und die drei Buchungen, darunter die Angaben, zuletzt die
+   Bewegungen. Buchungen wirken sofort; die Angaben werden erst mit dem Knopf
+   unten übernommen, der Zurück-Pfeil verwirft sie – wie in der Materialliste. */
+const LAGER_EINHEITEN = ['Stk.', 'Beutel', 'Packung', 'Rolle', 'Karton', 'm'];
+const LAGER_AKT = {
+  entnahme: {titel:'Entnehmen', feld:'Wofür (freiwillig)', ph:'z.B. Werkzeugwagen', ok:'Entnommen'},
+  zugang:   {titel:'Zugang',    feld:'Notiz (freiwillig)', ph:'z.B. Rückgabe',     ok:'Zugang gebucht'},
+  zaehlen:  {titel:'Zählen',    feld:'Notiz (freiwillig)', ph:'z.B. Inventur',     ok:'Bestand gezählt'}
+};
+
+function renderLagerArt(){
+  const neu = !lagerArtId;
+  const a = neu ? {name:'', einheit:'Stk.', melde:'', soll:'', vpe:'', artnr:'', stamm:false}
+                : LAGER.artikel[lagerArtId];
+  if(!a){ toast('Diesen Artikel gibt es nicht mehr'); zurueckStapel(); return; }
+  $('#title').textContent = neu ? 'Neuer Artikel' : 'Artikel';
+  const zahlFeld = (id, label, wert, ph) => `<label class="field"><span>${label}</span>
+    <input id="${id}" class="data" inputmode="numeric" enterkeyhint="done" value="${esc(wert)}" placeholder="${ph}"></label>`;
+  let h = '';
+  if(!neu){
+    h += `<div class="card lg-kopf" id="lgKopf"></div>
+      <div class="btn-row lg-akt">
+        ${Object.keys(LAGER_AKT).map(k => `<button class="btn" data-lgakt="${k}" aria-pressed="false">${LAGER_AKT[k].titel}</button>`).join('')}
+      </div>
+      <div id="lgPanel"></div>`;
+  }
+  h += `<div class="eyebrow">${neu ? 'Artikel' : 'Angaben'}</div>`;
+  if(neu){
+    const frei = CFG.material.filter(n => !lagerArtikelZuName(n));
+    h += `<label class="field"><span>Aus dem Material-Stamm</span><select id="lgStamm">
+        <option value="">Eigener Name (Verbrauchsmaterial)</option>
+        ${frei.map(n => `<option>${esc(n)}</option>`).join('')}
+      </select></label>`;
+  }
+  h += `<label class="field" id="lgNameFeld"><span>Name</span>
+      <input id="lgName" value="${esc(a.name)}" placeholder="z.B. Aderendhülsen 1,5 mm²"></label>
+    <div class="field"><span>Einheit</span>
+      <input id="lgEinheit" value="${esc(a.einheit || 'Stk.')}" placeholder="Stk.">
+      <div class="chk-grid">${LAGER_EINHEITEN.map(e => `<button class="sug" data-eh="${esc(e)}">${esc(e)}</button>`).join('')}</div>
+    </div>`;
+  if(neu) h += zahlFeld('lgStart', 'Bestand jetzt (gezählt)', '', '0');
+  h += `<div class="row">${zahlFeld('lgMelde', 'Meldebestand', a.melde || '', 'z.B. 20')}${zahlFeld('lgSoll', 'Sollbestand', a.soll || '', 'z.B. 100')}</div>
+    <div class="row">${zahlFeld('lgVpe', 'VPE', (+a.vpe > 1 ? a.vpe : ''), '1')}
+      <label class="field"><span>Art.-Nr.</span><input id="lgArtnr" value="${esc(a.artnr || '')}" placeholder="freiwillig"></label></div>
+    <p class="muted small" style="margin-top:0">Unter dem Meldebestand wird der Knopf auf der Startseite rot.
+      Bestellt wird bis zum Sollbestand, aufgerundet auf volle Verpackungseinheiten (VPE).</p>`;
+  if(!neu){
+    h += `<div class="eyebrow">Letzte Bewegungen</div><div id="lgBew"></div>
+      <button class="btn danger" id="btnLgWeg" style="margin-top:18px">Artikel löschen</button>`;
+  }
+  $('#lagerArtBody').innerHTML = h;
+  $('#btnLagerArtSave').textContent = neu ? 'Artikel anlegen' : 'Angaben speichern';
+
+  if(neu){
+    const namePruefen = () => { $('#lgNameFeld').hidden = !!$('#lgStamm').value; };
+    $('#lgStamm').onchange = namePruefen;
+    namePruefen();
+  }
+  $$('#lagerArtBody [data-eh]').forEach(b => b.onclick = () => { $('#lgEinheit').value = b.dataset.eh; });
+  $$('#lagerArtBody [data-lgakt]').forEach(b => b.onclick = () => {
+    lagerPanelArt = lagerPanelArt === b.dataset.lgakt ? null : b.dataset.lgakt;
+    lagerPanelZeigen();
+  });
+  const weg = $('#btnLgWeg');
+  if(weg) weg.onclick = () => {
+    const x = LAGER.artikel[lagerArtId];
+    if(!x) return;
+    showDialog({title:'Artikel löschen?', ok:'Löschen', danger:true,
+      body:`${x.name}: Bestand und Bewegungen sind danach auf allen Geräten weg.`,
+      onOk:() => {
+        const id = x.id;
+        lagerArtId = null;                       // die Ansicht soll sich dabei nicht selbst auffrischen
+        Object.values(LAGER.buchungen).filter(b => b.a === id)
+          .forEach(b => lagerSchreiben('buchungen', b.id, null));
+        lagerSchreiben('artikel', id, null);
+        lagerGeaendert(false);
+        toast('Artikel gelöscht');
+        zurueckStapel();
+      }});
+  };
+  if(!neu){ lagerPanelZeigen(); lagerArtAuffrischen(); }
+}
+
+/* Nur die Teile ohne Eingabefelder: Kopf mit Bestand und die Bewegungen. */
+function lagerArtAuffrischen(){
+  if(!lagerArtId || current !== 'lagerart') return;
+  const a = LAGER.artikel[lagerArtId];
+  if(!a){ lagerArtId = null; toast('Der Artikel wurde gelöscht'); zurueckStapel(); return; }
+  const z = lagerZustand(a), off = lagerOffen(a.id);
+  const info = [+a.melde ? 'Meldebestand ' + a.melde : 'ohne Meldebestand'];
+  if(+a.soll) info.push('Sollbestand ' + a.soll);
+  if(off)     info.push('bestellt ' + off);
+  const kopf = $('#lgKopf');
+  kopf.className = 'card lg-kopf' + (z === 'rot' ? ' state-red' : z === 'gelb' ? ' state-yellow' : '');
+  kopf.innerHTML = `<div class="lg-name">${esc(a.name)}</div>
+    <div class="muted small">${a.stamm ? 'Aus dem Material-Stamm' : 'Verbrauchsmaterial'}${a.artnr ? ' · Art.-Nr. ' + esc(a.artnr) : ''}</div>
+    <div class="lg-bestand">${LAGER_STAND[a.id] || 0}<em>${esc(lagerEinheit(a))}</em></div>
+    <div class="muted small">${esc(info.join(' · '))}</div>
+    ${a.stamm && !lagerImStamm(a.name) ? `<div class="warn info" style="margin:10px 0 0">Steht nicht mehr im
+      Material-Stamm. Projekte buchen nur noch ab, was ihre Materialliste unter genau diesem Namen führt.</div>` : ''}`;
+
+  const alle = Object.values(LAGER.buchungen).filter(b => b.a === a.id)
+                     .sort((x, y) => (y.t || 0) - (x.t || 0));
+  const text = b => {
+    const n = b.notiz ? ': ' + b.notiz : '';
+    if(b.art === 'projekt')  return 'Projekt ' + ((b.proj && b.proj.text) || '');
+    if(b.art === 'eingang')  return 'Lieferung' + (b.bestT ? ' zur Bestellung vom ' + dstr(b.bestT) : '');
+    if(b.art === 'zaehlen')  return 'Gezählt' + n;
+    if(b.art === 'zugang')   return 'Zugang' + n;
+    return 'Entnahme' + n;
+  };
+  const menge = b => b.art === 'zaehlen' ? '= ' + b.menge : (b.menge > 0 ? '+' + b.menge : '−' + Math.abs(b.menge));
+  $('#lgBew').innerHTML = alle.length
+    ? alle.slice(0, 20).map(b => `<div class="lg-bew">
+        <div class="w">${esc(text(b))}<small>${dstr(b.t)} ${tstr(b.t)}${b.von ? ' · ' + esc(b.von) : ''}</small></div>
+        <div class="m">${menge(b)}</div>
+      </div>`).join('')
+      + (alle.length > 20 ? `<p class="muted small">und ${alle.length - 20} ältere</p>` : '')
+    : `<div class="rail-empty">Noch keine Bewegungen.</div>`;
+}
+
+/* Entnehmen, Zugang, Zählen: ein kleines Feld unter den drei Knöpfen. Nicht
+   automatisch fokussiert – die App setzt nirgends selbst den Fokus. */
+function lagerPanelZeigen(){
+  const el = $('#lgPanel');
+  if(!el) return;
+  $$('#lagerArtBody [data-lgakt]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lgakt === lagerPanelArt)));
+  if(!lagerPanelArt){ el.innerHTML = ''; return; }
+  const k = LAGER_AKT[lagerPanelArt], zaehlen = lagerPanelArt === 'zaehlen';
+  const start = zaehlen ? Math.max(0, LAGER_STAND[lagerArtId] || 0) : 1;
+  el.innerHTML = `<div class="card lg-panel">
+    <div class="mat">
+      <span class="nm">${zaehlen ? 'Gezählter Bestand' : 'Menge'}</span>
+      <button data-lgs="-1" data-d="-1" aria-label="weniger"></button>
+      <input id="lgMenge" class="data lg-zahl" inputmode="numeric" enterkeyhint="done" value="${start}">
+      <button data-lgs="1" data-d="1" aria-label="mehr"></button>
+    </div>
+    <label class="field"><span>${k.feld}</span><input id="lgNotiz" placeholder="${k.ph}"></label>
+    <div class="btn-row">
+      <button class="btn ghost" id="lgAbbr">Abbrechen</button>
+      <button class="btn primary" id="lgBuchen">${zaehlen ? 'Übernehmen' : 'Buchen'}</button>
+    </div>
+  </div>`;
+  $$('#lgPanel [data-lgs]').forEach(b => b.onclick = () => {
+    const i = $('#lgMenge'), v = parseInt(i.value, 10) || 0;
+    i.value = Math.max(zaehlen ? 0 : 1, v + (+b.dataset.lgs));
+  });
+  $('#lgAbbr').onclick = () => { lagerPanelArt = null; lagerPanelZeigen(); };
+  $('#lgBuchen').onclick = () => {
+    const t = $('#lgMenge').value.trim();
+    if(!/^\d+$/.test(t)){ toast('Bitte eine ganze Zahl eintragen'); return; }
+    const n = parseInt(t, 10);
+    if(!zaehlen && n < 1){ toast('Menge fehlt'); return; }
+    const art = lagerPanelArt;
+    const notiz = $('#lgNotiz').value.trim();
+    lagerBuchung({a: lagerArtId, art, menge: art === 'entnahme' ? -n : n, notiz: notiz || undefined});
+    lagerPanelArt = null;
+    lagerPanelZeigen();
+    lagerGeaendert(false);
+    toast(k.ok);
+  };
+}
+
+/* Angaben lesen und prüfen. Liefert null, wenn etwas nicht stimmt. */
+function lagerArtFormLesen(){
+  const neu = !lagerArtId, alt = neu ? null : LAGER.artikel[lagerArtId];
+  let name, stamm;
+  if(neu && $('#lgStamm').value){ name = $('#lgStamm').value; stamm = true; }
+  else {
+    name = $('#lgName').value.trim().replace(/\s+/g, ' ');
+    /* Neu oder umbenannt: der Name entscheidet. Sonst bleibt die Herkunft stehen,
+       auch wenn der Name inzwischen aus dem Stamm verschwunden ist – dann zeigt
+       der Artikel einen Hinweis. */
+    stamm = (!alt || lagerNorm(alt.name) !== lagerNorm(name)) ? lagerImStamm(name) : !!alt.stamm;
+  }
+  if(!name){ toast('Name fehlt'); return null; }
+  if(Object.values(LAGER.artikel).some(x => x.id !== lagerArtId && lagerNorm(x.name) === lagerNorm(name))){
+    toast('Diesen Artikel gibt es schon'); return null;
+  }
+  const zahl = (sel, vorgabe) => {
+    const t = $(sel).value.trim();
+    if(!t) return vorgabe;
+    return /^\d+$/.test(t) ? parseInt(t, 10) : NaN;
+  };
+  const melde = zahl('#lgMelde', 0), soll = zahl('#lgSoll', 0), vpe = zahl('#lgVpe', 1);
+  const start = neu ? zahl('#lgStart', 0) : 0;
+  if([melde, soll, vpe, start].some(isNaN)){ toast('Bitte nur ganze Zahlen eintragen'); return null; }
+  if(melde > 0 && soll < melde){ toast('Der Sollbestand muss mindestens den Meldebestand erreichen'); return null; }
+  return {werte: {name, stamm, einheit: $('#lgEinheit').value.trim() || 'Stk.',
+                  melde, soll, vpe: Math.max(1, vpe), artnr: $('#lgArtnr').value.trim()}, start};
+}
+$('#btnLagerArtSave').onclick = () => {
+  const r = lagerArtFormLesen();
+  if(!r) return;
+  if(!lagerArtId){
+    const t = Date.now();
+    const a = Object.assign({id: neueKennung('A'), angelegt: t, von: lagerWer()}, r.werte);
+    lagerSchreiben('artikel', a.id, a);
+    lagerBuchung({a: a.id, art: 'zaehlen', menge: r.start, notiz: 'Anfangsbestand'}, t);
+    toast('Artikel angelegt');
+  } else {
+    const a = Object.assign({}, LAGER.artikel[lagerArtId], r.werte);
+    lagerSchreiben('artikel', a.id, a);
+    toast('Gespeichert');
+  }
+  lagerGeaendert(false);
+  zurueckStapel();
+};
+
+/* ---------- Ansicht: Bestellliste ---------- */
+function lagerBestellText(o){
+  return [`Bestellung vom ${dstr(o.t)}`, ...o.zeilen.map(z =>
+    `${z.menge} ${z.einheit ? z.einheit + ' ' : ''}${z.name}${z.artnr ? ' – Art.-Nr. ' + z.artnr : ''}`)].join('\n');
+}
+function renderLagerBest(){
+  if(!lagerBestEntwurf) lagerBestEntwurf = lagerVorschlag().map(v => ({a: v.a, menge: v.menge}));
+  const zeilen = lagerBestEntwurf.filter(z => LAGER.artikel[z.a]);
+  let h = `<div class="card"><strong>Bestellung vom ${dstr(Date.now())}</strong>
+    <div class="muted small" style="margin-top:4px">Alles unter Sollbestand, abzüglich schon bestellter
+      Mengen und aufgerundet auf volle Verpackungseinheiten.</div></div>`;
+  if(!zeilen.length) h += `<div class="rail-empty">Alles auf Sollbestand – nichts zu bestellen.</div>`;
+  else h += `<div class="eyebrow">Positionen</div>` + lagerBestEntwurf.map((z, i) => {
+      const a = LAGER.artikel[z.a];
+      if(!a) return '';
+      const unter = [`Bestand ${LAGER_STAND[a.id] || 0} ${lagerEinheit(a)}`, `Soll ${a.soll}`, `VPE ${a.vpe || 1}`];
+      if(a.artnr) unter.push('Art.-Nr. ' + a.artnr);
+      return `<div class="mat${z.menge ? '' : ' zero'}">
+        <span class="nm">${esc(a.name)}<span class="lg-unter">${esc(unter.join(' · '))}</span></span>
+        <button data-bz="${i}" data-d="-1" aria-label="weniger"${z.menge ? '' : ' disabled'}></button>
+        <span class="cnt">${z.menge}</span>
+        <button data-bz="${i}" data-d="1" aria-label="mehr"></button>
+      </div>`;
+    }).join('') + `<p class="muted small">Minus und Plus gehen in ganzen Verpackungseinheiten;
+      auf null fällt die Zeile aus der Bestellung.</p>`;
+  $('#lagerBestBody').innerHTML = h;
+  $('#btnBestAufgeben').disabled = !zeilen.some(z => z.menge > 0);
+  $$('#lagerBestBody [data-bz]').forEach(b => b.onclick = () => {
+    const z = lagerBestEntwurf[+b.dataset.bz], a = z && LAGER.artikel[z.a];
+    if(!a) return;
+    z.menge = Math.max(0, z.menge + (+b.dataset.d) * Math.max(1, +a.vpe || 1));
+    renderLagerBest();
+  });
+}
+/* Die Bestellung wird gemerkt, bevor das Teilen-Menü aufgeht: iOS meldet nicht
+   verlässlich, ob wirklich gesendet wurde. Ging sie doch nicht hinaus, lässt sie
+   sich in der Übersicht verwerfen. Das Teilen läuft ohne Titel – manche Apps
+   machten daraus eine eigene Zeile. */
+$('#btnBestAufgeben').onclick = () => {
+  const zeilen = (lagerBestEntwurf || []).filter(z => z.menge > 0 && LAGER.artikel[z.a]);
+  if(!zeilen.length){ toast('Nichts zu bestellen'); return; }
+  const o = {id: neueKennung('B'), t: Date.now(), von: lagerWer(), zeilen: zeilen.map(z => {
+    const a = LAGER.artikel[z.a];
+    return {a: a.id, name: a.name, einheit: lagerEinheit(a), artnr: a.artnr || '', menge: z.menge, geliefert: 0};
+  })};
+  const text = lagerBestellText(o);
+  lagerSchreiben('bestellungen', o.id, o);
+  lagerGeaendert(false);
+  const fertig = msg => { lagerBestEntwurf = null; toast(msg); zurueckStapel(); };
+  if(navigator.share){
+    try { navigator.share({text}).then(() => fertig('Bestellung gemerkt'), () => fertig('Bestellung gemerkt')); return; }
+    catch(e){}
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(text).then(() => fertig('Bestellliste kopiert und gemerkt'),
+                                             () => fertig('Bestellung gemerkt'));
+  else fertig('Bestellung gemerkt');
+};
+
+/* ---------- Ansicht: Lieferung einbuchen ----------
+   "Alles angekommen" bucht jede offene Position und schließt die Bestellung.
+   "Teillieferung" blendet je Zeile ein Kästchen und die Menge ein, vorbelegt
+   mit dem Rest. Wer die Menge ändert, hakt die Zeile damit an. Was beim
+   Abschließen noch fehlt, fällt weg – liegt der Artikel dann unter Soll, steht
+   er beim nächsten Mal von selbst wieder auf der Bestellliste. */
+function lagerEinZeilen(o){
+  return (o.zeilen || []).map((z, i) => ({z, i, rest: Math.max(0, (+z.menge || 0) - (+z.geliefert || 0))}))
+                         .filter(x => x.rest > 0);
+}
+function renderLagerEin(){
+  const o = lagerEinId && LAGER.bestellungen[lagerEinId];
+  if(!o){ toast('Diese Bestellung ist nicht mehr offen'); zurueckStapel(); return; }
+  const offen = lagerEinZeilen(o);
+  const unter = x => {
+    const s = ['bestellt ' + x.z.menge];
+    if(+x.z.geliefert) s.push('geliefert ' + x.z.geliefert);
+    if(x.z.artnr) s.push('Art.-Nr. ' + x.z.artnr);
+    return `<span class="lg-unter">${esc(s.join(' · '))}</span>`;
+  };
+  let h = `<div class="card lg-best"><strong>Bestellung vom ${dstr(o.t)}</strong>
+    <div class="muted small">${o.von ? esc(o.von) + ' · ' : ''}${offen.length} offene Position${offen.length === 1 ? '' : 'en'}</div></div>`;
+  if(!offen.length) h += `<div class="rail-empty">Alles geliefert.</div>`;
+  else if(!lagerEinTeil){
+    h += `<div class="eyebrow">Noch offen</div>` + offen.map(x => `<div class="mat">
+        <span class="nm">${esc(x.z.name)}${unter(x)}</span>
+        <span class="lg-menge">${x.rest}<em>${esc(x.z.einheit || '')}</em></span>
+      </div>`).join('');
+  } else {
+    h += `<div class="eyebrow">Was kam an?</div>` + offen.map(x => `<div class="mat">
+        <label class="lg-wahl"><input type="checkbox" data-ew="${x.i}">
+          <span class="nm">${esc(x.z.name)}${unter(x)}</span></label>
+        <input class="data lg-zahl" data-em="${x.i}" inputmode="numeric" enterkeyhint="done" value="${x.rest}">
+      </div>`).join('') + `<p class="muted small">Was nicht angehakt ist, bleibt offen – außer beim Abschließen.</p>`;
+  }
+  $('#lagerEinBody').innerHTML = h;
+  $('#lagerEinBar').innerHTML = !offen.length
+    ? `<button class="btn primary" id="lgEinZu">Bestellung abschließen</button>`
+    : !lagerEinTeil
+      ? `<button class="btn primary" id="lgEinAlles">Alles angekommen</button>
+         <button class="btn ghost" id="lgEinTeil">Teillieferung</button>`
+      : `<button class="btn primary" id="lgEinTeilBuchen">Buchen, Rest bleibt offen</button>
+         <button class="btn" id="lgEinTeilZu">Buchen und abschließen</button>`;
+
+  $$('#lagerEinBody [data-em]').forEach(i => i.oninput = () => {
+    const k = $(`#lagerEinBody [data-ew="${i.dataset.em}"]`);
+    if(k) k.checked = true;
+  });
+  const gewaehlt = () => {
+    const m = {};
+    let fehler = false;
+    $$('#lagerEinBody [data-ew]').forEach(k => {
+      if(!k.checked) return;
+      const t = $(`#lagerEinBody [data-em="${k.dataset.ew}"]`).value.trim();
+      if(!/^\d+$/.test(t)){ fehler = true; return; }
+      if(+t > 0) m[k.dataset.ew] = +t;
+    });
+    return fehler ? null : m;
+  };
+  const b = id => $('#' + id);
+  if(b('lgEinZu')) b('lgEinZu').onclick = () => lagerLiefern(o, {}, true);
+  if(b('lgEinAlles')) b('lgEinAlles').onclick = () => {
+    const m = {};
+    offen.forEach(x => { m[x.i] = x.rest; });
+    lagerLiefern(o, m, true);
+  };
+  if(b('lgEinTeil')) b('lgEinTeil').onclick = () => { lagerEinTeil = true; renderLagerEin(); };
+  if(b('lgEinTeilBuchen')) b('lgEinTeilBuchen').onclick = () => {
+    const m = gewaehlt();
+    if(!m){ toast('Bitte ganze Zahlen eintragen'); return; }
+    if(!Object.keys(m).length){ toast('Nichts ausgewählt'); return; }
+    lagerLiefern(o, m, false);
+  };
+  if(b('lgEinTeilZu')) b('lgEinTeilZu').onclick = () => {
+    const m = gewaehlt();
+    if(!m){ toast('Bitte ganze Zahlen eintragen'); return; }
+    const fehlt = offen.some(x => (m[x.i] || 0) < x.rest);
+    if(!fehlt) return lagerLiefern(o, m, true);
+    showDialog({title:'Bestellung abschließen?', ok:'Abschließen',
+      body:'Was jetzt noch fehlt, fällt aus der Bestellung. Liegt ein Artikel danach unter Soll, '
+         + 'steht er beim nächsten Mal wieder auf der Bestellliste.',
+      onOk:() => lagerLiefern(o, m, true)});
+  };
+}
+function lagerLiefern(o, mengen, schliessen){
+  const t = Date.now(), neu = JSON.parse(JSON.stringify(o));
+  let gebucht = 0;
+  Object.keys(mengen).forEach(i => {
+    const z = neu.zeilen[+i], n = +mengen[i];
+    if(!z || !(n > 0)) return;
+    if(LAGER.artikel[z.a]){ lagerBuchung({a: z.a, art: 'eingang', menge: n, best: o.id, bestT: o.t}, t); gebucht++; }
+    z.geliefert = (+z.geliefert || 0) + n;
+  });
+  const bleibt = neu.zeilen.some(z => (+z.geliefert || 0) < (+z.menge || 0));
+  lagerEinId = null;                        // die Ansicht soll sich dabei nicht selbst schließen
+  lagerSchreiben('bestellungen', o.id, (schliessen || !bleibt) ? null : neu);
+  lagerGeaendert(false);
+  toast((schliessen || !bleibt) ? (gebucht ? 'Eingebucht, Bestellung abgeschlossen' : 'Bestellung abgeschlossen')
+                                : 'Teillieferung eingebucht');
+  zurueckStapel();
+}
+
 /* ---------- Start ---------- */
+lagerLaden();
 ablageLaden().catch(() => { archBereit = true; if(archLoeser) archLoeser(ARCH); });
 fotosUmziehen().catch(() => {});      // Altfotos aus dem localStorage in den Bildspeicher
 window.addEventListener('resize', () => { if(current === 'finish') initPad(); });
