@@ -10,6 +10,12 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.82 13.09.2026  Im Artikel steht nur noch die letzte Bewegung, darunter
+                    "Letzte 10 anzeigen" zum Aufklappen (waren 20 auf einmal).
+                    Neu daneben "Verlauf zuruecksetzen": loescht die Bewegungen
+                    und legt an ihre Stelle eine einzelne Zaehlung mit dem
+                    aktuellen Bestand - der Bestand bleibt also stehen, nur die
+                    Vorgeschichte ist weg. Gilt auf allen Geraeten.
   v1.81 13.09.2026  Die Meldegrenze im Lager heisst "Melden ab" und meldet beim
                     ERREICHEN: 20 eingetragen heisst, bei 20 wird es rot (bisher
                     erst bei 19). Der Sollbestand muss deshalb echt groesser sein
@@ -2132,7 +2138,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.81';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.82';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 13.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -7300,6 +7306,7 @@ var lagerSichernT    = null;
 var lagerLadenP      = null;
 var lagerArtId       = null;        // geöffneter Artikel; null = neuer Artikel
 var lagerPanelArt    = null;        // 'entnahme' | 'zugang' | 'zaehlen' | null
+var lagerBewAlle     = false;       // Bewegungen aufgeklappt (10 statt 1)
 var lagerBestEntwurf = null;        // Bestellliste in Arbeit
 var lagerEinId       = null;        // Bestellung, deren Lieferung eingebucht wird
 var lagerEinTeil     = false;       // Teillieferung gewählt
@@ -7575,7 +7582,7 @@ function renderLager(){
   $('#lagerBody').innerHTML = h;
 
   $$('#lagerBody [data-la]').forEach(b => b.onclick = () => {
-    lagerArtId = b.dataset.la; lagerPanelArt = null; go('lagerart');
+    lagerArtId = b.dataset.la; lagerPanelArt = null; lagerBewAlle = false; go('lagerart');
   });
   $('#btnLagerNeu').onclick = () => { lagerArtId = null; lagerPanelArt = null; go('lagerart'); };
   const bb = $('#btnLagerBest');
@@ -7638,11 +7645,13 @@ function renderLagerArt(){
   h += `<div class="row">${zahlFeld('lgMelde', 'Melden ab', a.melde || '', 'z.B. 20')}${zahlFeld('lgSoll', 'Sollbestand', a.soll || '', 'z.B. 100')}</div>
     <div class="row">${zahlFeld('lgVpe', 'VPE', (+a.vpe > 1 ? a.vpe : ''), '1')}
       <label class="field"><span>Art.-Nr.</span><input id="lgArtnr" value="${esc(a.artnr || '')}" placeholder="freiwillig"></label></div>
-    <p class="muted small" style="margin-top:0">Erreicht der Bestand die Menge unter „Melden ab“, wird der Knopf
+    <p class="muted small" style="margin-top:0">Sobald der Bestand auf „Melden ab“ fällt, wird der Knopf
       auf der Startseite rot. Bestellt wird bis zum Sollbestand, aufgerundet auf volle Verpackungseinheiten (VPE).</p>`;
   if(!neu){
     h += `<div class="eyebrow">Letzte Bewegungen</div><div id="lgBew"></div>
-      <button class="btn danger" id="btnLgWeg" style="margin-top:18px">Artikel löschen</button>`;
+      <button class="btn ghost" id="btnLgMehr" hidden></button>
+      <button class="btn ghost" id="btnLgVerlauf" style="margin-top:18px">Verlauf zurücksetzen</button>
+      <button class="btn danger" id="btnLgWeg" style="margin-top:10px">Artikel löschen</button>`;
   }
   $('#lagerArtBody').innerHTML = h;
   $('#btnLagerArtSave').textContent = neu ? 'Artikel anlegen' : 'Angaben speichern';
@@ -7657,6 +7666,29 @@ function renderLagerArt(){
     lagerPanelArt = lagerPanelArt === b.dataset.lgakt ? null : b.dataset.lgakt;
     lagerPanelZeigen();
   });
+  const mehr = $('#btnLgMehr');
+  if(mehr) mehr.onclick = () => { lagerBewAlle = !lagerBewAlle; lagerArtAuffrischen(); };
+  /* Zurücksetzen heißt hier: alle Bewegungen weg und an ihrer Stelle eine
+     einzelne Zählung mit dem Bestand, den sie ergeben hatten. Beides in einem
+     Zug, damit zwischendurch nirgends ein Bestand von null steht. */
+  const verlauf = $('#btnLgVerlauf');
+  if(verlauf) verlauf.onclick = () => {
+    const x = LAGER.artikel[lagerArtId];
+    if(!x) return;
+    const alt = Object.values(LAGER.buchungen).filter(b => b.a === x.id);
+    if(alt.length < 2){ toast('Es gibt nichts zurückzusetzen'); return; }
+    const bestand = LAGER_STAND[x.id] || 0;
+    showDialog({title:'Verlauf zurücksetzen?', ok:'Zurücksetzen', danger:true,
+      body:`Die Bewegungen von ${x.name} werden gelöscht. Der Bestand von ${bestand} `
+         + `${lagerEinheit(x)} bleibt und steht danach als einzelne Zählung da. Gilt auf allen Geräten.`,
+      onOk:() => {
+        alt.forEach(b => lagerSchreiben('buchungen', b.id, null));
+        lagerBuchung({a: x.id, art: 'zaehlen', menge: bestand, notiz: 'Verlauf zurückgesetzt'});
+        lagerBewAlle = false;
+        lagerGeaendert(false);
+        toast('Verlauf zurückgesetzt');
+      }});
+  };
   const weg = $('#btnLgWeg');
   if(weg) weg.onclick = () => {
     const x = LAGER.artikel[lagerArtId];
@@ -7706,13 +7738,22 @@ function lagerArtAuffrischen(){
     return 'Entnahme' + n;
   };
   const menge = b => b.art === 'zaehlen' ? '= ' + b.menge : (b.menge > 0 ? '+' + b.menge : '−' + Math.abs(b.menge));
+  const zeigen = lagerBewAlle ? 10 : 1;
   $('#lgBew').innerHTML = alle.length
-    ? alle.slice(0, 20).map(b => `<div class="lg-bew">
+    ? alle.slice(0, zeigen).map(b => `<div class="lg-bew">
         <div class="w">${esc(text(b))}<small>${dstr(b.t)} ${tstr(b.t)}${b.von ? ' · ' + esc(b.von) : ''}</small></div>
         <div class="m">${menge(b)}</div>
       </div>`).join('')
-      + (alle.length > 20 ? `<p class="muted small">und ${alle.length - 20} ältere</p>` : '')
+      + (alle.length > zeigen ? `<p class="muted small">und ${alle.length - zeigen} ältere</p>` : '')
     : `<div class="rail-empty">Noch keine Bewegungen.</div>`;
+  /* Der Knopf erscheint erst ab der zweiten Bewegung – bei einer gibt es nichts
+     aufzuklappen. Fällt er beim Auffrischen weg, klappt die Liste wieder zu. */
+  const mehr = $('#btnLgMehr');
+  if(mehr){
+    mehr.hidden = alle.length < 2;
+    if(mehr.hidden) lagerBewAlle = false;
+    mehr.textContent = lagerBewAlle ? 'Weniger anzeigen' : 'Letzte 10 anzeigen';
+  }
 }
 
 /* Entnehmen, Zugang, Zählen: ein kleines Feld unter den drei Knöpfen. Nicht
