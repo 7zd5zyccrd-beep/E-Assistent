@@ -10,6 +10,10 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.83 13.09.2026  Artikelansicht: die drei Knoepfe unter den Bewegungen stehen
+                    jetzt in einem Block mit gleichem Abstand. Der Abstand kommt
+                    ueber gap, damit er sich nicht aendert, wenn "Letzte 10
+                    anzeigen" ausgeblendet ist.
   v1.82 13.09.2026  Im Artikel steht nur noch die letzte Bewegung, darunter
                     "Letzte 10 anzeigen" zum Aufklappen (waren 20 auf einmal).
                     Neu daneben "Verlauf zuruecksetzen": loescht die Bewegungen
@@ -1005,6 +1009,10 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
   width:22px;height:22px;min-height:0;flex:0 0 22px;margin:0;padding:0;border:0;border-radius:0;
   background:none;appearance:auto;-webkit-appearance:auto;accent-color:var(--ink)}
 .lg-verw{display:block;width:fit-content;margin:10px 0 0 auto;font-size:14px}
+/* Knöpfe unter den Bewegungen: gap statt Rändern, damit der Abstand gleich
+   bleibt, wenn "Letzte 10 anzeigen" wegfällt (gap überspringt Verstecktes). */
+.lg-artakt{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.lg-artakt .btn + .btn{margin-top:0}
 
 /* ---------- Toast ---------- */
 #toast{
@@ -2138,7 +2146,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.82';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.83';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 13.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -7649,9 +7657,11 @@ function renderLagerArt(){
       auf der Startseite rot. Bestellt wird bis zum Sollbestand, aufgerundet auf volle Verpackungseinheiten (VPE).</p>`;
   if(!neu){
     h += `<div class="eyebrow">Letzte Bewegungen</div><div id="lgBew"></div>
-      <button class="btn ghost" id="btnLgMehr" hidden></button>
-      <button class="btn ghost" id="btnLgVerlauf" style="margin-top:18px">Verlauf zurücksetzen</button>
-      <button class="btn danger" id="btnLgWeg" style="margin-top:10px">Artikel löschen</button>`;
+      <div class="lg-artakt">
+        <button class="btn ghost" id="btnLgMehr" hidden></button>
+        <button class="btn ghost" id="btnLgVerlauf">Verlauf zurücksetzen</button>
+        <button class="btn danger" id="btnLgWeg">Artikel löschen</button>
+      </div>`;
   }
   $('#lagerArtBody').innerHTML = h;
   $('#btnLagerArtSave').textContent = neu ? 'Artikel anlegen' : 'Angaben speichern';
