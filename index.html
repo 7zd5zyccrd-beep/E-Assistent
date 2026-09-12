@@ -10,6 +10,26 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.81 13.09.2026  Die Meldegrenze im Lager heisst "Melden ab" und meldet beim
+                    ERREICHEN: 20 eingetragen heisst, bei 20 wird es rot (bisher
+                    erst bei 19). Der Sollbestand muss deshalb echt groesser sein
+                    als "Melden ab" - gleich hiesse, dass der Artikel nach jeder
+                    Lieferung sofort wieder rot waere. Die Feldbedeutung ist die
+                    einzige Aenderung; bestehende Artikel melden nun eine Einheit
+                    frueher als zuvor.
+                    Ausserdem: die Wegbeschreibung zu Rexel nennt jetzt den Knopf
+                    "Eine Liste kopieren & einfuegen" - das Feld fuer einzelne
+                    Artikelnummern ist einzeilig und nimmt keine Liste an.
+  v1.80 11.09.2026  Bestellung naeher an Rexel. "Bestellung aufgeben" legt die
+                    Positionen mit Art.-Nr. als Artikelnummer-Tab-Menge in die
+                    Zwischenablage (wie aus Excel kopiert) und oeffnet im selben
+                    Tipp die Rexel-Schnellerfassung; dort einfuegen und
+                    uebernehmen. Kopiert wird synchron ueber ein verstecktes
+                    Textfeld - iOS oeffnet eine fremde Seite nur unmittelbar
+                    nach einem Tipp, nach dem Teilen-Menue nicht mehr.
+                    Positionen ohne Art.-Nr. werden vorher angesagt; hat keine
+                    eine, geht es auf Wunsch als Text hinaus. Der bisherige Weg
+                    steht als "Als Text teilen" daneben, fuer andere Lieferanten.
   v1.79 10.09.2026  Materialbestand. Auf der Startseite steht unter "Lager" ein
                     eigener Knopf. Das Lager fuehrt ausgewaehlte Artikel aus dem
                     Material-Stamm und freies Verbrauchsmaterial, je mit Einheit,
@@ -1940,6 +1960,7 @@ window.addEventListener('error', e => {
       <div id="lagerBestBody"></div>
       <div class="actionbar"><div class="inner">
         <button class="btn primary" id="btnBestAufgeben">Bestellung aufgeben</button>
+        <button class="btn ghost" id="btnBestText">Als Text teilen</button>
       </div></div>
     </section>
 
@@ -2111,8 +2132,8 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.79';                    // siehe Änderungsliste im Dateikopf
-const BUILD        = VERSION + ' · 10.09.2026';
+const VERSION      = 'v1.81';                    // siehe Änderungsliste im Dateikopf
+const BUILD        = VERSION + ' · 13.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
 const DAUER_WARN   = 100;                        // zu lang: unplausibel im Protokoll
@@ -7316,11 +7337,11 @@ function lagerOffen(aid){
   }));
   return n;
 }
-/* rot = unter Meldebestand und nicht bestellt · gelb = unter Meldebestand, aber
-   unterwegs · leer = ausreichend. Ohne Meldebestand gibt es keine Warnung. */
+/* rot = auf "Melden ab" oder darunter und nicht bestellt · gelb = ebenso, aber
+   unterwegs · leer = ausreichend. Ohne "Melden ab" gibt es keine Warnung. */
 function lagerZustand(a){
   const melde = +a.melde || 0;
-  if(melde > 0 && (LAGER_STAND[a.id] || 0) < melde) return lagerOffen(a.id) > 0 ? 'gelb' : 'rot';
+  if(melde > 0 && (LAGER_STAND[a.id] || 0) <= melde) return lagerOffen(a.id) > 0 ? 'gelb' : 'rot';
   return '';
 }
 function lagerKnopf(){
@@ -7532,19 +7553,19 @@ function renderLager(){
   const zeile = a => {
     const z = lagerZustand(a), off = lagerOffen(a.id);
     const s = [];
-    if(+a.melde) s.push('Melde ' + a.melde);
+    if(+a.melde) s.push('Melden ab ' + a.melde);
     if(+a.soll)  s.push('Soll ' + a.soll);
     if(off)      s.push('bestellt ' + off);
     if(a.stamm && !lagerImStamm(a.name)) s.push('nicht im Material-Stamm');
     return `<button class="list-item${z === 'rot' ? ' state-red' : z === 'gelb' ? ' state-yellow' : ''}" data-la="${esc(a.id)}">
-      <div class="body"><div class="t">${esc(a.name)}</div><div class="s">${esc(s.join(' · ') || 'ohne Meldebestand')}</div></div>
+      <div class="body"><div class="t">${esc(a.name)}</div><div class="s">${esc(s.join(' · ') || 'ohne Meldegrenze')}</div></div>
       <div class="lg-menge">${LAGER_STAND[a.id] || 0}<em>${esc(lagerEinheit(a))}</em></div>
     </button>`;
   };
   const knapp = arts.filter(a => lagerZustand(a));
   knapp.sort((x, y) => (lagerZustand(x) === 'rot' ? 0 : 1) - (lagerZustand(y) === 'rot' ? 0 : 1));
   const rest = arts.filter(a => !lagerZustand(a));
-  if(knapp.length) h += `<div class="eyebrow">Unter Meldebestand</div>` + knapp.map(zeile).join('');
+  if(knapp.length) h += `<div class="eyebrow">Nachbestellen</div>` + knapp.map(zeile).join('');
   const stamm = rest.filter(a => a.stamm), frei = rest.filter(a => !a.stamm);
   if(stamm.length) h += `<div class="eyebrow">Aus der Materialliste</div>` + stamm.map(zeile).join('');
   if(frei.length)  h += `<div class="eyebrow">Verbrauchsmaterial</div>` + frei.map(zeile).join('');
@@ -7614,11 +7635,11 @@ function renderLagerArt(){
       <div class="chk-grid">${LAGER_EINHEITEN.map(e => `<button class="sug" data-eh="${esc(e)}">${esc(e)}</button>`).join('')}</div>
     </div>`;
   if(neu) h += zahlFeld('lgStart', 'Bestand jetzt (gezählt)', '', '0');
-  h += `<div class="row">${zahlFeld('lgMelde', 'Meldebestand', a.melde || '', 'z.B. 20')}${zahlFeld('lgSoll', 'Sollbestand', a.soll || '', 'z.B. 100')}</div>
+  h += `<div class="row">${zahlFeld('lgMelde', 'Melden ab', a.melde || '', 'z.B. 20')}${zahlFeld('lgSoll', 'Sollbestand', a.soll || '', 'z.B. 100')}</div>
     <div class="row">${zahlFeld('lgVpe', 'VPE', (+a.vpe > 1 ? a.vpe : ''), '1')}
       <label class="field"><span>Art.-Nr.</span><input id="lgArtnr" value="${esc(a.artnr || '')}" placeholder="freiwillig"></label></div>
-    <p class="muted small" style="margin-top:0">Unter dem Meldebestand wird der Knopf auf der Startseite rot.
-      Bestellt wird bis zum Sollbestand, aufgerundet auf volle Verpackungseinheiten (VPE).</p>`;
+    <p class="muted small" style="margin-top:0">Erreicht der Bestand die Menge unter „Melden ab“, wird der Knopf
+      auf der Startseite rot. Bestellt wird bis zum Sollbestand, aufgerundet auf volle Verpackungseinheiten (VPE).</p>`;
   if(!neu){
     h += `<div class="eyebrow">Letzte Bewegungen</div><div id="lgBew"></div>
       <button class="btn danger" id="btnLgWeg" style="margin-top:18px">Artikel löschen</button>`;
@@ -7662,7 +7683,7 @@ function lagerArtAuffrischen(){
   const a = LAGER.artikel[lagerArtId];
   if(!a){ lagerArtId = null; toast('Der Artikel wurde gelöscht'); zurueckStapel(); return; }
   const z = lagerZustand(a), off = lagerOffen(a.id);
-  const info = [+a.melde ? 'Meldebestand ' + a.melde : 'ohne Meldebestand'];
+  const info = [+a.melde ? 'Melden ab ' + a.melde : 'ohne Meldegrenze'];
   if(+a.soll) info.push('Sollbestand ' + a.soll);
   if(off)     info.push('bestellt ' + off);
   const kopf = $('#lgKopf');
@@ -7760,7 +7781,9 @@ function lagerArtFormLesen(){
   const melde = zahl('#lgMelde', 0), soll = zahl('#lgSoll', 0), vpe = zahl('#lgVpe', 1);
   const start = neu ? zahl('#lgStart', 0) : 0;
   if([melde, soll, vpe, start].some(isNaN)){ toast('Bitte nur ganze Zahlen eintragen'); return null; }
-  if(melde > 0 && soll < melde){ toast('Der Sollbestand muss mindestens den Meldebestand erreichen'); return null; }
+  /* Echt größer: bei Soll gleich "Melden ab" stünde der Artikel nach jeder
+     Lieferung sofort wieder auf Rot. */
+  if(melde > 0 && soll <= melde){ toast('Der Sollbestand muss über „Melden ab“ liegen'); return null; }
   return {werte: {name, stamm, einheit: $('#lgEinheit').value.trim() || 'Stk.',
                   melde, soll, vpe: Math.max(1, vpe), artnr: $('#lgArtnr').value.trim()}, start};
 }
@@ -7806,9 +7829,12 @@ function renderLagerBest(){
         <button data-bz="${i}" data-d="1" aria-label="mehr"></button>
       </div>`;
     }).join('') + `<p class="muted small">Minus und Plus gehen in ganzen Verpackungseinheiten;
-      auf null fällt die Zeile aus der Bestellung.</p>`;
+      auf null fällt die Zeile aus der Bestellung.</p>
+      <p class="muted small">„Bestellung aufgeben“ kopiert die Positionen mit Art.-Nr. und öffnet die
+      Rexel-Schnellerfassung. Dort auf „Eine Liste kopieren &amp; einfügen“ tippen, in das große Feld einfügen
+      und übernehmen – das Feld für einzelne Artikelnummern nimmt keine Liste an.</p>`;
   $('#lagerBestBody').innerHTML = h;
-  $('#btnBestAufgeben').disabled = !zeilen.some(z => z.menge > 0);
+  $('#btnBestAufgeben').disabled = $('#btnBestText').disabled = !zeilen.some(z => z.menge > 0);
   $$('#lagerBestBody [data-bz]').forEach(b => b.onclick = () => {
     const z = lagerBestEntwurf[+b.dataset.bz], a = z && LAGER.artikel[z.a];
     if(!a) return;
@@ -7816,30 +7842,110 @@ function renderLagerBest(){
     renderLagerBest();
   });
 }
-/* Die Bestellung wird gemerkt, bevor das Teilen-Menü aufgeht: iOS meldet nicht
-   verlässlich, ob wirklich gesendet wurde. Ging sie doch nicht hinaus, lässt sie
-   sich in der Übersicht verwerfen. Das Teilen läuft ohne Titel – manche Apps
-   machten daraus eine eigene Zeile. */
-$('#btnBestAufgeben').onclick = () => {
+/* Die Rexel-Schnellerfassung nimmt Artikel per Datei oder durch Einfügen aus
+   Excel. Ändert Rexel die Adresse, ist nur diese Zeile anzupassen. */
+const REXEL_SCHNELL = 'https://www.rexel.de/newQuickorder';
+
+/* Aus dem Entwurf eine Bestellung bauen. "weg" hält fest, wie sie hinausging:
+   'rexel' (Zwischenablage und Schnellerfassung) oder 'text' (Teilen-Menü). */
+function lagerBestellungBauen(weg){
   const zeilen = (lagerBestEntwurf || []).filter(z => z.menge > 0 && LAGER.artikel[z.a]);
-  if(!zeilen.length){ toast('Nichts zu bestellen'); return; }
-  const o = {id: neueKennung('B'), t: Date.now(), von: lagerWer(), zeilen: zeilen.map(z => {
+  if(!zeilen.length) return null;
+  return {id: neueKennung('B'), t: Date.now(), von: lagerWer(), weg, zeilen: zeilen.map(z => {
     const a = LAGER.artikel[z.a];
-    return {a: a.id, name: a.name, einheit: lagerEinheit(a), artnr: a.artnr || '', menge: z.menge, geliefert: 0};
+    return {a: a.id, name: a.name, einheit: lagerEinheit(a), artnr: String(a.artnr || '').trim(),
+            menge: z.menge, geliefert: 0};
   })};
+}
+function lagerBestFertig(msg){ lagerBestEntwurf = null; toast(msg); zurueckStapel(); }
+
+/* Kopieren ohne Umweg über ein Versprechen: über ein verstecktes Textfeld, das
+   sofort fertig ist. iOS öffnet eine fremde Seite nur unmittelbar nach einem
+   Tipp – wartete das Öffnen auf die Zwischenablage, würde es still blockiert.
+   Das Feld ist schreibgeschützt, damit keine Tastatur aufgeht; das Abwählen vor
+   dem Entfernen holt die Fußleiste zurück, die beim Fokus weggeschoben wurde.
+   Klappt der alte Weg nicht, wird die neue Schnittstelle versucht. */
+function lagerKopieren(text){
+  let ok = false;
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px';
+  document.body.appendChild(ta);
+  try { ta.select(); ta.setSelectionRange(0, text.length); ok = document.execCommand('copy'); } catch(e){ ok = false; }
+  ta.blur();
+  ta.remove();
+  if(!ok && navigator.clipboard && navigator.clipboard.writeText){
+    try { navigator.clipboard.writeText(text).catch(() => {}); ok = true; } catch(e){}
+  }
+  return ok;
+}
+
+/* Weg 1: Rexel. Die Zeilen haben das Format, das beim Kopieren aus Excel
+   entsteht – Artikelnummer, Tabulator, Menge. Kopieren, Öffnen und Merken
+   laufen im selben Tipp. */
+function lagerZuRexel(o){
+  const text = o.zeilen.filter(z => z.artnr).map(z => z.artnr + '\t' + z.menge).join('\n');
+  if(!lagerKopieren(text)){
+    showDialog({title:'Kopieren ging nicht', ok:'Als Text teilen',
+      body:'Die Positionen ließen sich nicht in die Zwischenablage legen. Soll die Bestellung stattdessen als Text hinaus?',
+      onOk: lagerBestText});
+    return;
+  }
+  let w = null;
+  try { w = window.open(REXEL_SCHNELL, '_blank'); if(w) w.opener = null; } catch(e){}
+  lagerSchreiben('bestellungen', o.id, o);
+  lagerGeaendert(false);
+  lagerBestFertig(w ? 'Kopiert – bei „Eine Liste kopieren & einfügen“ einsetzen'
+                    : 'Kopiert – bitte die Rexel-Schnellerfassung öffnen');
+}
+$('#btnBestAufgeben').onclick = () => {
+  const o = lagerBestellungBauen('rexel');
+  if(!o){ toast('Nichts zu bestellen'); return; }
+  const ohne = o.zeilen.filter(z => !z.artnr);
+  if(ohne.length === o.zeilen.length){
+    showDialog({title:'Keine Artikelnummern', ok:'Als Text teilen',
+      body:'Für den Rexel-Warenkorb braucht jede Position ihre Rexel-Nummer im Feld Art.-Nr. '
+         + 'Diese Bestellung hat keine. Soll sie stattdessen als Text hinaus?',
+      onOk: lagerBestText});
+    return;
+  }
+  /* Positionen ohne Nummer werden vorher angesagt – im Shop muss man sie von
+     Hand ergänzen. Auf der Bestellung bleiben sie trotzdem stehen. Das Öffnen
+     läuft dann im Tipp auf "Weiter zu Rexel", der zählt ebenso. */
+  if(ohne.length){
+    showDialog({title:'Ohne Artikelnummer', ok:'Weiter zu Rexel',
+      body:(ohne.length === 1 ? 'Diese Position kommt' : `Diese ${ohne.length} Positionen kommen`)
+         + ` nicht in den Rexel-Warenkorb: ${ohne.map(z => z.name).join(', ')}. `
+         + (ohne.length === 1 ? 'Sie bleibt' : 'Sie bleiben') + ' auf der Bestellung; im Shop bitte von Hand ergänzen.',
+      onOk: () => lagerZuRexel(o)});
+    return;
+  }
+  lagerZuRexel(o);
+};
+
+/* Weg 2: als Text über das Teilen-Menü, für andere Lieferanten. Die Bestellung
+   wird gemerkt, bevor das Menü aufgeht: iOS meldet nicht verlässlich, ob
+   wirklich gesendet wurde. Ging sie doch nicht hinaus, lässt sie sich in der
+   Übersicht verwerfen. Geteilt wird ohne Titel – manche Apps machten daraus
+   eine eigene Zeile. */
+function lagerBestText(){
+  const o = lagerBestellungBauen('text');
+  if(!o){ toast('Nichts zu bestellen'); return; }
   const text = lagerBestellText(o);
   lagerSchreiben('bestellungen', o.id, o);
   lagerGeaendert(false);
-  const fertig = msg => { lagerBestEntwurf = null; toast(msg); zurueckStapel(); };
   if(navigator.share){
-    try { navigator.share({text}).then(() => fertig('Bestellung gemerkt'), () => fertig('Bestellung gemerkt')); return; }
+    try { navigator.share({text}).then(() => lagerBestFertig('Bestellung gemerkt'),
+                                        () => lagerBestFertig('Bestellung gemerkt')); return; }
     catch(e){}
   }
   if(navigator.clipboard && navigator.clipboard.writeText)
-    navigator.clipboard.writeText(text).then(() => fertig('Bestellliste kopiert und gemerkt'),
-                                             () => fertig('Bestellung gemerkt'));
-  else fertig('Bestellung gemerkt');
-};
+    navigator.clipboard.writeText(text).then(() => lagerBestFertig('Bestellliste kopiert und gemerkt'),
+                                             () => lagerBestFertig('Bestellung gemerkt'));
+  else lagerBestFertig('Bestellung gemerkt');
+}
+$('#btnBestText').onclick = lagerBestText;
 
 /* ---------- Ansicht: Lieferung einbuchen ----------
    "Alles angekommen" bucht jede offene Position und schließt die Bestellung.
