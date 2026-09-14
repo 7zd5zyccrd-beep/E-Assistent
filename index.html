@@ -10,6 +10,26 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.88 14.09.2026  Auf dem iPad nutzen die Ansichten die volle Bildschirmflaeche.
+                    Die Inhaltsspalte war auf 760 px begrenzt und liess auf einem
+                    Fenster von 1180 px links und rechts je rund 200 px leer; ab
+                    700 px Breite und genug Hoehe nimmt sie jetzt die ganze
+                    Breite, hochkant wie quer. Eine Obergrenze gibt es nicht, die
+                    App laeuft nur auf iPhone und iPad. Der Deckel von 1280 px im
+                    Zweispalten-Layout (Verteiler, Stromkreis, Zuleitung) faellt
+                    entsprechend mit.
+                    Damit daraus keine ueberlangen Zeilen werden, stellen sich
+                    weitere Bereiche ab 700 px Rahmenbreite zweispaltig: neben
+                    Verteiler, Angaben, Materialaufwand und Einstellungen jetzt
+                    auch Materialbestand, Bestellliste, Lieferung, Ablage und die
+                    Projektliste. Ueberschriften, Hinweise, Knoepfe und
+                    Leerzeilen nehmen darin die ganze Breite, nebeneinander
+                    stehen nur die Eintraege selbst. Im Artikel stehen nur die
+                    Eingabefelder nebeneinander - das ist ein Formular, keine
+                    Liste.
+                    Gedrehte iPhones bleiben aussen vor: die Hoehenabfrage von
+                    600 px haelt sie aus der Zone heraus, sie sind im Querformat
+                    zwar breit, aber flach.
   v1.87 14.09.2026  Benutzernamen erscheinen mit grossem Anfangsbuchstaben. Der
                     Kontoname bleibt beim Anmelden klein - daran haengt die
                     Adresse <name>@bds.local, und "Hagen " soll dasselbe Konto
@@ -1379,7 +1399,11 @@ body[data-modus="mess"] .linkbtn{color:#2E6DA8}
 
 /* ---------- Zone „Breit": iPad ---------- */
 @media (min-width:700px) and (min-height:600px){
-  :root{--col:760px}
+  /* Volle Fensterbreite statt fester Spalte. Damit daraus keine überlangen
+     Zeilen werden, stellen sich die Bereiche weiter unten nach ihrer eigenen
+     Rahmenbreite zweispaltig. Die Höhenabfrage hält gedrehte iPhones heraus:
+     die sind im Querformat breit genug, aber flach. */
+  :root{--col:100%}
   /* Die Blattvorschau ist die einzige Ansicht, die aus der Spalte ausbricht:
      sie nimmt die volle Fensterbreite ein, damit applySheetZoom() das Blatt
      ab etwa 1040 px Fensterbreite von selbst in Originalgröße zeigt.
@@ -1393,6 +1417,8 @@ body[data-modus="mess"] .linkbtn{color:#2E6DA8}
    Spalte des Zweispalten-Layouts, ohne Sonderregeln je Gerät. */
 #view-circuit,#view-feed,#view-settings{container:formular / inline-size}
 #view-board,#view-checks,#view-material{container:liste / inline-size}
+#view-lager,#view-lagerart,#view-lagerbest,#view-lagerein,
+#view-archive,#view-resume{container:liste / inline-size}
 
 @container formular (min-width:700px){
   .panes{display:grid;grid-template-columns:1fr 1fr;column-gap:22px;align-items:start}
@@ -1400,20 +1426,32 @@ body[data-modus="mess"] .linkbtn{color:#2E6DA8}
 }
 
 @container liste (min-width:700px){
-  #boardBody,#checkList,#materialBody{
+  #boardBody,#checkList,#materialBody,
+  #lagerBody,#lagerArtBody,#lagerBestBody,#lagerEinBody,#archiveBody,#resumeBody{
     display:grid;grid-template-columns:1fr 1fr;column-gap:10px;align-content:start;
   }
   #boardBody .row-head,#boardBody .rail-empty,
   #materialBody .eyebrow,#materialBody p,#materialBody .rail-empty{grid-column:1 / -1}
+  /* Nebeneinander stehen nur die Einträge selbst. Überschriften, Hinweise,
+     Knöpfe und Leerzeilen nehmen die ganze Breite – sonst stünde eine Rubrik
+     neben ihrem eigenen Inhalt. */
+  #lagerBody > .eyebrow,#lagerBody > .warn,#lagerBody > p,#lagerBody > .btn,#lagerBody > .rail-empty,
+  #lagerBestBody > .eyebrow,#lagerBestBody > p,#lagerBestBody > .rail-empty,#lagerBestBody > .card,
+  #lagerEinBody > .eyebrow,#lagerEinBody > p,#lagerEinBody > .rail-empty,#lagerEinBody > .card,
+  #archiveBody > .rail-empty,#resumeBody > .rail-empty{grid-column:1 / -1}
+  /* Der Artikel ist kein Listen-, sondern ein Formularbereich: dort stehen nur
+     die Eingabefelder nebeneinander, alles andere über die ganze Breite. */
+  #lagerArtBody > *{grid-column:1 / -1}
+  #lagerArtBody > .field{grid-column:auto}
 }
 
 /* ---------- Zone „Zwei Spalten": Liste links, Formular rechts ----------
    Die Schwelle folgt dem Platzbedarf, nicht einem Gerät: 320 Liste + 24 Spalt
    + 600 Formular + 32 Seitenrand ≈ 976, aufgerundet 1000. Die Liste bekommt
-   ein Band von 300 bis 400, das Formular den ganzen Rest.
+   ein Band von 300 bis 400, das Formular den ganzen Rest. Eine Obergrenze für
+   die Breite gibt es nicht – die App läuft auf iPhone und iPad.
    Die Klasse .split setzt syncSplit(). */
 @media (min-width:1000px) and (min-height:600px){
-  .app.split{max-width:1280px}
   .app.split main{
     display:grid;grid-template-columns:minmax(300px,400px) minmax(0,1fr);column-gap:24px;
   }
@@ -2284,7 +2322,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.87';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.88';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 14.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
