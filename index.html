@@ -10,6 +10,25 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.84 14.09.2026  Material: "Phasenschiene 3-phasig" heisst jetzt "Phasenschiene
+                    FI 3-phasig" - das ist die Schiene, die je vierpoligem FI
+                    mitgezaehlt wird. Sie behaelt alle Verknuepfungen: den
+                    Lager-Artikel samt Bestand, Bewegungen und offenen
+                    Bestellungen, und ihre Zeile in den Projekten. Daneben steht
+                    "Phasenschiene 3-phasig" neu als eigenes Bauteil ohne
+                    Verknuepfung. Neu im Stamm ausserdem RCD 25A/30mA 4P,
+                    RCD 40A/30mA 2P, RCD 40A/300mA 4P und RCD 63A/30mA 4P.
+                    Die Namenstabelle rechnet FI-Typen jetzt allgemein um
+                    ("FI 40A / 30mA / 2-polig" -> "RCD 40A/30mA 2P"), damit auch
+                    ein selbst ergaenzter Typ im Material richtig heisst.
+                    Die Umbenennung laeuft einmalig ueber Einstellungen, Lager
+                    und Projekte. Der Abgleich haette sie sonst zurueckgedreht:
+                    das Geraet ignoriert genau einen ankommenden Materialstand
+                    und schiebt stattdessen den eigenen hoch; der Merker dafuer
+                    faellt erst weg, wenn das geklappt hat. Die Projekte tragen
+                    dazu den Stand der Materialnamen (matV), sonst wuerde eine
+                    spaeter von Hand gesetzte Zeile "Phasenschiene 3-phasig"
+                    beim naechsten Laden wieder umbenannt.
   v1.83 13.09.2026  Artikelansicht: die drei Knoepfe unter den Bewegungen stehen
                     jetzt in einem Block mit gleichem Abstand. Der Abstand kommt
                     ueber gap, damit er sich nicht aendert, wenn "Letzte 10
@@ -2087,12 +2106,17 @@ const MATERIAL_STD = [
   'Phasenschiene 1-phasig',
   'Phasenschiene 2-phasig',
   'Phasenschiene 3-phasig',
+  'Phasenschiene FI 3-phasig',
   'LS-Schalter B10 1P',
   'LS-Schalter B16 1P',
   'LS-Schalter B16 3P',
   'LS-Schalter B20 3P',
   'RCD 25A/30mA 2P',
+  'RCD 25A/30mA 4P',
+  'RCD 40A/30mA 2P',
   'RCD 40A/30mA 4P',
+  'RCD 40A/300mA 4P',
+  'RCD 63A/30mA 4P',
   'FI/LS B16 2P',
   'FI/LS B16 4P',
   'Hauptschalter 63A',
@@ -2146,8 +2170,8 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.83';                    // siehe Änderungsliste im Dateikopf
-const BUILD        = VERSION + ' · 13.09.2026';
+const VERSION      = 'v1.84';                    // siehe Änderungsliste im Dateikopf
+const BUILD        = VERSION + ' · 14.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
 const DAUER_WARN   = 100;                        // zu lang: unplausibel im Protokoll
@@ -2209,10 +2233,51 @@ if(Array.isArray(CFG.specials) && CFG.specials.includes('Hauptschalter Trafo')){
   CFG.specials = CFG.specials.flatMap(x => x === 'Hauptschalter Trafo' ? ['Hauptschalter, 3','Trafo'] : x);
 }
 /* Materialliste: einmalig auf die neue, gekürzte Auswahl umstellen. Danach wird nichts mehr
-   nachgetragen: was in den Einstellungen gestrichen wird, bleibt gestrichen. */
-if(CFG.matStand !== 2){
+   nachgetragen: was in den Einstellungen gestrichen wird, bleibt gestrichen.
+   Die Abfrage prüft "kleiner als 2", nicht "ungleich 2" – sonst setzte ein
+   höherer Stand die Liste wieder auf die Vorgabe zurück. */
+if((CFG.matStand | 0) < 2){
   CFG.material = [...MATERIAL_STD];
   CFG.matStand = 2;
+  Store.set('cfg', CFG);
+}
+/* v1.84: die Phasenschiene, die je vierpoligem FI mitgezählt wird, heißt jetzt
+   "Phasenschiene FI 3-phasig". Der alte Eintrag wird umbenannt statt ersetzt,
+   damit er seinen Lager-Artikel (Bestand, Bewegungen, offene Bestellungen) und
+   seine Zeilen in den Projekten behält. Der alte Name kommt daneben als neues,
+   eigenes Bauteil in den Stamm – ab dann sind es zwei verschiedene Sachen. */
+const MAT_PH_ALT = 'Phasenschiene 3-phasig';
+const MAT_PH_NEU = 'Phasenschiene FI 3-phasig';
+/* Neue Zeilen, jeweils hinter ihrem Nachbarn einsortiert. Fehlt der Nachbar,
+   weil er gestrichen wurde, hängt sich die Zeile hinten an. */
+const MAT_NACHTRAG = [
+  [MAT_PH_ALT,        'Phasenschiene 2-phasig'],
+  ['RCD 25A/30mA 4P', 'RCD 25A/30mA 2P'],
+  ['RCD 40A/30mA 2P', 'RCD 25A/30mA 4P'],
+  ['RCD 40A/300mA 4P','RCD 40A/30mA 4P'],
+  ['RCD 63A/30mA 4P', 'RCD 40A/300mA 4P']
+];
+if((CFG.matStand | 0) < 3){
+  if(Array.isArray(CFG.material)){
+    const vorher = CFG.material.join('|');
+    /* Nur eine Liste umbenennen, die den neuen Namen noch nicht kennt. Eine
+       frisch eingerichtete App trägt schon beide Zeilen; ohne diese Abfrage
+       würde aus der neuen, gewöhnlichen Phasenschiene eine zweite FI-Zeile. */
+    if(!CFG.material.includes(MAT_PH_NEU))
+      CFG.material = CFG.material.map(n => n === MAT_PH_ALT ? MAT_PH_NEU : n);
+    MAT_NACHTRAG.forEach(([name, nach]) => {
+      if(CFG.material.includes(name)) return;
+      const i = CFG.material.indexOf(nach);
+      if(i >= 0) CFG.material.splice(i + 1, 0, name); else CFG.material.push(name);
+    });
+    /* Nur wenn sich wirklich etwas geändert hat: ein frisch eingerichtetes Gerät
+       trägt schon die neue Vorgabe und darf sie nicht über den Stand des
+       Betriebs schieben. matHoch sorgt dafür, dass die umbenannte Liste einmal
+       hinaufgeht, bevor der Abgleich den alten Stand zurückbringt; matLager
+       steht für den Artikel im Lager, der erst nach dem Laden umbenannt wird. */
+    if(CFG.material.join('|') !== vorher){ CFG.matHoch = true; CFG.matLager = true; }
+  }
+  CFG.matStand = 3;
   Store.set('cfg', CFG);
 }
 /* Neuer FI-Typ: in gespeicherten Einstellungen nachtragen, sonst bliebe er
@@ -2255,6 +2320,19 @@ function migrateProject(P){
   /* Der Schalter hieß in v1.49 noch "bestandsNr" – Projekte von damals behalten
      ihren Haken. */
   if(P.bestandsNr != null){ P.abwNr = !!P.bestandsNr; delete P.bestandsNr; }
+  /* v1.84: die Phasenschiene am vierpoligen FI heißt jetzt anders. Einmalig je
+     Projekt, festgehalten in matV – ohne diesen Merker würde eine später von
+     Hand gesetzte Zeile "Phasenschiene 3-phasig", also das neue eigene Bauteil,
+     beim nächsten Laden wieder in die FI-Variante umbenannt. Stehen beide da,
+     werden die Stückzahlen zusammengezählt. */
+  if((P.matV | 0) < 3){
+    const m = P.material;
+    if(m && typeof m === 'object' && m[MAT_PH_ALT] != null){
+      m[MAT_PH_NEU] = (+m[MAT_PH_NEU] || 0) + (+m[MAT_PH_ALT] || 0);
+      delete m[MAT_PH_ALT];
+    }
+    P.matV = 3;
+  }
   /* Trägt das Projekt eine abweichende Nummerierung, ist die Nummer Text und
      die Reihenfolge von Hand gesetzt – sie darf beim Laden nicht umsortiert
      werden, sonst stünde der Verteiler nach jedem Start anders da. */
@@ -4319,10 +4397,14 @@ $('#btnDelCircuit').onclick  = () => {
 /* Die Zählung nennt Geräte so, wie sie im Stromkreis heißen, die Materialliste
    führt eigene Namen. Diese Tabelle bringt beide zusammen, damit die Stückzahl
    an einer Zeile steht statt an zweien. */
+/* Die FI-Zeile rechnet allgemein um statt je Typ einzeln: Nennstrom,
+   Nennfehlerstrom und Polzahl werden übernommen ("FI 40A / 30mA / 2-polig" →
+   "RCD 40A/30mA 2P"). So bekommt auch ein in den Einstellungen ergänzter Typ
+   den passenden Materialnamen. Die FI/LS-Zeile steht davor; "FI/LS …" könnte
+   sonst am Anfang mitgelesen werden. */
 const MAT_NAME = [
-  [/^FI\s*40A.*30\s*mA.*4\s*-?\s*polig.*$/i,       'RCD 40A/30mA 4P'],
-  [/^FI\s*25A.*30\s*mA.*2\s*-?\s*polig.*$/i,       'RCD 25A/30mA 2P'],
   [/^FI\/LS\s*([A-Za-z]+\d+).*?(\d)\s*-?\s*polig.*$/i, 'FI/LS $1 $2P'],
+  [/^FI\s*(\d+)\s*A\D*?(\d+)\s*mA\D*?(\d)\s*-?\s*polig.*$/i, 'RCD $1A/$2mA $3P'],
   [/^Hauptschalter$/i,                              'Hauptschalter 63A']
 ];
 const matName = n => {
@@ -4346,11 +4428,13 @@ function deviceTally(){                               // eingesetzte Geräte mit
     map.set(name, (map.get(name) || 0) + 1);
   });
   /* Ein vierpoliger FI braucht eine dreiphasige Phasenschiene – die zählt die
-     App mit, statt sie jedes Mal von Hand setzen zu lassen. */
+     App mit, statt sie jedes Mal von Hand setzen zu lassen. Gemeint ist die
+     Schiene am FI (MAT_PH_NEU); die gewöhnliche dreiphasige steht daneben im
+     Stamm und wird nur von Hand gesetzt. */
   /* Die Polzahl steht beim FI im Typnamen ("FI 40A / 30mA / 4-polig"); das Feld
      poles gehört zum FI/LS und bliebe hier auf seinem Anfangswert stehen. */
   const vierpolig = circuits().filter(c => c.device === 'rcd' && poleTe(c.breaker) === '4').length;
-  if(vierpolig) map.set('Phasenschiene 3-phasig', (map.get('Phasenschiene 3-phasig') || 0) + vierpolig);
+  if(vierpolig) map.set(MAT_PH_NEU, (map.get(MAT_PH_NEU) || 0) + vierpolig);
   const liste = [...map.entries()].sort((a,b) => a[0].localeCompare(b[0], 'de'))
                                   .map(([name, count]) => ({name, count}));
   /* Abdeckstreifen ergeben sich aus Reihenzahl und belegten TE, nicht aus einem
@@ -6955,7 +7039,7 @@ function netzSetzen(an){
     clearTimeout(netzTimer); netzTimer = null;
     document.body.dataset.netz = 'an';
     if(!vorher && fbProjEin){ fotosNachschieben(); ablageNachschieben(); }   // Funkpause vorbei
-    if(!vorher) lagerNachschieben();
+    if(!vorher){ lagerNachschieben(); matHochschieben(); }
   } else if(!netzTimer){
     netzTimer = setTimeout(() => { netzTimer = null; document.body.dataset.netz = 'ab'; }, NETZ_VERZUG);
   }
@@ -6983,6 +7067,20 @@ function fbHoch(){
   const {ref, set} = FB.fn;
   FB_ALLE.forEach(k => { try { set(ref(FB.db, 'betrieb/' + k), fbWert(k)); } catch(e){} });
 }
+/* v1.84: die umgestellte Materialliste muss einmal hinauf, bevor von dort
+   gelesen wird – sonst käme der alte Stand zurück und die Umbenennung wäre
+   wieder weg. Solange der Merker steht, wird ein ankommender Materialstand
+   nicht übernommen. Er fällt erst, wenn die Datenbank den neuen Stand wirklich
+   bestätigt hat; ein Start ohne Netz verliert die Umstellung also nicht. */
+function matHochschieben(){
+  if(!fbEin || !CFG.matHoch) return;
+  const {ref, set} = FB.fn;
+  try {
+    Promise.resolve(set(ref(FB.db, 'betrieb/material'), fbWert('material')))
+      .then(() => { delete CFG.matHoch; saveCfg(); })
+      .catch(() => {});
+  } catch(e){}
+}
 /* Der eigene Name, damit später auf den Projekten "Hagen" steht und nicht die
    Kennung. Er wird geschrieben, nie von anderen Geräten zurückgelesen. */
 function fbNameHoch(){
@@ -7000,9 +7098,13 @@ FB.bereit.then(() => {
   try { onValue(ref(FB.db, '.info/connected'), s => netzSetzen(!!s.val())); } catch(e){}
   get(ref(FB.db, 'betrieb')).then(snap => {
     if(!snap.exists()) fbHoch();                 // erste Inbetriebnahme
+    matHochschieben();                           // umgestellte Materialliste zuerst hinauf
     FB_ALLE.forEach(k => onValue(ref(FB.db, 'betrieb/' + k), s => {
       const v = s.val();
       if(v == null || v === fbWert(k)) return;
+      /* Solange die eigene, umbenannte Liste noch nicht oben steht, wird der
+         alte Stand übergangen statt übernommen. */
+      if(k === 'material' && CFG.matHoch){ matHochschieben(); return; }
       fbEmpfang = true;
       fbSetz(k, v);
       saveCfg();
@@ -7443,7 +7545,22 @@ function lagerRein(zweig, roh){
   });
   lagerAusObenauf(zweig, neu);
   LAGER[zweig] = neu;
+  if(zweig === 'artikel') lagerUmbenennen();
   lagerGeaendert(true);
+}
+/* v1.84: der Artikel zur Phasenschiene wird mitumbenannt statt neu angelegt –
+   Bestand, Bewegungen und offene Bestellungen hängen an seiner Kennung, nicht
+   am Namen. Geschrieben wird über den gewöhnlichen Weg, damit die Änderung
+   einen ankommenden Stand überlebt und hinaufgeht.
+   Einmalig: danach ist "Phasenschiene 3-phasig" ein eigenes Bauteil und darf
+   nicht mehr umbenannt werden. Der Merker fällt, sobald umbenannt wurde oder
+   feststeht, dass es hier nichts umzubenennen gibt (Lager vom Abgleich da). */
+function lagerUmbenennen(){
+  if(!CFG.matLager || !LAGER) return;
+  const alt = lagerNorm(MAT_PH_ALT);
+  const a = Object.values(LAGER.artikel).find(x => lagerNorm(x.name) === alt);
+  if(a) lagerSchreiben('artikel', a.id, Object.assign({}, a, {name: MAT_PH_NEU}));
+  if(a || lagerFbEin){ delete CFG.matLager; saveCfg(); }
 }
 /* Nach jeder Änderung: neu rechnen, sichern, Anzeigen nachführen. Ansichten mit
    Eingabefeldern werden dabei nicht neu aufgebaut – das wischte eine begonnene
@@ -7473,6 +7590,7 @@ function lagerLaden(){
       LAGER_ZWEIGE.forEach(k => { if(v[k] && typeof v[k] === 'object') LAGER[k] = v[k]; });
   }).catch(() => {}).then(() => {
     LAGER_ZWEIGE.forEach(k => lagerAusObenauf(k, LAGER[k]));
+    lagerUmbenennen();
     lagerGeaendert(false);
   });
   return lagerLadenP;
