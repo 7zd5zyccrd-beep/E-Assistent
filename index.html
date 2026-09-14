@@ -10,6 +10,34 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.87 14.09.2026  Benutzernamen erscheinen mit grossem Anfangsbuchstaben. Der
+                    Kontoname bleibt beim Anmelden klein - daran haengt die
+                    Adresse <name>@bds.local, und "Hagen " soll dasselbe Konto
+                    treffen wie "hagen". Grossgeschrieben wird nur die Anzeige:
+                    einmal an der Quelle, sobald FB.konto gesetzt wird, und
+                    zusaetzlich bei der Ausgabe gespeicherter Namen (Buchungen,
+                    Bestellungen, Projektbesitzer, "sitzt gerade daran", Ablage),
+                    damit auch Altbestaende richtig dastehen.
+                    Getrennt wird an Punkt, Strich und Unterstrich, nicht am
+                    Leerzeichen: aus "jean.d" wird "Jean.D", ein von Hand
+                    eingetragener Pruefername wie "von der Heide" behaelt seine
+                    Kleinschreibung dort, wo sie hingehoert.
+  v1.86 14.09.2026  Erinnerung an die Inventur. Steht im Materialbestand auch nur
+                    eine Position laenger als die eingestellte Spanne ohne
+                    Zaehlung da, erscheint oben ein gelb hinterlegter Hinweis
+                    "Inventur faellig"; die betroffenen Artikel tragen in der
+                    Liste den Vermerk mit. Als Zaehlung gilt die Buchungsart
+                    "Zaehlen" - die schreibt die App beim Anlegen eines Artikels
+                    schon als "Anfangsbestand", ein frischer Artikel steht also
+                    nicht sofort als ueberfaellig da. Fehlt sie in Altbestaenden,
+                    gilt ersatzweise der Tag der Anlage.
+                    Gerechnet wird in Monaten, nicht in Tagen: 15 Monate nach dem
+                    3. Januar ist der 3. April, unabhaengig von deren Laenge.
+                    In den Einstellungen unter dem Material-Stamm ein Haken und
+                    die Spanne in Monaten (1 bis 120, ab Werk an und 15). Beides
+                    gilt fuer alle und wird abgeglichen; dafuer nimmt der
+                    Abgleich erstmals einen Schalter und eine Zahl auf, die als
+                    Text reisen und beim Empfang zurueckverwandelt werden.
   v1.85 14.09.2026  Verbrauchsmaterial. Was sich rechnen laesst, steht jetzt in
                     einer Regeltabelle (MAT_REGELN) statt verstreut im Code;
                     Abdeckstreifen und Phasenschiene FI 3-phasig sind dort mit
@@ -975,6 +1003,7 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
   font-size:14px;margin-bottom:10px;
 }
 .warn.info{border-left-color:#2E5C8A;background:var(--info-bg)}
+.warn.gelb{border-left-color:var(--signal);background:var(--sig-bg)}
 .warn.ok{border-left-color:var(--pe);background:var(--ok-bg)}
 .warn strong{display:block;font-family:var(--f-label);letter-spacing:.06em;text-transform:uppercase;font-size:14px}
 
@@ -1507,6 +1536,19 @@ window.addEventListener('error', e => {
    wird trotzdem, nur ohne Abgleich. Der localStorage bleibt führend,
    Firebase ist der Spiegel.
    ============================================================ */
+/* Der Kontoname wird beim Anmelden kleingeschrieben, damit "Hagen " und "hagen"
+   dasselbe Konto treffen (siehe kontoName weiter unten). Angezeigt gehört er
+   trotzdem mit großem Anfangsbuchstaben. Getrennt wird nur an Punkt, Strich und
+   Unterstrich, nicht am Leerzeichen: so wird aus "hagen" ein "Hagen" und aus
+   "jean.d" ein "Jean.D", während ein von Hand eingetragener Prüfername wie
+   "von der Heide" seine Kleinschreibung behält, wo sie hingehört.
+   Steht absichtlich außerhalb des Bausteins: die Anzeige braucht sie auch. */
+function nameGross(s){
+  return String(s == null ? '' : s)
+    .replace(/(^|[._-])([a-zäöüß])/g, function(v, trenner, buchstabe){
+      return trenner + buchstabe.toUpperCase();
+    });
+}
 (function(){
   var CONF = {
     apiKey: "AIzaSyAPKUz3tTVGbB1QulZjIo6EgHJV-XaOsuY",
@@ -1566,7 +1608,7 @@ window.addEventListener('error', e => {
   var loeser;
   var FB = window.FB = {
     bereit: new Promise(function(res){ loeser = res; }),   // löst erst nach der Anmeldung
-    konto:  les(K_KONTO) || '',
+    konto:  nameGross(les(K_KONTO) || ''),
     uid:    null,
     auth:   null,
     db:     null,
@@ -1632,7 +1674,7 @@ window.addEventListener('error', e => {
     if(user){
       /* Der Kontoname steckt in der Adresse; so steht er auch nach einem
          geleerten localStorage wieder richtig da. */
-      FB.konto = String(user.email || '').split('@')[0] || FB.konto;
+      FB.konto = nameGross(String(user.email || '').split('@')[0]) || FB.konto;
       angemeldet(user);
       return;
     }
@@ -1678,7 +1720,7 @@ window.addEventListener('error', e => {
       go.textContent = 'meldet an …'; go.disabled = true;
       err.hidden = true;
       FB.fn.signIn(FB.auth, name + DOMAENE, pw.value).then(function(c){
-        FB.konto = name;
+        FB.konto = nameGross(name);
         pw.value = '';
         angemeldet(c.user);
       }).catch(function(e){
@@ -2068,6 +2110,14 @@ window.addEventListener('error', e => {
           <p class="muted small" style="margin:0 0 14px">Feste TE-Breite optional mit Komma anhängen, z.B. „Hauptschalter, 3".</p>
           <label class="field"><span>Kabelarten</span><textarea id="setCables"></textarea></label>
           <label class="field"><span>Material-Stamm</span><textarea id="setMaterial" style="min-height:200px"></textarea></label>
+          <div class="eyebrow">Materialbestand</div>
+          <label class="chk" style="margin-bottom:8px">
+            <input type="checkbox" id="setInvHinweis"><span>An die Inventur erinnern</span></label>
+          <label class="field"><span>Zeitspanne (Monate)</span>
+            <input id="setInvMonate" type="number" min="1" max="120" step="1" inputmode="numeric"></label>
+          <p class="muted small" style="margin:-8px 0 14px">Der Hinweis erscheint im Materialbestand,
+            sobald eine Position länger nicht gezählt wurde. Die betroffenen Artikel tragen in der
+            Liste den Vermerk „Inventur fällig“.</p>
           <div class="eyebrow">Zugang und Abgleich</div>
           <p class="muted small" id="fbStatus" style="margin-bottom:6px"></p>
           <p class="muted small">„Gerät sperren“ meldet dieses Gerät ab; beim nächsten Öffnen werden Name und Passwort wieder abgefragt. Die Projekte auf dem Gerät bleiben erhalten. „App neu laden“ holt die Datei frisch vom Server, ohne die Daten anzurühren.</p>
@@ -2196,6 +2246,10 @@ const DEFAULTS = {
   specials: ['Überspannungsableiter, 4','Hauptschalter, 3','Trafo 12V, 2',
              'Stromstoßschalter 12V 1-fach, 1','Stromstoßschalter 12V 2-fach, 1',
              'Stromstoßschalter 230V, 1'],
+  /* Erinnerung an die Inventur im Materialbestand: an, und fällig wird ein
+     Artikel, wenn seine letzte Zählung länger her ist als diese Spanne. */
+  invHinweis: true,
+  invMonate: 15,
   cables:   ['NYM-J 3x1,5','NYM-J 3x2,5','NYM-J 5x1,5','NYM-J 5x2,5','NYM-J 5x4','NYM-J 5x6',
              'NYM-J 5x10','NYY-J 5x10',
              'NAYY-J 2x2,5 (Alu)','NAYY-J 3x2,5 (Alu)','NAYYfl-J 3x2,5 (Alu)',
@@ -2230,7 +2284,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.85';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.87';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 14.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -2946,14 +3000,14 @@ function renderResume(){
     /* Wer hat es angelegt, wer zuletzt angefasst? Ohne Kennung stammt der
        Eintrag aus der Zeit vor dem Abgleich – dann steht nur das Datum da. */
     const wer = !p.owner ? ''
-      : (eigenes(p) ? 'Von dir' : `Von ${esc(p.ownerName || 'jemand anderem')}`)
-        + (p.lastBy && p.lastBy !== p.owner ? `, zuletzt ${p.lastBy === FB.uid ? 'von dir' : 'von ' + esc(p.lastByName || 'jemand anderem')}` : '')
+      : (eigenes(p) ? 'Von dir' : `Von ${esc(nameGross(p.ownerName) || 'jemand anderem')}`)
+        + (p.lastBy && p.lastBy !== p.owner ? `, zuletzt ${p.lastBy === FB.uid ? 'von dir' : 'von ' + esc(nameGross(p.lastByName) || 'jemand anderem')}` : '')
         + ' · ';
     const f = fremdeArbeit(p.id);
     return `<div class="card">
       <div><strong>${esc((p.address || '').split('\n')[0] || 'Ohne Adresse')}${p.flat ? ' · ' + esc(flatLabel(p.flat)) : ''}</strong></div>
       <div class="muted small">${wer}${dstr(p.updatedAt || p.startedAt)} ${tstr(p.updatedAt || p.startedAt)} · ${n} Kreis${n===1?'':'e'}</div>
-      ${f ? `<div class="small" style="color:var(--signal);margin-top:4px">${esc(f.name || 'Ein Kollege')} sitzt gerade daran</div>` : ''}
+      ${f ? `<div class="small" style="color:var(--signal);margin-top:4px">${esc(nameGross(f.name) || 'Ein Kollege')} sitzt gerade daran</div>` : ''}
       <div class="btn-row" style="margin-top:10px">
         <button class="btn primary" data-open="${esc(p.id)}">Fortsetzen</button>
         <button class="btn danger" data-del="${esc(p.id)}">Löschen</button>
@@ -2966,7 +3020,7 @@ function renderResume(){
     const p = PROJECTS.find(x => x.id === b.dataset.del); if(!p) return;
     showDialog({title:'Löschen',
       body:`„${(p.address || '').split('\n')[0] || 'Ohne Adresse'}" wird endgültig entfernt`
-        + (eigenes(p) ? '.' : ` – auch bei ${p.ownerName || 'dem Kollegen'}, dem es gehört.`),
+        + (eigenes(p) ? '.' : ` – auch bei ${nameGross(p.ownerName) || 'dem Kollegen'}, dem es gehört.`),
       ok:'Löschen', danger:true,
       onOk:() => {
         PROJECTS = PROJECTS.filter(x => x.id !== p.id); saveProjects();
@@ -7143,7 +7197,7 @@ function renderArchive(){
   $('#archiveBody').innerHTML = ARCH.length ? ARCH.map((e, i) => {
     const whg = archWohnung(e), fotos = archFotos(e);
     const wer = !e.owner ? '' :
-      (eigenesArch(e) ? 'Von dir' : `Von ${esc(e.ablegerName || e.ownerName || 'jemand anderem')}`) + ' · ';
+      (eigenesArch(e) ? 'Von dir' : `Von ${esc(nameGross(e.ablegerName || e.ownerName) || 'jemand anderem')}`) + ' · ';
     return `
     <div class="card">
       <div><strong>${esc((archAdresse(e) || '').split('\n')[0] || 'Ohne Adresse')}${whg ? ' · ' + esc(flatLabel(whg)) : ''}</strong></div>
@@ -7252,6 +7306,8 @@ function renderSettings(){
   $('#setSpecials').value = CFG.specials.join('\n');
   $('#setCables').value   = CFG.cables.join('\n');
   $('#setMaterial').value = CFG.material.join('\n');
+  $('#setInvHinweis').checked = invAn();
+  $('#setInvMonate').value    = invMonate(CFG.invMonate);
   fbStatusZeigen();
 }
 const lines = el => el.value.split('\n').map(s => s.trim()).filter(Boolean);
@@ -7269,6 +7325,8 @@ $('#btnSaveSettings').onclick = () => {
   CFG.specials = lines($('#setSpecials'));
   CFG.cables   = lines($('#setCables'));
   CFG.material = lines($('#setMaterial'));
+  CFG.invHinweis = $('#setInvHinweis').checked;
+  CFG.invMonate  = invMonate($('#setInvMonate').value);
   const sel = $('#setDevice').value;
   if(sel && CFG.devices.includes(sel)) CFG.devices = [sel, ...CFG.devices.filter(d => d !== sel)];
   saveCfg();
@@ -7301,15 +7359,24 @@ $('#btnReload').onclick = () => {
    ============================================================ */
 const FB_LISTEN = ['devices','chars','rated','rcds','specials','cables','material'];
 const FB_TEXTE  = ['auftraggeber','auftragnehmer'];
-const FB_ALLE   = [...FB_LISTEN, ...FB_TEXTE];
+/* Schalter und Zahlen reisen als Text, damit beide Seiten beim Vergleich
+   dasselbe sehen; beim Empfang werden sie zurückverwandelt. */
+const FB_JANEIN = ['invHinweis'];
+const FB_ZAHL   = ['invMonate'];
+const FB_ALLE   = [...FB_LISTEN, ...FB_TEXTE, ...FB_JANEIN, ...FB_ZAHL];
 let fbEin      = false;      // Abgleich läuft
 let fbEmpfang  = false;      // gerade wird empfangen: nicht gleich zurückschreiben
 let fbFremd    = false;      // während die Einstellungen offen standen, kam eine Änderung
 
-const fbWert = k => FB_LISTEN.includes(k) ? (CFG[k] || []).join('\n') : (CFG[k] || '');
+const fbWert = k => FB_LISTEN.includes(k) ? (CFG[k] || []).join('\n')
+                  : FB_JANEIN.includes(k) ? (CFG[k] ? '1' : '0')
+                  : FB_ZAHL.includes(k)   ? String(invMonate(CFG[k]))
+                  : (CFG[k] || '');
 function fbSetz(k, txt){
-  if(FB_LISTEN.includes(k)) CFG[k] = String(txt).split('\n').map(s => s.trim()).filter(Boolean);
-  else CFG[k] = String(txt);
+  if(FB_LISTEN.includes(k))      CFG[k] = String(txt).split('\n').map(s => s.trim()).filter(Boolean);
+  else if(FB_JANEIN.includes(k)) CFG[k] = String(txt) === '1';
+  else if(FB_ZAHL.includes(k))   CFG[k] = invMonate(txt);
+  else                           CFG[k] = String(txt);
 }
 
 /* Verbindungsanzeige. Gefragt wird Firebase selbst über den Knoten
@@ -7696,6 +7763,7 @@ function projektOeffnen(p){
    ============================================================ */
 var LAGER            = null;        // {artikel:{}, buchungen:{}, bestellungen:{}}
 var LAGER_STAND      = {};          // Artikel-Kennung -> Bestand
+var LAGER_GEZAEHLT   = {};          // Artikel-Kennung -> Zeit der letzten Zählung
 var LAGER_AUS        = {};          // Pfad -> Text, null heißt löschen; noch nicht bestätigt
 var LAGER_ZWEIGE     = ['artikel', 'buchungen', 'bestellungen'];
 var lagerFbEin       = false;
@@ -7725,15 +7793,42 @@ function lagerRechnen(){
   Object.values(LAGER.buchungen).forEach(b => {
     if(b && b.a) (proArtikel[b.a] || (proArtikel[b.a] = [])).push(b);
   });
-  const st = {};
+  const st = {}, gz = {};
   Object.keys(LAGER.artikel).forEach(id => {
-    let s = 0;
+    let s = 0, zuletzt = 0;
     (proArtikel[id] || [])
       .sort((x, y) => ((x.t || 0) - (y.t || 0)) || String(x.id).localeCompare(String(y.id)))
-      .forEach(b => { const m = +b.menge || 0; s = b.art === 'zaehlen' ? m : s + m; });
+      .forEach(b => {
+        const m = +b.menge || 0;
+        s = b.art === 'zaehlen' ? m : s + m;
+        if(b.art === 'zaehlen') zuletzt = Math.max(zuletzt, +b.t || 0);
+      });
     st[id] = s;
+    /* Beim Anlegen schreibt die App eine Zählung "Anfangsbestand"; fehlt sie in
+       Altbeständen, gilt ersatzweise der Tag der Anlage. */
+    gz[id] = zuletzt || +(LAGER.artikel[id] || {}).angelegt || 0;
   });
   LAGER_STAND = st;
+  LAGER_GEZAEHLT = gz;
+}
+/* ---------- Inventur ----------
+   Fällig ist ein Artikel, wenn seine letzte Zählung länger her ist als die
+   eingestellte Spanne. Gerechnet wird in Monaten und nicht in Tagen: 15 Monate
+   nach dem 3. Januar ist der 3. April, unabhängig von der Länge der Monate. */
+function invMonate(v){
+  const n = Math.round(+v);
+  return Number.isFinite(n) ? Math.min(120, Math.max(1, n)) : 15;
+}
+function invGrenze(){
+  const d = new Date();
+  d.setMonth(d.getMonth() - invMonate(CFG.invMonate));
+  return d.getTime();
+}
+const invAn = () => CFG.invHinweis !== false;
+function invFaellige(){
+  if(!invAn() || !LAGER) return [];
+  const g = invGrenze();
+  return Object.values(LAGER.artikel).filter(a => (LAGER_GEZAEHLT[a.id] || 0) < g);
 }
 /* Was von einem Artikel noch unterwegs ist: bestellt, aber nicht geliefert. */
 function lagerOffen(aid){
@@ -7953,13 +8048,19 @@ function renderLager(){
   if(lagerAbgewiesen) h += `<div class="warn"><strong>Kein Abgleich</strong>Firebase weist den Bereich
     „lager“ ab. Gebucht wird trotzdem, aber nur auf diesem Gerät, bis er in der
     Datenbankregel freigegeben ist.</div>`;
+  /* Steht auch nur eine Position zu lange ohne Zählung da, gilt der Bestand als
+     nicht mehr vollständig geprüft. Abschalten und Spanne in den Einstellungen. */
+  const faellig = invFaellige();
+  if(faellig.length) h += `<div class="warn gelb"><strong>Inventur fällig</strong>Bestand wurde seit
+    über ${invMonate(CFG.invMonate)} Monaten nicht vollständig geprüft.</div>`;
+  const istFaellig = new Set(faellig.map(a => a.id));
 
   bestellungen.forEach(o => {
     const n = (o.zeilen || []).length;
     const teil = (o.zeilen || []).filter(z => (+z.geliefert || 0) > 0).length;
     h += `<div class="card lg-best">
       <div><strong>Bestellung vom ${dstr(o.t)}</strong></div>
-      <div class="muted small">${o.von ? esc(o.von) + ' · ' : ''}${n} Position${n === 1 ? '' : 'en'}${
+      <div class="muted small">${o.von ? esc(nameGross(o.von)) + ' · ' : ''}${n} Position${n === 1 ? '' : 'en'}${
         teil ? ` · ${teil} teilweise geliefert` : ''}</div>
       <button class="btn" data-ein="${esc(o.id)}" style="margin-top:10px">Lieferung einbuchen</button>
       <button class="linkbtn lg-verw" data-verw="${esc(o.id)}">verwerfen</button>
@@ -7979,6 +8080,7 @@ function renderLager(){
     if(+a.soll)  s.push('Soll ' + a.soll);
     if(off)      s.push('bestellt ' + off);
     if(a.stamm && !lagerImStamm(a.name)) s.push('nicht im Material-Stamm');
+    if(istFaellig.has(a.id)) s.push('Inventur fällig');
     return `<button class="list-item${z === 'rot' ? ' state-red' : z === 'gelb' ? ' state-yellow' : ''}" data-la="${esc(a.id)}">
       <div class="body"><div class="t">${esc(a.name)}</div><div class="s">${esc(s.join(' · ') || 'ohne Meldegrenze')}</div></div>
       <div class="lg-menge">${LAGER_STAND[a.id] || 0}<em>${esc(lagerEinheit(a))}</em></div>
@@ -8158,7 +8260,7 @@ function lagerArtAuffrischen(){
   const zeigen = lagerBewAlle ? 10 : 1;
   $('#lgBew').innerHTML = alle.length
     ? alle.slice(0, zeigen).map(b => `<div class="lg-bew">
-        <div class="w">${esc(text(b))}<small>${dstr(b.t)} ${tstr(b.t)}${b.von ? ' · ' + esc(b.von) : ''}</small></div>
+        <div class="w">${esc(text(b))}<small>${dstr(b.t)} ${tstr(b.t)}${b.von ? ' · ' + esc(nameGross(b.von)) : ''}</small></div>
         <div class="m">${menge(b)}</div>
       </div>`).join('')
       + (alle.length > zeigen ? `<p class="muted small">und ${alle.length - zeigen} ältere</p>` : '')
@@ -8426,7 +8528,7 @@ function renderLagerEin(){
     return `<span class="lg-unter">${esc(s.join(' · '))}</span>`;
   };
   let h = `<div class="card lg-best"><strong>Bestellung vom ${dstr(o.t)}</strong>
-    <div class="muted small">${o.von ? esc(o.von) + ' · ' : ''}${offen.length} offene Position${offen.length === 1 ? '' : 'en'}</div></div>`;
+    <div class="muted small">${o.von ? esc(nameGross(o.von)) + ' · ' : ''}${offen.length} offene Position${offen.length === 1 ? '' : 'en'}</div></div>`;
   if(!offen.length) h += `<div class="rail-empty">Alles geliefert.</div>`;
   else if(!lagerEinTeil){
     h += `<div class="eyebrow">Noch offen</div>` + offen.map(x => `<div class="mat">
