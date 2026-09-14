@@ -10,6 +10,38 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.85 14.09.2026  Verbrauchsmaterial. Was sich rechnen laesst, steht jetzt in
+                    einer Regeltabelle (MAT_REGELN) statt verstreut im Code;
+                    Abdeckstreifen und Phasenschiene FI 3-phasig sind dort mit
+                    eingezogen. Neu gerechnet werden: Phasenschiene Vertikal
+                    2-reihig und 3-reihig, Aderendhuelsen 10mm2 in 12 und 18 mm,
+                    H07V-K 10 in SW/HBL/GNGE als Meterware je Verteiler und der
+                    Phasenschienen-Berührungsschutz mit 0,2 Stueck je
+                    dreipoligem LS (bewusst ohne Aufrundung, im Regal liegt dann
+                    ein angebrochenes Stueck).
+                    Die Lage im Verteiler ergibt sich aus den Teilungseinheiten
+                    in Kreisreihenfolge, zwoelf je Reihe; ein Verteilereintrag
+                    mit Stueckzahl 2 bildet zwei Bloecke, die Reihen laufen der
+                    Reihe nach durch. Die senkrechte Phasenschiene verlangt, dass
+                    jede Reihe des Verteilers mit einem dreipoligen LS oder
+                    vierpoligem RCD beginnt; ein Hauptschalter laesst die
+                    Bedingung durchfallen.
+                    Markierungen: in der bearbeitbaren Liste ist jede Zeile gelb,
+                    deren Menge die App selbst eingetragen hat (wie in der
+                    Angabenliste). Im Dokument bekommt nur das gerechnete
+                    Verbrauchsmaterial ein Sternchen und darunter die Fussnote.
+                    Reihenfolge in Liste und Dokument: Verteiler, Hauptleitungs-
+                    abzweigklemme, alles Automatische, dann der Rest alphabetisch.
+                    Das Minus geht jetzt auch unter eine gerechnete Menge, bis
+                    null; die eigene Stueckzahl wird dafuer negativ. Meterware
+                    und Berührungsschutz gehen in Schritten von 0,1.
+                    Geraeteauswahl: "Trafo" heisst "Trafo 12V", der Stromstoss-
+                    schalter zerfaellt in 12V 1-fach, 12V 2-fach und 230V, alle
+                    mit 1 TE. Erfasste Kreise behalten ihren alten Namen; der
+                    alte "Trafo" wird ueber die Namenstabelle auf "Trafo 12V"
+                    abgebildet. Dazu acht Wago-Positionen rein manuell.
+                    Der Export nennt das gerechnete Material jetzt mit; eine von
+                    Hand zurueckgenommene Menge steht dort negativ.
   v1.84 14.09.2026  Material: "Phasenschiene 3-phasig" heisst jetzt "Phasenschiene
                     FI 3-phasig" - das ist die Schiene, die je vierpoligem FI
                     mitgezaehlt wird. Sie behaelt alle Verknuepfungen: den
@@ -995,6 +1027,11 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
   transform:translate(-50%,-50%);width:2px;height:16px;background:var(--ink)}
 .mat button[disabled]{opacity:.35}
 .mat.zero{opacity:.55}
+/* Gelb wie in der Angabenliste: die Zeile trägt eine Menge, die das Programm
+   selbst eingetragen hat – gezählt oder gerechnet. */
+.mat.auto{border-left:5px solid var(--signal);background:var(--sig-bg);padding-left:6px}
+.mat .cnt em{font-style:normal;font-family:var(--f-body);font-size:12px;
+  font-weight:400;color:var(--ink-soft);margin-left:2px}
 
 /* ---------- Materialbestand ---------- */
 #view-lager{padding-bottom:28px}
@@ -1082,6 +1119,7 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
    Dunkle Schrift wie bei den Akzentknöpfen der App: Weiß auf diesem hellen Grün
    wäre auf Papier kaum zu lesen.
    Die Farbanweisung sorgt dafür, dass der Grund beim Erzeugen der PDF bleibt. */
+.paper .fussnote{margin:8px 0 0;font-size:8.5pt;color:#3A3A3A}
 .paper .hinweis{
   display:block;width:fit-content;margin:14px auto 0;text-align:center;
   font-size:9pt;font-weight:600;line-height:1.3;
@@ -2107,6 +2145,9 @@ const MATERIAL_STD = [
   'Phasenschiene 2-phasig',
   'Phasenschiene 3-phasig',
   'Phasenschiene FI 3-phasig',
+  'Phasenschiene Vertikal (2-reihig)',
+  'Phasenschiene Vertikal (3-reihig)',
+  'Phasenschienen-Berührungsschutz',
   'LS-Schalter B10 1P',
   'LS-Schalter B16 1P',
   'LS-Schalter B16 3P',
@@ -2121,6 +2162,23 @@ const MATERIAL_STD = [
   'FI/LS B16 4P',
   'Hauptschalter 63A',
   'Überspannungsableiter Typ 2',
+  'Trafo 12V',
+  'Stromstoßschalter 12V 1-fach',
+  'Stromstoßschalter 12V 2-fach',
+  'Stromstoßschalter 230V',
+  'Aderendhülsen 10mm², 12mm',
+  'Aderendhülsen 10mm², 18mm',
+  'H07V-K 10 SW',
+  'H07V-K 10 HBL',
+  'H07V-K 10 GNGE',
+  'Wago Steckklemme 2-fach',
+  'Wago Steckklemme 3-fach',
+  'Wago Durchgangsverbinder',
+  'Wago Hebelklemme 2-fach',
+  'Wago Hebelklemme 3-fach',
+  'Wago Hebelklemme 5-fach',
+  'Wago Befestigungsadapter Steckklemme',
+  'Wago Befestigungsadapter Hebelklemme',
   'Abdeckstreifen'
 ];
 
@@ -2135,7 +2193,9 @@ const DEFAULTS = {
              'FI/LS B16 / 30mA / 2-polig','FI/LS C16 / 30mA / 2-polig',
              'FI/LS B16 / 30mA / 4-polig','FI/LS C16 / 30mA / 4-polig',
              'FI/LS B32 / 30mA / 4-polig','FI/LS C32 / 30mA / 4-polig'],
-  specials: ['Überspannungsableiter, 4','Hauptschalter, 3','Trafo, 2','Stromstoßschalter, 1'],
+  specials: ['Überspannungsableiter, 4','Hauptschalter, 3','Trafo 12V, 2',
+             'Stromstoßschalter 12V 1-fach, 1','Stromstoßschalter 12V 2-fach, 1',
+             'Stromstoßschalter 230V, 1'],
   cables:   ['NYM-J 3x1,5','NYM-J 3x2,5','NYM-J 5x1,5','NYM-J 5x2,5','NYM-J 5x4','NYM-J 5x6',
              'NYM-J 5x10','NYY-J 5x10',
              'NAYY-J 2x2,5 (Alu)','NAYY-J 3x2,5 (Alu)','NAYYfl-J 3x2,5 (Alu)',
@@ -2170,7 +2230,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.84';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.85';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 14.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -2280,6 +2340,43 @@ if((CFG.matStand | 0) < 3){
   CFG.matStand = 3;
   Store.set('cfg', CFG);
 }
+/* v1.85: Verbrauchsmaterial, Leitung, Wago-Klemmen und die drei neuen Geräte.
+   Wieder einmalig und wieder hinter dem jeweiligen Nachbarn. */
+const MAT_NACHTRAG_4 = [
+  ['Phasenschiene Vertikal (2-reihig)',    MAT_PH_NEU],
+  ['Phasenschiene Vertikal (3-reihig)',    'Phasenschiene Vertikal (2-reihig)'],
+  ['Phasenschienen-Berührungsschutz',      'Phasenschiene Vertikal (3-reihig)'],
+  ['Trafo 12V',                            'Überspannungsableiter Typ 2'],
+  ['Stromstoßschalter 12V 1-fach',         'Trafo 12V'],
+  ['Stromstoßschalter 12V 2-fach',         'Stromstoßschalter 12V 1-fach'],
+  ['Stromstoßschalter 230V',               'Stromstoßschalter 12V 2-fach'],
+  ['Aderendhülsen 10mm², 12mm',            'Stromstoßschalter 230V'],
+  ['Aderendhülsen 10mm², 18mm',            'Aderendhülsen 10mm², 12mm'],
+  ['H07V-K 10 SW',                         'Aderendhülsen 10mm², 18mm'],
+  ['H07V-K 10 HBL',                        'H07V-K 10 SW'],
+  ['H07V-K 10 GNGE',                       'H07V-K 10 HBL'],
+  ['Wago Steckklemme 2-fach',              'H07V-K 10 GNGE'],
+  ['Wago Steckklemme 3-fach',              'Wago Steckklemme 2-fach'],
+  ['Wago Durchgangsverbinder',             'Wago Steckklemme 3-fach'],
+  ['Wago Hebelklemme 2-fach',              'Wago Durchgangsverbinder'],
+  ['Wago Hebelklemme 3-fach',              'Wago Hebelklemme 2-fach'],
+  ['Wago Hebelklemme 5-fach',              'Wago Hebelklemme 3-fach'],
+  ['Wago Befestigungsadapter Steckklemme', 'Wago Hebelklemme 5-fach'],
+  ['Wago Befestigungsadapter Hebelklemme', 'Wago Befestigungsadapter Steckklemme']
+];
+if((CFG.matStand | 0) < 4){
+  if(Array.isArray(CFG.material)){
+    const vorher = CFG.material.join('|');
+    MAT_NACHTRAG_4.forEach(([name, nach]) => {
+      if(CFG.material.includes(name)) return;
+      const i = CFG.material.indexOf(nach);
+      if(i >= 0) CFG.material.splice(i + 1, 0, name); else CFG.material.push(name);
+    });
+    if(CFG.material.join('|') !== vorher) CFG.matHoch = true;
+  }
+  CFG.matStand = 4;
+  Store.set('cfg', CFG);
+}
 /* Neuer FI-Typ: in gespeicherten Einstellungen nachtragen, sonst bliebe er
    auf Geräten unsichtbar, die die Liste schon abgelegt haben. */
 const RCD_NACHTRAG = 'FI 25A / 30mA / 4-polig';
@@ -2288,9 +2385,31 @@ if(Array.isArray(CFG.rcds) && !CFG.rcds.includes(RCD_NACHTRAG)){
   if(i >= 0) CFG.rcds.splice(i + 1, 0, RCD_NACHTRAG); else CFG.rcds.unshift(RCD_NACHTRAG);
   Store.set('cfg', CFG);
 }
+/* v1.85: Trafo und Stromstoßschalter heißen in der Geräteauswahl jetzt nach
+   ihrer Bauart, der Stromstoßschalter zerfällt in drei Varianten. Bereits
+   erfasste Kreise behalten ihren alten Namen – der steht im Kreis selbst und
+   wird hier nicht angefasst. */
+if(Array.isArray(CFG.specials)){
+  const neu = [];
+  CFG.specials.forEach(x => {
+    const n = parseSpecialName(x);
+    if(n === 'Trafo')                     neu.push('Trafo 12V, 2');
+    else if(n === 'Stromstoßschalter')    neu.push('Stromstoßschalter 12V 1-fach, 1',
+                                                   'Stromstoßschalter 12V 2-fach, 1',
+                                                   'Stromstoßschalter 230V, 1');
+    else                                  neu.push(x);
+  });
+  if(neu.join('|') !== CFG.specials.join('|')){
+    CFG.specials = neu;
+    CFG.matHoch  = true;            // muss hinauf, sonst holt der Abgleich den alten Stand zurück
+    Store.set('cfg', CFG);
+  }
+}
 /* TE-Vorgaben für die bekannten Geräte nachtragen, wo sie in gespeicherten
    Einstellungen noch fehlen. Eigene Einträge und eigene Werte bleiben. */
-const SPECIAL_TE_STD = {'Überspannungsableiter':'4','Hauptschalter':'3','Trafo':'2','Stromstoßschalter':'1'};
+const SPECIAL_TE_STD = {'Überspannungsableiter':'4','Hauptschalter':'3','Trafo':'2',
+  'Trafo 12V':'2','Stromstoßschalter':'1','Stromstoßschalter 12V 1-fach':'1',
+  'Stromstoßschalter 12V 2-fach':'1','Stromstoßschalter 230V':'1'};
 if(Array.isArray(CFG.specials)){
   const neu = CFG.specials.map(x => {
     const e = parseSpecial(x);
@@ -3496,15 +3615,23 @@ function autoRoomWeg(){
 function roomParts(){ return $('#cRoom').value.split(',').map(s => s.trim()).filter(Boolean); }
 /* Sonstige Geräte bekommen normalerweise keine Ortsauswahl – der Stromstoß-
    schalter schon, denn er gehört zu einem bestimmten Raum. */
+/* Seit v1.85 tragen Stromstoßschalter und Trafo ihre Bauart im Namen
+   ("Stromstoßschalter 12V 1-fach"). Verglichen wird deshalb der Anfang des
+   Namens, nicht der ganze – sonst fiele jede Variante durch. */
 const ROOM_SPECIALS = ['Stromstoßschalter'];
+const specialBeginnt = (liste, n) => liste.some(x => String(n).startsWith(x));
 /* Abweichende Vorbelegung der Bezeichnung: am Verteiler steht beim Stromstoß-
    schalter nicht das Gerät, sondern der Kreis, den er schaltet. */
 const SPECIAL_NAME = {'Stromstoßschalter': 'Beleuchtung'};
-const specialDefaultName = () => draft && draft.special
-  ? (SPECIAL_NAME[parseSpecialName(draft.special)] || draft.special) : '';
+const specialDefaultName = () => {
+  if(!(draft && draft.special)) return '';
+  const n = parseSpecialName(draft.special);
+  const k = Object.keys(SPECIAL_NAME).find(x => n.startsWith(x));
+  return k ? SPECIAL_NAME[k] : draft.special;
+};
 function renderRoomOpts(){
   const box = $('#roomOpts');
-  const spOhneOrt = draft && draft.special && !ROOM_SPECIALS.includes(parseSpecialName(draft.special));
+  const spOhneOrt = draft && draft.special && !specialBeginnt(ROOM_SPECIALS, parseSpecialName(draft.special));
   if(!draft || spOhneOrt || $('#cName').value.trim() === ''){      // erst mit Bezeichnung
     box.hidden = true; box.innerHTML = ''; return;
   }
@@ -4405,7 +4532,9 @@ $('#btnDelCircuit').onclick  = () => {
 const MAT_NAME = [
   [/^FI\/LS\s*([A-Za-z]+\d+).*?(\d)\s*-?\s*polig.*$/i, 'FI/LS $1 $2P'],
   [/^FI\s*(\d+)\s*A\D*?(\d+)\s*mA\D*?(\d)\s*-?\s*polig.*$/i, 'RCD $1A/$2mA $3P'],
-  [/^Hauptschalter$/i,                              'Hauptschalter 63A']
+  [/^Hauptschalter$/i,                              'Hauptschalter 63A'],
+  /* Kreise aus der Zeit vor v1.85 tragen noch den kurzen Gerätenamen. */
+  [/^Trafo$/i,                                      'Trafo 12V']
 ];
 const matName = n => {
   const treffer = MAT_NAME.find(([re]) => re.test(n));
@@ -4427,40 +4556,192 @@ function deviceTally(){                               // eingesetzte Geräte mit
     name = matName(name);
     map.set(name, (map.get(name) || 0) + 1);
   });
-  /* Ein vierpoliger FI braucht eine dreiphasige Phasenschiene – die zählt die
-     App mit, statt sie jedes Mal von Hand setzen zu lassen. Gemeint ist die
-     Schiene am FI (MAT_PH_NEU); die gewöhnliche dreiphasige steht daneben im
-     Stamm und wird nur von Hand gesetzt. */
-  /* Die Polzahl steht beim FI im Typnamen ("FI 40A / 30mA / 4-polig"); das Feld
-     poles gehört zum FI/LS und bliebe hier auf seinem Anfangswert stehen. */
-  const vierpolig = circuits().filter(c => c.device === 'rcd' && poleTe(c.breaker) === '4').length;
-  if(vierpolig) map.set(MAT_PH_NEU, (map.get(MAT_PH_NEU) || 0) + vierpolig);
-  const liste = [...map.entries()].sort((a,b) => a[0].localeCompare(b[0], 'de'))
-                                  .map(([name, count]) => ({name, count}));
-  /* Abdeckstreifen ergeben sich aus Reihenzahl und belegten TE, nicht aus einem
-     Gerät – sie stehen deshalb am Ende der übernommenen Liste. */
+  return [...map.entries()].sort((a,b) => a[0].localeCompare(b[0], 'de'))
+                           .map(([name, count]) => ({name, count}));
+}
+
+/* --- Verbrauchsmaterial: eine Regel je Position ----------------------------
+   Was sich rechnen lässt, steht hier an einer Stelle statt verstreut im Code.
+   Eine Regel liefert eine Menge oder null; null heißt "gehört nicht auf das
+   Blatt". Alles aus dieser Tabelle gilt als Verbrauchsmaterial und bekommt im
+   Dokument das Sternchen. Gerechnet wird nur bei der Neuinstallation – außer
+   den Abdeckstreifen, die hingen schon immer allein am Verteilereintrag. */
+
+/* Nachkommastellen entstehen bei Meterware und beim Berührungsschutz. Eine
+   Stelle genügt; ohne Rundung käme aus 0,2 · 3 sonst 0,6000000000000001. */
+const mrund = x => Math.round((+x || 0) * 10) / 10;
+/* Der Name steht hier oben, weil die Regeltabelle ihn schon beim Aufbau
+   einsetzt – die Rechnung dazu folgt weiter unten beim Verteiler. */
+const ABDECKUNG = 'Abdeckstreifen';
+
+/* Ein dreipoliger LS: die Breite verrät die Polzahl, wie schon beim Zählen der
+   Geräte. Schmelzsicherungen (gG) sind keine LS und bleiben außen vor. */
+const istLs3 = c => !isSpecial(c) && devOf(c) === 'ls' && c.char !== 'gG'
+                    && (parseInt(c.te, 10) || 1) >= 3;
+/* Ein RCD ist der FI selbst; der FI/LS ist ein eigenes Gerät (device 'rcbo')
+   und zählt hier nicht mit. Die Polzahl steht im Typnamen. */
+const istRcd = (c, pole) => !isSpecial(c) && c.device === 'rcd' && poleTe(c.breaker) === pole;
+const istFi  = c => !isSpecial(c) && (c.device === 'rcd' || c.device === 'rcbo');
+
+/* Die Lage im Verteiler ergibt sich aus den Teilungseinheiten in
+   Kreisreihenfolge: Reihe 1 belegt die TE 1–12, Reihe 2 die TE 13–24 und so
+   fort. Geliefert wird je Reihe das Gerät, das ihre erste TE belegt. */
+function reihenAnfang(){
+  const anf = [];
+  let pos = 0;
+  circuits().forEach(c => {
+    const te = parseInt(c.te, 10) || 1;
+    const von = pos + 1, bis = pos + te;
+    for(let r = Math.ceil(von / 12); r <= Math.ceil(bis / 12); r++){
+      const erste = (r - 1) * 12 + 1;
+      if(von <= erste && erste <= bis && !anf[r - 1]) anf[r - 1] = c;
+    }
+    pos = bis;
+  });
+  return anf;
+}
+/* Je Verteiler ein Block mit seiner Reihenzahl, in der Reihenfolge der Liste.
+   Ein Eintrag mit Stückzahl 2 steht für zwei Verteiler, also zwei Blöcke. Die
+   Reihen laufen über die Blöcke hinweg durch: der erste Verteiler bekommt die
+   ersten Reihen, der zweite die folgenden. */
+function verteilerBloecke(quelle){
+  const bloecke = [];
+  Object.entries(quelle || {}).forEach(([n, c]) => {
+    if(!(c > 0) || !n.startsWith(VERTEILER_BASIS)) return;
+    const m = /(\d+)-reihig/.exec(n);
+    if(!m) return;
+    for(let i = 0; i < c; i++) bloecke.push(parseInt(m[1], 10));
+  });
+  return bloecke;
+}
+/* Eine senkrechte Phasenschiene führt die Außenleiter über die Reihen hinweg
+   auf deren erstes Gerät. Sie lohnt nur, wenn jede Reihe des Verteilers mit
+   einem Drehstromgerät beginnt – ein Hauptschalter ist dafür nicht geeignet
+   und lässt die Bedingung durchfallen. Je Verteiler höchstens ein Stück. */
+function vertikalSchiene(quelle, genauZwei){
+  const anf = reihenAnfang();
+  let reihe = 0, stueck = 0;
+  verteilerBloecke(quelle).forEach(n => {
+    const eigene = [];
+    for(let i = 0; i < n; i++) eigene.push(anf[reihe + i]);
+    reihe += n;
+    if(genauZwei ? n !== 2 : n < 3) return;
+    if(eigene.every(c => c && (istLs3(c) || istRcd(c, '4')))) stueck++;
+  });
+  return stueck || null;
+}
+/* Aderendhülsen 18 mm sitzen an der Hauptleitungsabzweigklemme; ohne sie wird
+   nichts gerechnet. Je Überspannungsableiter fünf Stück bei drei oder mehr TE,
+   sonst drei. Die vier bzw. zwei Hülsen fallen einmal an, nicht je Gerät: sie
+   gehören zur Einspeisung des ersten Geräts. Dazu eine für den Anschluss der
+   PE-Schiene und eine für den Schwund. */
+function huelsen18(quelle){
+  if(!((quelle || {})['Hauptleitungsabzweigklemme'] > 0)) return null;
+  const cs = circuits();
+  let n = 0;
+  cs.forEach(c => {
+    if(c.special !== 'Überspannungsableiter') return;
+    n += (parseInt(c.te, 10) || 0) >= 3 ? 5 : 3;
+  });
+  if(cs.some(c => istRcd(c, '4'))) n += 4;
+  if(cs.some(c => istRcd(c, '2'))) n += 2;
+  return n + 2;
+}
+/* Aderendhülsen 12 mm hängen an keiner Klemme: vier bzw. zwei für die
+   Einspeisung, zwei je FI und FI/LS, sechs je Hauptschalter, zwei Schwund. */
+function huelsen12(){
+  const cs = circuits();
+  if(!cs.length) return null;
+  let n = 0;
+  if(cs.some(c => istRcd(c, '4'))) n += 4;
+  if(cs.some(c => istRcd(c, '2'))) n += 2;
+  n += 2 * cs.filter(istFi).length;
+  n += 6 * cs.filter(c => c.special === 'Hauptschalter').length;
+  return n + 2;
+}
+const verteilerAnzahl = quelle => verteilerBloecke(quelle).length;
+const proVerteiler = m => quelle => mrund(m * verteilerAnzahl(quelle)) || null;
+
+const MAT_REGELN = [
+  {name: MAT_PH_NEU,
+   fn: () => circuits().filter(c => istRcd(c, '4')).length || null},
+  {name: 'Phasenschiene Vertikal (2-reihig)', fn: q => vertikalSchiene(q, true)},
+  {name: 'Phasenschiene Vertikal (3-reihig)', fn: q => vertikalSchiene(q, false)},
+  /* Ein Berührungsschutz reicht für fünf dreipolige LS. Gerechnet wird der
+     Anteil und nicht auf ganze Stück aufgerundet – im Regal liegt dann
+     tatsächlich ein angebrochenes Stück. */
+  {name: 'Phasenschienen-Berührungsschutz', dez: true,
+   fn: () => mrund(0.2 * circuits().filter(istLs3).length) || null},
+  {name: 'Aderendhülsen 10mm², 18mm', fn: q => huelsen18(q)},
+  {name: 'Aderendhülsen 10mm², 12mm', fn: () => huelsen12()},
+  {name: 'H07V-K 10 SW',   dez: true, einheit: 'm', fn: proVerteiler(2.5)},
+  {name: 'H07V-K 10 HBL',  dez: true, einheit: 'm', fn: proVerteiler(2.2)},
+  {name: 'H07V-K 10 GNGE', dez: true, einheit: 'm', fn: proVerteiler(1.1)},
   /* Sobald ein Verteiler erfasst ist, gehört die Zeile in die Liste – auch mit
      der Zahl 0, sonst sieht man nicht, dass gerechnet wurde. */
-  if(verteilerReihen(PROJ.material || {}))
-    liste.push({name:ABDECKUNG, count:abdeckAnzahl(PROJ.material || {})});
-  return liste;
+  {name: ABDECKUNG, wdh: true,
+   fn: q => verteilerReihen(q) ? abdeckAnzahl(q) : null}
+];
+const MAT_GERECHNET = new Set(MAT_REGELN.map(r => r.name));
+const matRegel  = n => MAT_REGELN.find(r => r.name === n) || null;
+const matSchritt = n => { const r = matRegel(n); return r && r.dez ? 0.1 : 1; };
+/* Anzeige: Kommastellen nur, wo die Regel sie vorsieht; die Einheit steht klein
+   hinter der Zahl. */
+function matZahl(v, name, klein){
+  const r = matRegel(name);
+  const s = mrund(v).toFixed(r && r.dez ? 1 : 0).replace('.', ',');
+  if(!(r && r.einheit)) return s;
+  return klein ? `${s}<em>${r.einheit}</em>` : `${s} ${r.einheit}`;
 }
-/* Was am Ende auf dem Blatt steht: die aus den Kreisen gezählten Geräte, die
-   berechneten Abdeckstreifen und die von Hand gesetzten Komponenten – gleiche
-   Namen zusammengefasst. Die Quelle ist im Materialfenster der Arbeitsstand,
-   sonst der gespeicherte, damit die Vorschau sofort mitzieht. */
+
+/* Was am Ende auf dem Blatt steht: die aus den Kreisen gezählten Geräte, das
+   gerechnete Verbrauchsmaterial und die von Hand gesetzten Komponenten –
+   gleiche Namen zusammengefasst. Die Quelle ist im Materialfenster der
+   Arbeitsstand, sonst der gespeicherte, damit die Vorschau sofort mitzieht. */
 function materialAuto(quelle){
   const q = quelle || PROJ.material || {};
   const map = new Map();
-  deviceTally().forEach(t => { if(t.name !== ABDECKUNG) map.set(t.name, t.count); });
-  if(verteilerReihen(q)) map.set(ABDECKUNG, abdeckAnzahl(q));
+  deviceTally().forEach(t => map.set(t.name, t.count));
+  const neu = (PROJ.mode || 'wdh') === 'neu';
+  MAT_REGELN.forEach(r => {
+    if(!neu && !r.wdh) return;
+    const v = r.fn(q);
+    if(v == null) return;
+    map.set(r.name, mrund((map.get(r.name) || 0) + v));
+  });
   return map;
+}
+/* Reihenfolge: ganz oben die Verteiler in Listenreihenfolge, dann die
+   Hauptleitungsabzweigklemme, dann alles automatisch Eingetragene, zuletzt der
+   Rest. Die beiden letzten Gruppen alphabetisch. */
+const MAT_KOPF = 'Hauptleitungsabzweigklemme';
+function matSortiert(namen, auto){
+  const rang = n => n.startsWith(VERTEILER_BASIS) ? 0
+                  : n === MAT_KOPF               ? 1
+                  : (auto.get(n) || 0) > 0       ? 2 : 3;
+  return [...namen].sort((a, b) => {
+    const ra = rang(a), rb = rang(b);
+    if(ra !== rb) return ra - rb;
+    return ra === 0 ? 0 : a.localeCompare(b, 'de');   // Verteiler wie eingetragen
+  });
 }
 function materialListe(quelle){
   const q = quelle || PROJ.material || {};
-  const map = materialAuto(q);
-  Object.entries(q).forEach(([n, c]) => { if(c > 0) map.set(n, (map.get(n) || 0) + c); });
-  return [...map.entries()].map(([name, count]) => ({name, count}));
+  const auto = materialAuto(q);
+  const map = new Map(auto);
+  /* Von Hand gesetzte Stücke kommen obendrauf. Sie können negativ sein: so
+     nimmt das Minus auch eine gerechnete Menge wieder zurück. */
+  Object.entries(q).forEach(([n, c]) => {
+    if(!c) return;
+    map.set(n, mrund((map.get(n) || 0) + c));
+  });
+  const namen = [...map.keys()].filter(n => map.get(n) > 0 || auto.has(n));
+  return matSortiert(namen, auto).map(name => ({
+    name,
+    count: Math.max(0, mrund(map.get(name))),
+    auto: (auto.get(name) || 0) > 0,
+    gerechnet: MAT_GERECHNET.has(name)
+  }));
 }
 
 let matDraft = null, matLangdruck = false;
@@ -4472,34 +4753,34 @@ function renderMaterial(){
   const tally = materialListe(matDraft);
   const auto = tally.length
     ? `<div class="eyebrow">Bisher erfasst</div>` +
-      tally.map(t => `<div class="mat">
-        <span class="nm">${esc(t.name)}</span><span class="cnt">${t.count}</span>
+      tally.map(t => `<div class="mat${t.auto ? ' auto' : ''}">
+        <span class="nm">${esc(t.name)}</span><span class="cnt">${matZahl(t.count, t.name, true)}</span>
       </div>`).join('') +
-      `<p class="muted small">Zählt automatisch mit, sobald du Kreise, Verteiler oder Komponenten änderst.</p>`
+      `<p class="muted small">Gelb zählt oder rechnet die App selbst, sobald du Kreise,
+       Verteiler oder Komponenten änderst.</p>`
     : (PROJ.mode || 'wdh') !== 'neu' ? ''
     : `<div class="eyebrow">Bisher erfasst</div>
        <div class="rail-empty">Noch keine Geräte erfasst.</div>`;
   /* Angeboten wird nur, was in den Einstellungen steht – dazu Einträge aus
      früheren Fassungen, solange sie noch eine Stückzahl tragen. So verschwinden
-     alte Bauteile aus der Liste, ohne dass eine erfasste Menge verloren geht. */
-  const alle  = Array.from(new Set([...CFG.material,
-                                    ...Object.keys(matDraft).filter(n => matDraft[n] > 0)]));
-  const istVt = n => n.startsWith(VERTEILER_BASIS);
-  const names = [...alle.filter(istVt), ...alle.filter(n => !istVt(n))];   // fertige Verteiler nach oben
-  /* Die Zahl an der Komponente ist dieselbe wie oben unter "Bisher erfasst":
-     automatisch Gezähltes und von Hand Gesetztes zusammen. Das Plus legt oben
-     drauf, das Minus nimmt nur die eigenen Stücke wieder weg. */
+     alte Bauteile aus der Liste, ohne dass eine erfasste Menge verloren geht.
+     Eine von Hand zurückgenommene Menge ist negativ und zählt hier mit. */
   const autoMap = materialAuto(matDraft);
+  const alle  = Array.from(new Set([...CFG.material,
+                                    ...Object.keys(matDraft).filter(n => matDraft[n] !== 0)]));
+  const names = matSortiert(alle, autoMap);
+  /* Die Zahl an der Komponente ist dieselbe wie oben unter "Bisher erfasst":
+     automatisch Gezähltes und von Hand Gesetztes zusammen. Plus und Minus
+     ändern die eigene Menge, das Minus geht auch unter die gerechnete – bis
+     null, tiefer nicht. */
   $('#materialBody').innerHTML = auto + `<div class="eyebrow">Zusätzliche Komponenten</div>` + verteilerHtml() + names.map(n => {
-    const eigen = matDraft[n] || 0;
-    const c = (autoMap.get(n) || 0) + eigen;
+    const c = Math.max(0, mrund((autoMap.get(n) || 0) + (matDraft[n] || 0)));
     /* Steht die Zeile auf null, öffnet langes Drücken auf das Minus die Frage,
-       ob das Bauteil aus der Liste soll. Gesperrt ist das Minus nur, wenn die
-       Zahl allein aus der automatischen Zählung stammt. */
-    return `<div class="mat ${c ? '' : 'zero'}">
+       ob das Bauteil aus der Liste soll. */
+    return `<div class="mat ${c ? '' : 'zero'}${(autoMap.get(n) || 0) > 0 ? ' auto' : ''}">
       <span class="nm">${esc(n)}</span>
-      <button data-m="${esc(n)}" data-d="-1" data-c="${c}" aria-label="weniger"${(c && !eigen) ? ' disabled' : ''}>−</button>` + `
-      <span class="cnt">${c}</span>
+      <button data-m="${esc(n)}" data-d="-1" data-c="${c}" aria-label="weniger">−</button>` + `
+      <span class="cnt">${matZahl(c, n, true)}</span>
       <button data-m="${esc(n)}" data-d="1" aria-label="mehr">+</button>
     </div>`;
   }).join('');
@@ -4536,7 +4817,11 @@ function renderMaterial(){
        um eine Differenz verschoben – sonst käme die eigene Korrektur zu der des
        Browsers hinzu, der solche Sprünge inzwischen selbst ausgleicht. */
     const hoehe = b.getBoundingClientRect().top;
-    matDraft[n] = Math.max(0, (matDraft[n] || 0) + (+d));
+    /* Die Schrittweite steht an der Regel: Meterware und Berührungsschutz gehen
+       in Zehnteln. Nach unten begrenzt die gerechnete Menge – zusammen ergibt
+       die Zeile nie weniger als null. */
+    const grenze = -(materialAuto(matDraft).get(n) || 0);
+    matDraft[n] = Math.max(grenze, mrund((matDraft[n] || 0) + (+d) * matSchritt(n)));
     renderMaterial();
     const neu = document.querySelector(`#materialBody [data-m="${CSS.escape(n)}"][data-d="${d}"]`);
     if(neu){
@@ -4563,15 +4848,8 @@ let vtAktiv = false, vtStufe = 0, vtWahl = [], vtTeile = [];
    Jede Reihe fasst zwölf Teilungseinheiten. Was die eingebauten Geräte davon
    nicht belegen, wird abgedeckt; ein Streifen reicht für zwölf TE, ein
    angefangener zählt als ganzer. */
-const ABDECKUNG = 'Abdeckstreifen';
 function verteilerReihen(quelle){
-  let reihen = 0;
-  Object.entries(quelle || {}).forEach(([n, c]) => {
-    if(!c || !n.startsWith(VERTEILER_BASIS)) return;
-    const m = /(\d+)-reihig/.exec(n);
-    if(m) reihen += parseInt(m[1], 10) * c;
-  });
-  return reihen;
+  return verteilerBloecke(quelle).reduce((s, n) => s + n, 0);
 }
 function offeneTE(quelle){
   const belegt = circuits().reduce((sum, c) => sum + (parseInt(c.te, 10) || 1), 0);
@@ -4861,8 +5139,12 @@ function exportObj(){
       kurzschlussstrom_a: it.m.ik ?? null, netzspannung_v: it.m.unetz ?? null,
       bemerkung: it.m.drehf ?? null
     })),
-    material: [...deviceTally().map(t => ({bauteil:t.name, anzahl:t.count, quelle:'Stromkreise'})),
-               ...Object.entries(PROJ.material || {}).filter(([,v]) => v > 0)
+    /* Automatisches und Ergänztes getrennt, damit beides nachvollziehbar
+       bleibt; zusammengezählt ergeben sie die Zahl auf dem Blatt. Eine von Hand
+       zurückgenommene Menge steht deshalb mit negativem Vorzeichen da. */
+    material: [...[...materialAuto(PROJ.material).entries()]
+                    .map(([n,v]) => ({bauteil:n, anzahl:v, quelle:'Stromkreise'})),
+               ...Object.entries(PROJ.material || {}).filter(([,v]) => v)
                         .map(([n,v]) => ({bauteil:n, anzahl:v, quelle:'ergänzt'}))],
     unterschrift: PROJ.signature ? {status: PROJ.signature.mode === 'now' ? 'unterschrieben' : 'offen',
       zeitpunkt: PROJ.signature.at ? new Date(PROJ.signature.at).toISOString() : null,
@@ -6426,12 +6708,18 @@ function blaetterBauen(nur){
         : ''));
   }
   if(docs.material){
-    const mats = materialListe(PROJ.material).map(t => [t.name, t.count]);
+    /* Was die App selbst gerechnet oder geschätzt hat, trägt ein Sternchen und
+       darunter die Fußnote – die aus den Kreisen gezählten Geräte nicht, die
+       sind Stück für Stück erfasst. */
+    const mats = materialListe(PROJ.material);
+    const stern = mats.some(t => t.gerechnet);
     blaetter.push(`<h2>Materialaufwand</h2>
       <div class="meta">${objektHtml(PROJ)}</div>
       <table><thead><tr><th>Bauteil</th><th style="width:90px">Anzahl</th></tr></thead><tbody>` +
-      (mats.length ? mats.map(([n,v]) => `<tr><td>${esc(n)}</td><td>${v}</td></tr>`).join('')
-                   : `<tr><td colspan="2">Kein Material erfasst</td></tr>`) + `</tbody></table>`);
+      (mats.length ? mats.map(t => `<tr><td>${esc(t.name)}${t.gerechnet ? ' *' : ''}</td>
+                                    <td>${matZahl(t.count, t.name)}</td></tr>`).join('')
+                   : `<tr><td colspan="2">Kein Material erfasst</td></tr>`) + `</tbody></table>` +
+      (stern ? `<p class="fussnote">* Verbrauchsmaterial, Menge rechnerisch ermittelt</p>` : ''));
   }
   if(!blaetter.length) return [];
   /* Ohne Schriftzug: auf Verteilerbeschreibung und Materialaufwand stehen nur
@@ -7072,11 +7360,12 @@ function fbHoch(){
    wieder weg. Solange der Merker steht, wird ein ankommender Materialstand
    nicht übernommen. Er fällt erst, wenn die Datenbank den neuen Stand wirklich
    bestätigt hat; ein Start ohne Netz verliert die Umstellung also nicht. */
+const MAT_HOCH_KEYS = ['material', 'specials'];
 function matHochschieben(){
   if(!fbEin || !CFG.matHoch) return;
   const {ref, set} = FB.fn;
   try {
-    Promise.resolve(set(ref(FB.db, 'betrieb/material'), fbWert('material')))
+    Promise.all(MAT_HOCH_KEYS.map(k => Promise.resolve(set(ref(FB.db, 'betrieb/' + k), fbWert(k)))))
       .then(() => { delete CFG.matHoch; saveCfg(); })
       .catch(() => {});
   } catch(e){}
@@ -7102,9 +7391,9 @@ FB.bereit.then(() => {
     FB_ALLE.forEach(k => onValue(ref(FB.db, 'betrieb/' + k), s => {
       const v = s.val();
       if(v == null || v === fbWert(k)) return;
-      /* Solange die eigene, umbenannte Liste noch nicht oben steht, wird der
-         alte Stand übergangen statt übernommen. */
-      if(k === 'material' && CFG.matHoch){ matHochschieben(); return; }
+      /* Solange die eigenen, umgestellten Listen noch nicht oben stehen, wird
+         der alte Stand übergangen statt übernommen. */
+      if(CFG.matHoch && MAT_HOCH_KEYS.includes(k)){ matHochschieben(); return; }
       fbEmpfang = true;
       fbSetz(k, v);
       saveCfg();
