@@ -10,6 +10,49 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.94 18.09.2026  Im Beschriftungsblatt (Verteilerbeschreibung) steht hinter
+                    der Bezeichnung eines FI, welche Kreise er abdeckt:
+                    "FI-Schutzschalter (fuer 26-27)". Uebernommen wird der
+                    Eintrag aus "Deckt Kreise ab", wie er dort steht; ist das
+                    Feld leer, bleibt es bei der blossen Bezeichnung. Ein von
+                    Hand gesetzter Name bekommt den Zusatz ebenso. Protokoll und
+                    Materialblatt bleiben unveraendert.
+  v1.93 18.09.2026  Phasenschiene PS1/2 und PS1/3 im Material-Stamm. Gerechnet
+                    wird je zweipoligem RCD ein Stueck, wenn sein Feld "Deckt
+                    Kreise ab" genau einen (PS1/2) bzw. genau zwei einpolige LS
+                    (PS1/3) nennt, diese luckenlos nebeneinander liegen und
+                    unmittelbar vor oder hinter dem RCD sitzen - alles in
+                    derselben Reihe. Bei zweien liegen sie damit zwangslaeufig
+                    auf derselben Seite. gG-Sicherungen, dreipolige LS und
+                    FI/LS zaehlen nicht mit; ein RCD loest immer nur eine der
+                    beiden Schienen aus. Beide im Materialbestand einmal von
+                    Hand anzulegen.
+  v1.92 18.09.2026  Werden Doppeladerendhuelsen gebraucht, kommt eine fuer den
+                    Schwund dazu - wie bei den 12ern und 18ern, dort sind es
+                    zwei. Ohne Bedarf bleibt die Zeile leer.
+  v1.91 18.09.2026  Doppeladerendhuelsen 10mm2 im Material. Sitzen mehrere FI in
+                    einer Reihe, gilt deren Zuleitung als durchgeschliffen: der
+                    zweite und jeder weitere haengt mit zwei Doppeladerendhuelsen
+                    am Vorgaenger, und seine zwei Aderendhuelsen 12mm fallen
+                    dafuer weg. Nebeneinander muessen sie nicht sitzen, dieselbe
+                    Reihe genuegt; der FI/LS zaehlt nicht mit. Die Reihe ergibt
+                    sich aus den TE in Kreisreihenfolge, zwoelf je Reihe.
+                    Neue Zeile im Material-Stamm hinter den 18ern, gerechnet wie
+                    das uebrige Verbrauchsmaterial. Im Materialbestand einmal von
+                    Hand anzulegen.
+  v1.90 18.09.2026  Der Ueberspannungsableiter Typ 2 zerfaellt in zwei Bauteile:
+                    "Ueberspannungsableiter Typ 2, 2 TE" und "..., 4 TE". In der
+                    Geraeteauswahl bleibt es ein Geraet - wie beim LS entscheidet
+                    die Breite, ab 3 TE zaehlt die Materialliste den vierteiligen.
+                    Angabenliste und Verteilerbeschreibung bleiben unberuehrt,
+                    dort haengt alles am Geraetenamen. Die Aderendhuelsen 18 mm
+                    unterschieden schon immer nach Breite (5 ab 3 TE, sonst 3).
+                    Die vorhandene Zeile im Stamm wird zur 4-TE-Variante
+                    umbenannt statt ersetzt - ihr Lager-Artikel behaelt Bestand,
+                    Bewegungen, Artikelnummer und offene Bestellungen, ebenso
+                    die von Hand gesetzten Zeilen in vorhandenen Projekten. Die
+                    2-TE-Zeile kommt davor neu in den Stamm und ist im
+                    Materialbestand einmal von Hand anzulegen.
   v1.89 18.09.2026  Beim FI halten Typ und Breite zusammen. Die Polzahl eines FI
                     steht allein im Typnamen; wer nur das TE-Feld auf 2 stellte,
                     behielt den vorgewaehlten vierpoligen Typ. Die Materialliste
@@ -2250,6 +2293,8 @@ const MATERIAL_STD = [
   'Phasenschiene 2-phasig',
   'Phasenschiene 3-phasig',
   'Phasenschiene FI 3-phasig',
+  'Phasenschiene PS1/2',
+  'Phasenschiene PS1/3',
   'Phasenschiene Vertikal (2-reihig)',
   'Phasenschiene Vertikal (3-reihig)',
   'Phasenschienen-Berührungsschutz',
@@ -2266,13 +2311,15 @@ const MATERIAL_STD = [
   'FI/LS B16 2P',
   'FI/LS B16 4P',
   'Hauptschalter 63A',
-  'Überspannungsableiter Typ 2',
+  'Überspannungsableiter Typ 2, 2 TE',
+  'Überspannungsableiter Typ 2, 4 TE',
   'Trafo 12V',
   'Stromstoßschalter 12V 1-fach',
   'Stromstoßschalter 12V 2-fach',
   'Stromstoßschalter 230V',
   'Aderendhülsen 10mm², 12mm',
   'Aderendhülsen 10mm², 18mm',
+  'Doppeladerendhülsen 10mm²',
   'H07V-K 10 SW',
   'H07V-K 10 HBL',
   'H07V-K 10 GNGE',
@@ -2339,7 +2386,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.89';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.94';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 18.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -2486,6 +2533,69 @@ if((CFG.matStand | 0) < 4){
   CFG.matStand = 4;
   Store.set('cfg', CFG);
 }
+/* v1.90: der Überspannungsableiter zerfällt in zwei Bauteile – 2 TE und 4 TE.
+   Die vorhandene Zeile wird zur 4-TE-Variante umbenannt statt ersetzt: sie
+   behält damit ihren Lager-Artikel samt Bestand, Bewegungen, Artikelnummer und
+   offenen Bestellungen sowie ihre Zeilen in den Projekten. Die 2-TE-Variante
+   kommt davor neu in den Stamm und ist im Lager einmal von Hand anzulegen. */
+const MAT_SPD_ALT = 'Überspannungsableiter Typ 2';
+const MAT_SPD_2   = 'Überspannungsableiter Typ 2, 2 TE';
+const MAT_SPD_4   = 'Überspannungsableiter Typ 2, 4 TE';
+if((CFG.matStand | 0) < 5){
+  if(Array.isArray(CFG.material)){
+    const vorher = CFG.material.join('|');
+    /* Nur eine Liste umbenennen, die den neuen Namen noch nicht kennt – wie bei
+       der Phasenschiene in v1.84. */
+    if(!CFG.material.includes(MAT_SPD_4))
+      CFG.material = CFG.material.map(n => n === MAT_SPD_ALT ? MAT_SPD_4 : n);
+    if(!CFG.material.includes(MAT_SPD_2)){
+      /* Nur dort einfügen, wo die 4-TE-Zeile auch steht: wer den Ableiter in den
+         Einstellungen gestrichen hat, soll ihn nicht als 2-TE-Zeile zurück-
+         bekommen. */
+      const i = CFG.material.indexOf(MAT_SPD_4);
+      if(i >= 0) CFG.material.splice(i, 0, MAT_SPD_2);
+    }
+    if(CFG.material.join('|') !== vorher){ CFG.matHoch = true; CFG.matLagerSpd = true; }
+  }
+  CFG.matStand = 5;
+  Store.set('cfg', CFG);
+}
+/* v1.91: Doppeladerendhülsen für durchgeschliffene FI-Zuleitungen – eine neue
+   Zeile, hinter den 18ern einsortiert. Fehlt der Nachbar, hängt sie sich hinten
+   an. */
+const MAT_NACHTRAG_6 = [['Doppeladerendhülsen 10mm²', 'Aderendhülsen 10mm², 18mm']];
+if((CFG.matStand | 0) < 6){
+  if(Array.isArray(CFG.material)){
+    const vorher = CFG.material.join('|');
+    MAT_NACHTRAG_6.forEach(([name, nach]) => {
+      if(CFG.material.includes(name)) return;
+      const i = CFG.material.indexOf(nach);
+      if(i >= 0) CFG.material.splice(i + 1, 0, name); else CFG.material.push(name);
+    });
+    if(CFG.material.join('|') !== vorher) CFG.matHoch = true;
+  }
+  CFG.matStand = 6;
+  Store.set('cfg', CFG);
+}
+/* v1.93: die kleinen Schienen am zweipoligen RCD, hinter der FI-Schiene
+   einsortiert. */
+const MAT_NACHTRAG_7 = [
+  ['Phasenschiene PS1/2', 'Phasenschiene FI 3-phasig'],
+  ['Phasenschiene PS1/3', 'Phasenschiene PS1/2']
+];
+if((CFG.matStand | 0) < 7){
+  if(Array.isArray(CFG.material)){
+    const vorher = CFG.material.join('|');
+    MAT_NACHTRAG_7.forEach(([name, nach]) => {
+      if(CFG.material.includes(name)) return;
+      const i = CFG.material.indexOf(nach);
+      if(i >= 0) CFG.material.splice(i + 1, 0, name); else CFG.material.push(name);
+    });
+    if(CFG.material.join('|') !== vorher) CFG.matHoch = true;
+  }
+  CFG.matStand = 7;
+  Store.set('cfg', CFG);
+}
 /* Neuer FI-Typ: in gespeicherten Einstellungen nachtragen, sonst bliebe er
    auf Geräten unsichtbar, die die Liste schon abgelegt haben. */
 const RCD_NACHTRAG = 'FI 25A / 30mA / 4-polig';
@@ -2560,6 +2670,16 @@ function migrateProject(P){
       delete m[MAT_PH_ALT];
     }
     P.matV = 3;
+  }
+  /* v1.90: dasselbe für den Überspannungsableiter. Von Hand gesetzte Zeilen
+     gehen auf die 4-TE-Variante, wie der Eintrag im Stamm. */
+  if((P.matV | 0) < 4){
+    const m = P.material;
+    if(m && typeof m === 'object' && m[MAT_SPD_ALT] != null){
+      m[MAT_SPD_4] = (+m[MAT_SPD_4] || 0) + (+m[MAT_SPD_ALT] || 0);
+      delete m[MAT_SPD_ALT];
+    }
+    P.matV = 4;
   }
   /* Trägt das Projekt eine abweichende Nummerierung, ist die Nummer Text und
      die Reihenfolge von Hand gesetzt – sie darf beim Laden nicht umsortiert
@@ -4744,7 +4864,11 @@ function deviceTally(){                               // eingesetzte Geräte mit
     let name;
     /* Ein dreipoliger LS ist ein anderes Bauteil als ein einpoliger, deshalb
        getrennt zählen. Die Breite in Teilungseinheiten verrät die Polzahl. */
-    if(isSpecial(c))            name = c.special === 'Überspannungsableiter' ? 'Überspannungsableiter Typ 2' : c.special;
+    /* Der Überspannungsableiter zerfällt seit v1.90 in zwei Bauteile; die
+       Breite verrät sie, wie schon beim LS. Ab 3 TE ist es der vierteilige. */
+    if(isSpecial(c))            name = c.special === 'Überspannungsableiter'
+                                     ? ((parseInt(c.te, 10) || 0) >= 3 ? MAT_SPD_4 : MAT_SPD_2)
+                                     : c.special;
     else if(c.device === 'ls')  name = (c.char === 'gG' ? 'Sicherung ' : 'LS-Schalter ') + c.breaker
                                      + (parseInt(c.te, 10) >= 3 ? ' 3P' : ' 1P');
     else                        name = c.breaker;
@@ -4843,8 +4967,77 @@ function huelsen18(quelle){
   if(cs.some(c => istRcd(c, '2'))) n += 2;
   return n + 2;
 }
+/* Lage der Kreise auf der Hutschiene: erste und letzte Teilungseinheit in
+   Kreisreihenfolge, dazu die Reihe, in der das Gerät beginnt. */
+function teLage(){
+  const lage = new Map();
+  let pos = 0;
+  circuits().forEach(c => {
+    const te = parseInt(c.te, 10) || 1;
+    lage.set(c, {von: pos + 1, bis: pos + te, reihe: Math.ceil((pos + 1) / 12)});
+    pos += te;
+  });
+  return lage;
+}
+/* Ein einpoliger Leitungsschutzschalter; gG-Schmelzsicherungen und dreipolige
+   Geräte bleiben außen vor. */
+const istLs1 = c => !isSpecial(c) && devOf(c) === 'ls' && c.char !== 'gG'
+                    && (parseInt(c.te, 10) || 1) < 3;
+/* Phasenschiene PS1/2 und PS1/3: ein zweipoliger RCD speist die unmittelbar
+   anschließenden LS über eine kleine Schiene. Alle Bedingungen müssen stimmen:
+   – der RCD ist zweipolig,
+   – sein Feld "Deckt Kreise ab" nennt genau einen Kreis (PS1/2) bzw. genau zwei
+     (PS1/3), und die sind einpolige LS,
+   – die LS liegen lückenlos nebeneinander und grenzen unmittelbar an den RCD,
+     vor oder hinter ihm – bei zweien sitzen sie damit auf derselben Seite,
+   – RCD und LS stehen in derselben Reihe.
+   Je zutreffendem RCD ein Stück; er kann immer nur eine der beiden auslösen. */
+function psKlein(anzahl){
+  const lage = teLage();
+  const cs   = circuits();
+  let n = 0;
+  cs.forEach(fi => {
+    if(!istRcd(fi, '2')) return;
+    const nums = coversNummern(fi.covers);
+    if(!nums.size) return;
+    const deckt = cs.filter(c => c !== fi && kreisNummern(c).some(x => nums.has(x)));
+    if(deckt.length !== anzahl || !deckt.every(istLs1)) return;
+    const f = lage.get(fi);
+    const teile = deckt.map(c => lage.get(c)).sort((a, b) => a.von - b.von);
+    if(teile.some(t => t.reihe !== f.reihe)) return;
+    for(let i = 1; i < teile.length; i++)
+      if(teile[i].von !== teile[i - 1].bis + 1) return;       // lückenlos
+    const davor  = teile[teile.length - 1].bis + 1 === f.von;
+    const danach = f.bis + 1 === teile[0].von;
+    if(davor || danach) n++;
+  });
+  return n || null;
+}
+/* Sitzen mehrere FI in einer Reihe, werden ihre Zuleitungen durchgeschliffen:
+   der zweite und jeder weitere hängt mit Doppeladerendhülsen am Vorgänger statt
+   mit eigenen 12ern an der Einspeisung. Nebeneinander müssen sie dafür nicht
+   sitzen, dieselbe Reihe genügt; der FI/LS bleibt außen vor. Die Reihe ergibt
+   sich wie bei der senkrechten Schiene aus den TE in Kreisreihenfolge, zwölf je
+   Reihe – maßgeblich ist die Reihe, in der die erste TE des Geräts liegt. */
+function fiDurchgeschliffen(){
+  const proReihe = new Map();
+  let pos = 0;
+  circuits().forEach(c => {
+    const te = parseInt(c.te, 10) || 1;
+    const reihe = Math.ceil((pos + 1) / 12);
+    pos += te;
+    if(isSpecial(c) || c.device !== 'rcd') return;
+    proReihe.set(reihe, (proReihe.get(reihe) || 0) + 1);
+  });
+  let n = 0;
+  proReihe.forEach(z => { n += Math.max(0, z - 1); });
+  return n;
+}
 /* Aderendhülsen 12 mm hängen an keiner Klemme: vier bzw. zwei für die
-   Einspeisung, zwei je FI und FI/LS, sechs je Hauptschalter, zwei Schwund. */
+   Einspeisung, zwei je FI und FI/LS, sechs je Hauptschalter, zwei Schwund.
+   Von den durchgeschliffenen FI kommen die zwei wieder weg – dort sitzen
+   Doppeladerendhülsen. Damit fällt genau der eigene Beitrag des Geräts weg,
+   unter null kann nichts rutschen. */
 function huelsen12(){
   const cs = circuits();
   if(!cs.length) return null;
@@ -4852,6 +5045,7 @@ function huelsen12(){
   if(cs.some(c => istRcd(c, '4'))) n += 4;
   if(cs.some(c => istRcd(c, '2'))) n += 2;
   n += 2 * cs.filter(istFi).length;
+  n -= 2 * fiDurchgeschliffen();
   n += 6 * cs.filter(c => c.special === 'Hauptschalter').length;
   return n + 2;
 }
@@ -4861,6 +5055,8 @@ const proVerteiler = m => quelle => mrund(m * verteilerAnzahl(quelle)) || null;
 const MAT_REGELN = [
   {name: MAT_PH_NEU,
    fn: () => circuits().filter(c => istRcd(c, '4')).length || null},
+  {name: 'Phasenschiene PS1/2', fn: () => psKlein(1)},
+  {name: 'Phasenschiene PS1/3', fn: () => psKlein(2)},
   {name: 'Phasenschiene Vertikal (2-reihig)', fn: q => vertikalSchiene(q, true)},
   {name: 'Phasenschiene Vertikal (3-reihig)', fn: q => vertikalSchiene(q, false)},
   /* Ein Berührungsschutz reicht für fünf dreipolige LS. Gerechnet wird der
@@ -4870,6 +5066,10 @@ const MAT_REGELN = [
    fn: () => mrund(0.2 * circuits().filter(istLs3).length) || null},
   {name: 'Aderendhülsen 10mm², 18mm', fn: q => huelsen18(q)},
   {name: 'Aderendhülsen 10mm², 12mm', fn: () => huelsen12()},
+  /* Wo Doppeladerendhülsen gebraucht werden, kommt eine für den Schwund dazu –
+     wie bei den 12ern und 18ern, dort sind es zwei. */
+  {name: 'Doppeladerendhülsen 10mm²',
+   fn: () => { const n = fiDurchgeschliffen(); return n ? 2 * n + 1 : null; }},
   {name: 'H07V-K 10 SW',   dez: true, einheit: 'm', fn: proVerteiler(2.5)},
   {name: 'H07V-K 10 HBL',  dez: true, einheit: 'm', fn: proVerteiler(2.2)},
   {name: 'H07V-K 10 GNGE', dez: true, einheit: 'm', fn: proVerteiler(1.1)},
@@ -6883,6 +7083,14 @@ function protokollBlatt(){
 </div>`;
 }
 
+/* Im Beschriftungsblatt steht hinter der Bezeichnung eines FI, welche Kreise er
+   abdeckt – das Blatt bleibt am Verteiler, dort ist die Zuordnung sonst nicht
+   ablesbar. Übernommen wird der Eintrag, wie er im Feld steht; ist es leer,
+   bleibt es bei der Bezeichnung. Ein eigener Name bekommt den Zusatz ebenso. */
+const beschrName = c => {
+  const deckt = devOf(c) === 'rcd' && !isSpecial(c) ? String(c.covers || '').trim() : '';
+  return String(c.name || '') + (deckt ? ` (für ${deckt})` : '');
+};
 function blaetterBauen(nur){
   const cs = circuits();
   /* nur = Schluessel eines einzelnen Dokuments, sonst alles Angehakte */
@@ -6894,7 +7102,7 @@ function blaetterBauen(nur){
     blaetter.push(`<h2>Verteilerbeschreibung</h2>
       <div class="meta klein">${objektKurz(PROJ)}</div>
       <table class="besch"><thead><tr><th style="width:90px">Nr.</th><th>Bezeichnung</th><th style="width:39%">Ort</th></tr></thead><tbody>` +
-      cs.map(c => `<tr><td>${esc(circuitLabel(c))}</td><td>${esc(c.name)}</td><td>${esc(c.room)}</td></tr>`).join('') +
+      cs.map(c => `<tr><td>${esc(circuitLabel(c))}</td><td>${esc(beschrName(c))}</td><td>${esc(c.room)}</td></tr>`).join('') +
       `</tbody></table>` +
       /* Das Blatt bleibt am Verteiler, deshalb der Prüfhinweis darunter – nur
          wenn dort auch ein FI oder FI/LS sitzt. */
@@ -8074,19 +8282,26 @@ function lagerRein(zweig, roh){
   if(zweig === 'artikel') lagerUmbenennen();
   lagerGeaendert(true);
 }
-/* v1.84: der Artikel zur Phasenschiene wird mitumbenannt statt neu angelegt –
-   Bestand, Bewegungen und offene Bestellungen hängen an seiner Kennung, nicht
-   am Namen. Geschrieben wird über den gewöhnlichen Weg, damit die Änderung
-   einen ankommenden Stand überlebt und hinaufgeht.
+/* Wird ein Bauteil im Stamm umbenannt, wandert der Artikel im Lager mit, statt
+   neu angelegt zu werden – Bestand, Bewegungen und offene Bestellungen hängen an
+   seiner Kennung, nicht am Namen. Geschrieben wird über den gewöhnlichen Weg,
+   damit die Änderung einen ankommenden Stand überlebt und hinaufgeht.
+   Zwei Fälle mit je eigenem Merker: v1.84 die Phasenschiene am vierpoligen FI,
+   v1.90 der Überspannungsableiter, der zur 4-TE-Variante wird.
    Einmalig: danach ist "Phasenschiene 3-phasig" ein eigenes Bauteil und darf
    nicht mehr umbenannt werden. Der Merker fällt, sobald umbenannt wurde oder
    feststeht, dass es hier nichts umzubenennen gibt (Lager vom Abgleich da). */
 function lagerUmbenennen(){
-  if(!CFG.matLager || !LAGER) return;
-  const alt = lagerNorm(MAT_PH_ALT);
-  const a = Object.values(LAGER.artikel).find(x => lagerNorm(x.name) === alt);
-  if(a) lagerSchreiben('artikel', a.id, Object.assign({}, a, {name: MAT_PH_NEU}));
-  if(a || lagerFbEin){ delete CFG.matLager; saveCfg(); }
+  if(!LAGER) return;
+  lagerUmbenennenEins('matLager',    MAT_PH_ALT,  MAT_PH_NEU);
+  lagerUmbenennenEins('matLagerSpd', MAT_SPD_ALT, MAT_SPD_4);
+}
+function lagerUmbenennenEins(merker, alt, neu){
+  if(!CFG[merker]) return;
+  const k = lagerNorm(alt);
+  const a = Object.values(LAGER.artikel).find(x => lagerNorm(x.name) === k);
+  if(a) lagerSchreiben('artikel', a.id, Object.assign({}, a, {name: neu}));
+  if(a || lagerFbEin){ delete CFG[merker]; saveCfg(); }
 }
 /* Nach jeder Änderung: neu rechnen, sichern, Anzeigen nachführen. Ansichten mit
    Eingabefeldern werden dabei nicht neu aufgebaut – das wischte eine begonnene
