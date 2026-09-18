@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.95 18.09.2026  Je N-Klemmblock zwei Aderendhuelsen 10mm2 12mm mehr. Der
+                    Klemmblock wird nie gezaehlt, sondern unter "Zusaetzliche
+                    Komponenten" von Hand gesetzt - die Huelsen kommen deshalb
+                    aus der Komponentenliste und wachsen mit jedem Antippen des
+                    Plus sofort mit, auch vor dem Speichern.
   v1.94 18.09.2026  Im Beschriftungsblatt (Verteilerbeschreibung) steht hinter
                     der Bezeichnung eines FI, welche Kreise er abdeckt:
                     "FI-Schutzschalter (fuer 26-27)". Uebernommen wird der
@@ -2386,7 +2391,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.94';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.95';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 18.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -5033,12 +5038,12 @@ function fiDurchgeschliffen(){
   proReihe.forEach(z => { n += Math.max(0, z - 1); });
   return n;
 }
-/* Aderendhülsen 12 mm hängen an keiner Klemme: vier bzw. zwei für die
-   Einspeisung, zwei je FI und FI/LS, sechs je Hauptschalter, zwei Schwund.
+/* Aderendhülsen 12 mm: vier bzw. zwei für die Einspeisung, zwei je FI und
+   FI/LS, sechs je Hauptschalter, zwei je N-Klemmblock, zwei Schwund.
    Von den durchgeschliffenen FI kommen die zwei wieder weg – dort sitzen
    Doppeladerendhülsen. Damit fällt genau der eigene Beitrag des Geräts weg,
    unter null kann nichts rutschen. */
-function huelsen12(){
+function huelsen12(quelle){
   const cs = circuits();
   if(!cs.length) return null;
   let n = 0;
@@ -5047,6 +5052,10 @@ function huelsen12(){
   n += 2 * cs.filter(istFi).length;
   n -= 2 * fiDurchgeschliffen();
   n += 6 * cs.filter(c => c.special === 'Hauptschalter').length;
+  /* Der N-Klemmblock wird nie gezählt, sondern von Hand gesetzt – seine zwei
+     Hülsen kommen deshalb aus der Komponentenliste und wachsen mit jedem
+     Antippen des Plus sofort mit. */
+  n += 2 * Math.max(0, parseInt((quelle || {})['N-Klemmblock'], 10) || 0);
   return n + 2;
 }
 const verteilerAnzahl = quelle => verteilerBloecke(quelle).length;
@@ -5065,7 +5074,7 @@ const MAT_REGELN = [
   {name: 'Phasenschienen-Berührungsschutz', dez: true,
    fn: () => mrund(0.2 * circuits().filter(istLs3).length) || null},
   {name: 'Aderendhülsen 10mm², 18mm', fn: q => huelsen18(q)},
-  {name: 'Aderendhülsen 10mm², 12mm', fn: () => huelsen12()},
+  {name: 'Aderendhülsen 10mm², 12mm', fn: q => huelsen12(q)},
   /* Wo Doppeladerendhülsen gebraucht werden, kommt eine für den Schwund dazu –
      wie bei den 12ern und 18ern, dort sind es zwei. */
   {name: 'Doppeladerendhülsen 10mm²',
