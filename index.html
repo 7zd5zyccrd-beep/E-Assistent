@@ -10,6 +10,21 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.96 18.09.2026  Zwischenexport aus der Verteileransicht. Bei Neuinstallation
+                    steht unter "Dokumente" wieder ein Knopf "Dokumente
+                    ausgeben": ein Auswahlfenster mit Verteilerbeschreibung,
+                    Materialaufwand und Fotos, vorgewaehlt ist, was noch nicht
+                    hinausging. Die Ausgabe laeuft ueber denselben Kurzbefehl mit
+                    denselben Dateinamen wie im Abschluss.
+                    Anders als der in v1.78 entfernte Knopf geht er nicht am
+                    Abschluss vorbei: keine Projektdatei, kein Ablage-Eintrag,
+                    kein Abschlussdatum und keine Buchung im Materialbestand -
+                    das bleibt dem Abschluss vorbehalten. Kommt die Uebergabe
+                    nicht zustande, wird auch der Vermerk zurueckgenommen.
+                    Was hinausging, steht im Projekt (bei Fotos die Anzahl), und
+                    der Abschluss hakt es nicht mehr von selbst an. Neue Fotos
+                    danach schalten ihr Kaestchen wieder ein, eine Wahl von Hand
+                    bleibt stehen.
   v1.95 18.09.2026  Je N-Klemmblock zwei Aderendhuelsen 10mm2 12mm mehr. Der
                     Klemmblock wird nie gezaehlt, sondern unter "Zusaetzliche
                     Komponenten" von Hand gesetzt - die Huelsen kommen deshalb
@@ -2391,7 +2406,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.95';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.96';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 18.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -5376,10 +5391,49 @@ function docsVorwahl(){
 function renderBoardDocs(){
   /* Bei der Neuinstallation bleiben im Verteiler nur die Knöpfe stehen –
      "Material bearbeiten" führt in die Materialansicht und wird gebraucht.
-     Was ausgegeben wird, entscheidet inzwischen die Auswahl beim Ablegen. */
+     Dazu seit v1.96 "Dokumente ausgeben": Beschreibung, Material und Fotos
+     gehen dort oft vorab hinaus, lange bevor der Abschluss ansteht. */
   const liste = imVerteiler() ? DOCS.filter(d => d.board) : [];
   $('#boardDocTitle').hidden = !liste.length;      // ohne Inhalt auch keine Überschrift
   renderDocGroup('#boardDocOpts', '#boardDocActions', liste, true);
+  if(!liste.length) return;
+  $('#boardDocActions').insertAdjacentHTML('beforeend',
+    `<button class="btn ghost" id="btnBoardExport" style="margin-top:10px">Dokumente ausgeben</button>`);
+  $('#btnBoardExport').onclick = boardExportFragen;
+}
+/* Auswahlfenster zum Zwischenexport. Vorgewählt ist, was noch nicht hinausging –
+   dieselbe Rechnung wie im Abschluss; bei den Fotos zählt die Anzahl. Die Zeile
+   für Fotos erscheint nur, wenn welche da sind. Ausgegeben werden allein die
+   angehakten Blätter: keine Projektdatei, kein Ablage-Eintrag, keine Buchung im
+   Materialbestand – das Projekt bleibt in Arbeit. */
+function boardExportFragen(){
+  if(!PROJ) return;
+  const e = PROJ.exportiert || {}, fotos = (PROJ.photos || []).length;
+  const zeilen = [
+    {k:'beschriftung', label:'Verteilerbeschreibung', an: !e.beschriftung},
+    {k:'material',     label:'Materialaufwand',       an: !e.material}
+  ];
+  if(fotos) zeilen.push({k:'fotos', label:`Fotos (${fotos})`, an: fotos > (e.fotos || 0)});
+  resetModal(false);
+  $('#modalTitle').textContent = 'Dokumente ausgeben';
+  $('#modalBody').innerHTML =
+    `<div class="muted small">Geht über den Kurzbefehl hinaus wie im Abschluss. Das Projekt bleibt `
+    + `offen; es wird nichts abgelegt und kein Material gebucht.</div>`
+    + `<div class="chk-grid" style="margin-top:10px">`
+    + zeilen.map(z => `<label class="chk${z.an ? ' on' : ''}">
+         <input type="checkbox" data-bex="${z.k}"${z.an ? ' checked' : ''}><span>${esc(z.label)}</span>
+       </label>`).join('')
+    + `</div>`;
+  $$('#modalBody [data-bex]').forEach(i => i.onchange = () =>
+    i.closest('.chk').classList.toggle('on', i.checked));
+  $('#modalOk').textContent   = 'Ausgeben';
+  $('#modalBack').textContent = 'Abbrechen';
+  pendingAck = () => {
+    const wahl = {};
+    $$('#modalBody [data-bex]').forEach(i => { if(i.checked) wahl[i.dataset.bex] = true; });
+    ablegen(wahl, false, true);
+  };
+  $('#modal').hidden = false;
 }
 function renderFinish(){
   const f = PROJ.feed || blankFeed();
@@ -7296,21 +7350,27 @@ function dataUrlBlob(u){
 }
 const alsDatei = (inhalt, name, typ) => new File([new Blob([inhalt], {type: typ})], name, {type: typ});
 
-async function ablegen(wahl, nochmal){
+async function ablegen(wahl, nochmal, zwischen){
   const p = PROJ, dateien = [];
   /* Materialbestand: gebucht wird beim ersten Export und beim Export nach einer
      Nachbesserung über "Ansehen" (dann ist archOffen gesetzt), nie beim bloßen
-     "Erneut sichern". Der Vermerk, was schon abging, steht wie "exportiert" VOR
-     dem Bauen der Dateien im Projekt, damit er in der Projektdatei und in der
-     Ablage mitreist. Abgebucht wird erst, wenn die Übergabe stattgefunden hat;
-     schlägt sie fehl, wird der Vermerk zurückgenommen. Ein Fehler hier darf den
-     Export nie aufhalten – dann wird eben nicht gebucht. */
+     "Erneut sichern" und nie beim Zwischenexport aus dem Verteiler – dort geht
+     nur ein Blatt hinaus, das Projekt läuft weiter. Der Vermerk, was schon
+     abging, steht wie "exportiert" VOR dem Bauen der Dateien im Projekt, damit
+     er in der Projektdatei und in der Ablage mitreist. Abgebucht wird erst, wenn
+     die Übergabe stattgefunden hat; schlägt sie fehl, wird der Vermerk
+     zurückgenommen. Ein Fehler hier darf den Export nie aufhalten – dann wird
+     eben nicht gebucht. */
   const lagerVorher = p.lager;
   let lagerPlan = null;
-  try { if(!nochmal || archOffen) lagerPlan = lagerProjektPlan(p); } catch(e){ lagerPlan = null; }
+  try { if(!zwischen && (!nochmal || archOffen)) lagerPlan = lagerProjektPlan(p); } catch(e){ lagerPlan = null; }
   if(lagerPlan && !lagerPlan.buchungen.length && lagerVorher) lagerPlan = null;   // nichts Neues
   if(lagerPlan) p.lager = {a: lagerPlan.a, am: Date.now()};
   const lagerZurueck = () => { if(!lagerPlan) return; if(lagerVorher) p.lager = lagerVorher; else delete p.lager; };
+  /* Beim Zwischenexport wird der Vermerk erst mit dem Speichern verbindlich –
+     kommt die Übergabe nicht zustande, gilt wieder der alte Stand. */
+  const vermerkVorher = Object.assign({}, p.exportiert || {});
+  const vermerkZurueck = () => { if(zwischen) p.exportiert = vermerkVorher; };
   /* Was hinausgeht, wird im Projekt vermerkt – und zwar VOR dem Bauen der
      Dateien, damit der Vermerk in der Weitergabe-Datei mitreist. Der Kollege,
      der sie einliest, sieht im Abschluss dann nur noch, was wirklich fehlt.
@@ -7350,7 +7410,7 @@ async function ablegen(wahl, nochmal){
       dateien.push(new File([blob], name, {type: blob.type || 'image/jpeg'}));
     }
   }
-  if(!dateien.length){ lagerZurueck(); toast('Nichts ausgewählt'); return; }
+  if(!dateien.length){ lagerZurueck(); vermerkZurueck(); toast('Nichts ausgewählt'); return; }
 
   /* iOS meldet beim Teilen an einen Kurzbefehl auch dann einen Abbruch, wenn der
      Kurzbefehl in Wirklichkeit durchläuft. Auf diese Rückmeldung ist deshalb kein
@@ -7370,7 +7430,7 @@ async function ablegen(wahl, nochmal){
       }, i * 400));
     }
   }catch(e){
-    lagerZurueck();
+    lagerZurueck(); vermerkZurueck();
     toast('Übergabe nicht möglich'); return;
   }
   if(lagerPlan){
@@ -7378,9 +7438,11 @@ async function ablegen(wahl, nochmal){
     if(nochmal) saveProj();              // "Ansehen": Vermerk in den Ablage-Eintrag
   }
   /* Beim Wiederholen aus der Ablage heraus wird nichts erneut abgelegt – das
-     Projekt ist längst abgeschlossen. */
-  if(!nochmal){ await archLadenP; archiveNow(); }   // erst wenn die Ablage geladen ist
-  toast(nochmal ? 'Erneut gesichert' : 'Daten exportiert');
+     Projekt ist längst abgeschlossen. Der Zwischenexport legt ebenfalls nichts
+     ab und setzt kein Abschlussdatum; er hält nur fest, was hinausging. */
+  if(zwischen){ saveProj(); renderBoardDocs(); }
+  else if(!nochmal){ await archLadenP; archiveNow(); }   // erst wenn die Ablage geladen ist
+  toast(zwischen ? 'Dokumente ausgegeben' : (nochmal ? 'Erneut gesichert' : 'Daten exportiert'));
 }
 /* Im Abschluss ist die Auswahl schon in der Ansicht getroffen – der Export
    nimmt sie unverändert und legt die Projektdaten immer mit dazu. */
