@@ -10,6 +10,23 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.89 18.09.2026  Beim FI halten Typ und Breite zusammen. Die Polzahl eines FI
+                    steht allein im Typnamen; wer nur das TE-Feld auf 2 stellte,
+                    behielt den vorgewaehlten vierpoligen Typ. Die Materialliste
+                    zaehlte daraufhin "RCD 40A/30mA 4P" statt 2P und dazu je
+                    Geraet eine Phasenschiene FI 3-phasig; auch Aderendhuelsen,
+                    die senkrechte Phasenschiene und die Uebersicherungspruefung
+                    rechneten mit vier Polen.
+                    Jetzt zieht eine geaenderte Breite den Typ nach: gesucht wird
+                    derselbe Typ mit der passenden Polzahl, der Name darf sich
+                    nur in der Ziffer vor "-polig" unterscheiden. Gewechselt wird
+                    nur zwischen 2 und 4 TE; eine von Hand gesetzte andere Breite
+                    bleibt unangetastet.
+                    Als Netz fuer Altprojekte, uebernommene Dateien und fehlende
+                    Typen fragt das Speichern nach, wenn Typ und Breite sich
+                    widersprechen: Geraet umstellen, Breite anpassen oder so
+                    lassen. "So lassen" wird am Kreis vermerkt und erst wieder
+                    gefragt, wenn sich Typ oder Breite aendern.
   v1.88 14.09.2026  Auf dem iPad nutzen die Ansichten die volle Bildschirmflaeche.
                     Die Inhaltsspalte war auf 760 px begrenzt und liess auf einem
                     Fenster von 1180 px links und rechts je rund 200 px leer; ab
@@ -2322,8 +2339,8 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.88';                    // siehe Änderungsliste im Dateikopf
-const BUILD        = VERSION + ' · 14.09.2026';
+const VERSION      = 'v1.89';                    // siehe Änderungsliste im Dateikopf
+const BUILD        = VERSION + ' · 18.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
 const DAUER_WARN   = 100;                        // zu lang: unplausibel im Protokoll
@@ -3553,6 +3570,28 @@ function poleTe(str){
   const m = /(\d+)\s*-?\s*polig/i.exec(str || '');
   return m ? String(parseInt(m[1], 10)) : null;
 }
+/* --- FI: Typ und Breite zusammenhalten (v1.89) -----------------------------
+   Die Polzahl eines FI steht allein im Typnamen – daran hängen Materialname,
+   Phasenschiene, Aderendhülsen und die Übersicherungsprüfung. Das TE-Feld
+   daneben ist frei änderbar; wer die Breite auf 2 stellt, meint ein zweipoliges
+   Gerät, und der Typ muss mitgehen.
+   Gesucht wird derselbe Typ mit anderer Polzahl: der Name darf sich NUR in der
+   Ziffer vor "-polig" unterscheiden, damit aus 40 A nicht stillschweigend 25 A
+   wird. Findet sich keiner, bleibt der Typ stehen und das Speichern fragt. */
+const rcdKern = s => String(s || '').replace(/\d+(\s*-?\s*polig)/i, '#$1');
+function rcdTypMitPolen(typ, pole){
+  const kern = rcdKern(typ);
+  return typeList('rcd').find(t => rcdKern(t) === kern && poleTe(t) === String(pole)) || null;
+}
+/* Widersprechen sich Typ und Breite? Nur die beiden gebauten Breiten zählen –
+   eine von Hand gesetzte 5 oder 6 ist Absicht und keine Rückfrage wert. */
+function rcdPolWiderspruch(c){
+  if(!c || isSpecial(c) || devOf(c) !== 'rcd') return null;
+  const typPol = poleTe(c.breaker);
+  const te     = String(parseInt(c.te, 10) || '');
+  if(!typPol || !POLES.includes(te) || typPol === te) return null;
+  return {typPol, te, ersatz: rcdTypMitPolen(c.breaker, te)};
+}
 /* --- Anzeigename des Schutzorgans --- */
 function ratedNum(d){ return String(d.rated || '').replace(/\s*A$/, ''); }
 function breakerOf(d){
@@ -3687,7 +3726,23 @@ function refreshNoField(){
   $('#cNo').value = te > 1 ? `${start}–${start + te - 1}` : String(start);
   coversHint();
 }
-$('#cTe').onchange = () => { draft.te = $('#cTe').value; refreshNoField(); };
+/* Beim FI zieht die geänderte Breite den Typ nach (v1.89, siehe
+   rcdTypMitPolen). Gewechselt wird nur zwischen den gebauten Polzahlen und nur,
+   wenn die Typliste den passenden Eintrag führt; sonst bleibt alles stehen und
+   das Speichern fragt nach. */
+function rcdTypNachziehen(){
+  if(draft.special || (segVal('#segDevice') || devOf(draft)) !== 'rcd') return;
+  const te = $('#cTe').value;
+  if(!POLES.includes(te)) return;
+  const jetzt = $('#cBreaker').value;
+  if(!poleTe(jetzt) || poleTe(jetzt) === te) return;
+  const neu = rcdTypMitPolen(jetzt, te);
+  if(!neu) return;
+  fillSelect($('#cBreaker'), typeList('rcd'), neu);
+  draft.breaker = neu;
+  toast(`FI-Typ ${te}-polig übernommen`);
+}
+$('#cTe').onchange = () => { draft.te = $('#cTe').value; refreshNoField(); rcdTypNachziehen(); };
 $('#cNo').onchange = refreshNoField;
 /* Antippen markiert den bisherigen Inhalt, damit die neue Zahl ihn ersetzt statt
    sich anzuhängen. iOS setzt den Cursor nach dem Fokus noch einmal selbst,
@@ -4587,6 +4642,55 @@ function zeitAendern(vorgabe, onDone){
   $('#modal').hidden = false;
   $('#modalOk').focus();
 }
+/* --- FI: Typ und Breite widersprechen sich (v1.89) -------------------------
+   Netz für das, was das Nachziehen beim Tippen nicht abfängt: ein Projekt aus
+   einer älteren Fassung, eine übernommene Datei oder ein Typ, den die Liste in
+   der gebrauchten Polzahl nicht führt. Gefragt wird nur zum gerade gespeicherten
+   Kreis. "So lassen" wird am Kreis vermerkt (polOk) und erst wieder gefragt,
+   wenn sich Typ oder Breite ändern. Die Frage läuft VOR nummernPruefen: eine
+   hier geänderte Breite soll die Überschneidungsprüfung schon kennen. */
+function rcdPolFragen(c, fertig){
+  const w = rcdPolWiderspruch(c);
+  const stand = w ? `${c.breaker}|${c.te}` : '';
+  if(!w || c.polOk === stand){ if(fertig) fertig(); return; }
+  const nr = circuitLabel(c) ? `Kreis ${circuitLabel(c)}` : 'Der Kreis';
+  resetModal(true);
+  $('#modalTitle').textContent = 'Typ und Breite passen nicht zusammen';
+  $('#modalBody').innerHTML =
+    `<div>${esc(nr)}: der Typ „${esc(c.breaker)}" ist ${esc(w.typPol)}-polig, `
+    + `belegt sind aber ${esc(w.te)} TE.</div>`
+    + `<div class="muted small" style="margin-top:8px">Die Materialliste zählt den RCD nach dem Typ`
+    + ` – an der Polzahl hängen auch Phasenschiene, Aderendhülsen und die Übersicherungsprüfung.</div>`
+    + `<div style="margin-top:14px">`
+    + (w.ersatz
+        ? `<button class="btn primary" id="rpTyp">Gerät ist ${esc(w.te)}-polig</button>`
+        : `<div class="muted small">Ein ${esc(w.te)}-poliger Typ dieser Bauart steht nicht in den `
+          + `Einstellungen unter „FI / RCD".</div>`)
+    + `<button class="btn ghost" id="rpTe" style="margin-top:10px">Breite auf ${esc(w.typPol)} TE ändern</button>`
+    + `<button class="btn ghost" id="rpLassen" style="margin-top:10px">So lassen</button>`
+    + `</div>`;
+  $('#modalOk').hidden = true; $('#modalBack').hidden = true;
+  const schliessen = () => {
+    $('#modal').hidden = true; pendingAck = null;
+    saveProj(); renderBoard();
+    if(fertig) fertig();
+  };
+  /* Die Ansicht wird gleich verlassen; steht der Kreis aber noch im Formular
+     (c ist dann dasselbe Objekt wie draft), wandert die Entscheidung mit in die
+     Felder – sonst zeigte ein Zurück den alten Stand. */
+  if(w.ersatz) $('#rpTyp').onclick = () => {
+    c.breaker = w.ersatz; delete c.polOk;
+    if(c === draft) fillSelect($('#cBreaker'), typeList('rcd'), w.ersatz);
+    schliessen();
+  };
+  $('#rpTe').onclick     = () => {
+    c.te = w.typPol; delete c.polOk;
+    if(c === draft){ $('#cTe').value = w.typPol; refreshNoField(); }
+    schliessen();
+  };
+  $('#rpLassen').onclick = () => { c.polOk = stand; schliessen(); };
+  $('#modal').hidden = false;
+}
 function saveCircuitThen(next){
   const c = collectCircuit();
   const w = checkCircuit(c);
@@ -4594,7 +4698,7 @@ function saveCircuitThen(next){
      diesem Kreis, und der Weiterlauf wartet auf die Antwort. */
   const done = () => {
     persistCircuit(); toast('Gespeichert');
-    nummernPruefen(() => uebersicherungFragen(next));
+    rcdPolFragen(c, () => nummernPruefen(() => uebersicherungFragen(next)));
   };
   if(w.length) showWarnModal(w, done); else done();
 }
