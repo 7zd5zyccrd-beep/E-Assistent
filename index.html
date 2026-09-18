@@ -10,6 +10,19 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.97 18.09.2026  Feste Rangfolge im Materialaufwand: Wichtiges oben,
+                    Kleinmaterial unten. Verteiler, Hauptleitungsabzweigklemme,
+                    Ueberspannungsableiter, Hauptschalter, Trafo, RCD, FI/LS,
+                    Stromstossschalter, LS-Schalter und gG-Sicherungen,
+                    Phasenschienen samt Beruehrungsschutz, N-Klemmblock,
+                    Abdeckstreifen, H07V-K, Aderendhuelsen samt
+                    Doppeladerendhuelsen. Eigene Eintraege stehen am Ende.
+                    Eine Gruppe erscheint nur, wenn etwas darin steht - sonst
+                    rueckt die naechste auf. Innerhalb einer Gruppe
+                    alphabetisch, nur die Verteiler wie eingetragen. Gilt fuer
+                    "Bisher erfasst", die Komponentenliste und das Blatt; die
+                    fruehere Trennung nach automatisch Gezaehltem und dem Rest
+                    faellt damit weg.
   v1.96 18.09.2026  Zwischenexport aus der Verteileransicht. Bei Neuinstallation
                     steht unter "Dokumente" wieder ein Knopf "Dokumente
                     ausgeben": ein Auswahlfenster mit Verteilerbeschreibung,
@@ -2406,7 +2419,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.96';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.97';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 18.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -5131,14 +5144,37 @@ function materialAuto(quelle){
   });
   return map;
 }
-/* Reihenfolge: ganz oben die Verteiler in Listenreihenfolge, dann die
-   Hauptleitungsabzweigklemme, dann alles automatisch Eingetragene, zuletzt der
-   Rest. Die beiden letzten Gruppen alphabetisch. */
+/* Reihenfolge seit v1.97: Verteiler, Hauptleitungsabzweigklemme,
+   Überspannungsableiter, Hauptschalter, Trafo, RCD, FI/LS, Stromstoßschalter,
+   LS-Schalter und Sicherungen, Phasenschienen, N-Klemmblock, Abdeckstreifen,
+   H07V-K, Aderendhülsen – Wichtiges oben, Kleinmaterial unten. */
 const MAT_KOPF = 'Hauptleitungsabzweigklemme';
-function matSortiert(namen, auto){
-  const rang = n => n.startsWith(VERTEILER_BASIS) ? 0
-                  : n === MAT_KOPF               ? 1
-                  : (auto.get(n) || 0) > 0       ? 2 : 3;
+/* Rangfolge im Materialaufwand: Wichtiges oben, Kleinmaterial unten. Eine Gruppe
+   erscheint nur, wenn etwas darin steht – fehlt sie, rückt die nächste auf.
+   Innerhalb einer Gruppe alphabetisch; nur die Verteiler behalten die
+   Reihenfolge ihrer Eingabe. Was in keine Gruppe passt, etwa ein eigener
+   Eintrag, steht am Ende. */
+const MAT_GRUPPEN = [
+  n => n.startsWith(VERTEILER_BASIS),
+  n => n === MAT_KOPF,
+  n => /^Überspannungsableiter/i.test(n),
+  n => /^Hauptschalter/i.test(n),
+  n => /^Trafo/i.test(n),
+  n => /^RCD/i.test(n),
+  n => /^FI\s*\/\s*LS/i.test(n),
+  n => /^Stromstoßschalter/i.test(n),
+  n => /^(LS-Schalter|Sicherung)/i.test(n),
+  n => /^Phasenschiene/i.test(n),                    // samt Berührungsschutz
+  n => /^N-Klemmblock/i.test(n),
+  n => n === ABDECKUNG,
+  n => /^H07V-K/i.test(n),
+  n => /derendhülsen/i.test(n)                       // auch die Doppeladerendhülsen
+];
+function matSortiert(namen){
+  const rang = n => {
+    const i = MAT_GRUPPEN.findIndex(f => f(n));
+    return i < 0 ? MAT_GRUPPEN.length : i;
+  };
   return [...namen].sort((a, b) => {
     const ra = rang(a), rb = rang(b);
     if(ra !== rb) return ra - rb;
@@ -5156,7 +5192,7 @@ function materialListe(quelle){
     map.set(n, mrund((map.get(n) || 0) + c));
   });
   const namen = [...map.keys()].filter(n => map.get(n) > 0 || auto.has(n));
-  return matSortiert(namen, auto).map(name => ({
+  return matSortiert(namen).map(name => ({
     name,
     count: Math.max(0, mrund(map.get(name))),
     auto: (auto.get(name) || 0) > 0,
@@ -5188,7 +5224,7 @@ function renderMaterial(){
   const autoMap = materialAuto(matDraft);
   const alle  = Array.from(new Set([...CFG.material,
                                     ...Object.keys(matDraft).filter(n => matDraft[n] !== 0)]));
-  const names = matSortiert(alle, autoMap);
+  const names = matSortiert(alle);
   /* Die Zahl an der Komponente ist dieselbe wie oben unter "Bisher erfasst":
      automatisch Gezähltes und von Hand Gesetztes zusammen. Plus und Minus
      ändern die eigene Menge, das Minus geht auch unter die gerechnete – bis
