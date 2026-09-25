@@ -2650,10 +2650,12 @@ if((CFG.matStand | 0) < 7){
   CFG.matStand = 7;
   Store.set('cfg', CFG);
 }
-/* Einpoliger B20, seit 20 A in der Nennstromliste steht. Hinter den
-   dreipoligen B16 einsortiert, also vor den dreipoligen B20. */
-const MAT_NACHTRAG_8 = [['LS-Schalter B20 1P', 'LS-Schalter B16 3P']];
-if((CFG.matStand | 0) < 8){
+/* Einpoliger B20, seit 20 A in der Nennstromliste steht, dahinter der
+   dreipolige: der stand zwar schon in der Vorgabe, fehlt aber in Listen, die
+   vor ihm abgelegt wurden. */
+const MAT_NACHTRAG_8 = [['LS-Schalter B20 1P', 'LS-Schalter B16 3P'],
+                        ['LS-Schalter B20 3P', 'LS-Schalter B20 1P']];
+if((CFG.matStand | 0) < 9){
   if(Array.isArray(CFG.material)){
     const vorher = CFG.material.join('|');
     MAT_NACHTRAG_8.forEach(([name, nach]) => {
@@ -2663,7 +2665,7 @@ if((CFG.matStand | 0) < 8){
     });
     if(CFG.material.join('|') !== vorher) CFG.matHoch = true;
   }
-  CFG.matStand = 8;
+  CFG.matStand = 9;
   Store.set('cfg', CFG);
 }
 /* Neuer FI-Typ: in gespeicherten Einstellungen nachtragen, sonst bliebe er
