@@ -10,6 +10,17 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.100 25.09.2026 SAM (Semi Automatic Mode) als Beta, Etappe 1. Neuer
+                    Schalter in den Einstellungen, je Geraet: "Wieder-
+                    holungspruefung mit SAM beginnen". Dann oeffnet "Erfassung
+                    beginnen" sofort die Kamera fuer die Verteilerbeschreibung,
+                    danach fuehrt eine eigene Ansicht zum Foto des Verteilers;
+                    beide lassen sich neu aufnehmen. Die Bilder haengen als
+                    Fotos am Projekt und gehen zusaetzlich in den Trainings-
+                    ordner (Datenbank: training/info und training/bild), auch
+                    jede verworfene Aufnahme. Nach bestaetigter Uebertragung
+                    wird die Kopie auf dem Geraet geloescht. Das Auslesen folgt
+                    in Etappe 2.
   v1.99 25.09.2026  Stromkreis: engt ein Vorschlag (E-Herd, CEE, Beleuchtung,
                     Einzelgeraete) Nennstrom oder Kabelart ein, steht am Ende
                     der Auswahl "Andere ...". Es oeffnet die ganze hinterlegte
@@ -874,6 +885,17 @@ main{flex:1;display:flex;flex-direction:column;padding:var(--pad);padding-bottom
 .eyebrow:first-child{margin-top:0}
 
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+/* SAM (Beta): die beiden Aufnahmeschritte. Der gerade fällige Schritt trägt
+   den Rahmen in Akzentfarbe, damit auf einen Blick klar ist, was als Nächstes
+   kommt. */
+.sam-schritt{display:flex;gap:12px;align-items:center}
+.sam-schritt.dran{border-color:var(--ink)}
+.sam-schritt .sam-bild{flex:0 0 88px;height:88px;border-radius:var(--r);background:var(--enclosure-2);
+  object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--ink-soft)}
+.sam-schritt .sam-text{flex:1;min-width:0}
+.sam-schritt .sam-text .btn{margin-top:8px}
+.beta{font-size:11px;letter-spacing:.08em;text-transform:uppercase;border:1px solid currentColor;
+  border-radius:4px;padding:0 4px;margin-left:6px;vertical-align:middle}
 .muted{color:var(--ink-soft);font-size:14px}
 .small{font-size:13px}
 
@@ -1982,6 +2004,30 @@ function nameGross(s){
       </div></div>
     </section>
 
+    <!-- ========== SAM (BETA): FOTOS DER VERTEILERBESCHREIBUNG ========== -->
+    <section class="view" id="view-sam">
+      <p class="muted small" style="margin:0 0 14px">Zwei Fotos: erst die Beschreibung, dann der Verteiler.
+        Beide gehen zusätzlich in den Trainingsordner von SAM.</p>
+      <div class="card sam-schritt" id="samS_beschreibung">
+        <div class="sam-bild" id="samV_beschreibung">1</div>
+        <div class="sam-text"><strong>Verteilerbeschreibung</strong>
+          <div class="muted small">Die ganze Liste, möglichst gerade und formatfüllend.</div>
+          <button class="btn" id="samB_beschreibung" type="button">Foto aufnehmen</button></div>
+      </div>
+      <div class="card sam-schritt" id="samS_verteiler">
+        <div class="sam-bild" id="samV_verteiler">2</div>
+        <div class="sam-text"><strong>Verteiler</strong>
+          <div class="muted small">Alle Geräte mit ihren Aufdrucken.</div>
+          <button class="btn" id="samB_verteiler" type="button">Foto aufnehmen</button></div>
+      </div>
+      <input type="file" id="samFile" accept="image/*" capture="environment" hidden>
+      <p class="muted small">Beta: das Auslesen der Beschreibung folgt in der nächsten Stufe.
+        Bis dahin werden die Kreise wie gewohnt angelegt.</p>
+      <div class="actionbar"><div class="inner">
+        <button class="btn primary" id="samWeiter">Weiter zum Verteiler</button>
+      </div></div>
+    </section>
+
     <!-- ========== VERTEILER ========== -->
     <section class="view" id="view-board">
       <div class="card" id="boardMeta"></div>
@@ -2241,6 +2287,12 @@ function nameGross(s){
             <option value="nr">Nummernfolge</option>
             <option value="weg">Messweg</option></select></label>
           <p class="muted small" style="margin:-8px 0 14px">Messweg: erst Zuleitung, Herd und CEE, dann reine Beleuchtungskreise, danach raumweise. Die FI folgen jeweils hinter den Kreisen, die sie abdecken. Tragen die Stromkreisnummern nicht, wird immer raumweise gemessen. Betrifft nur „Speichern &amp; weiter“, nicht die Liste im Verteiler.</p>
+          <div class="eyebrow">SAM <span class="beta">Beta</span></div>
+          <label class="chk" style="margin-bottom:8px">
+            <input type="checkbox" id="setSam"><span>Wiederholungsprüfung mit SAM beginnen</span></label>
+          <p class="muted small" style="margin:0 0 6px">Gilt nur auf diesem Gerät. Nach „Erfassung beginnen“
+            öffnet sich die Kamera für die Verteilerbeschreibung, danach für den Verteiler.</p>
+          <p class="muted small" id="samTrainStatus" style="margin:0 0 14px"></p>
           <div class="eyebrow">Adressen im Protokoll</div>
           <p class="muted small">Höchstens drei Zeilen je Feld – mehr zeigt das Protokoll nicht an.</p>
           <label class="field"><span>Auftraggeber / Anlagenbetreiber</span><textarea id="setAuftraggeber" rows="3"></textarea></label>
@@ -2437,7 +2489,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.99';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.100';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 25.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -3073,10 +3125,10 @@ const TITLES = {
   home:'E-Assistent', new:'Neues Projekt', board:'Verteiler', circuit:'Stromkreis',
   feed:'Zuleitung', material:'Material', finish:'Abschluss',
   mode:'Auswahl', resume:'Fortsetzen', archive:'Ablage', settings:'Einstellungen',
-  sheets:'Blätter', checks:'Angaben',
+  sheets:'Blätter', checks:'Angaben', sam:'SAM · Beta',
   lager:'Materialbestand', lagerart:'Artikel', lagerbest:'Bestellliste', lagerein:'Lieferung'
 };
-const PROJECT_VIEWS = ['board','circuit','feed','material','finish','sheets','checks'];
+const PROJECT_VIEWS = ['board','circuit','feed','material','finish','sheets','checks','sam'];
 /* Die Ansicht "Neues Projekt" dient auch zum Nachbessern eines laufenden
    Projekts; dieser Schalter unterscheidet beides (siehe projektAendern). */
 let projEdit = false;
@@ -3166,6 +3218,7 @@ function go(name, push = true){
   window.scrollTo(0,0);
   if(name === 'home')     renderHome();
   if(name === 'board')    renderBoard();
+  if(name === 'sam')      renderSam();
   if(name === 'material'){ materialInit(); renderMaterial(); }
   if(name === 'finish')   renderFinish();
   if(name === 'mode')     renderModeMenu();
@@ -3496,6 +3549,14 @@ $('#btnCreate').onclick = () => {
   };
   sigMode = 'later';
   CFG.tester = PROJ.tester; saveCfg(); saveProj();
+  /* SAM: die Kamera geht noch im selben Antippen auf – iOS öffnet sie nur aus
+     einer Berührung heraus, nicht nach einer Verzögerung. */
+  if(newMode === 'wdh' && CFG.sam){
+    PROJ.sam = {};
+    stack = ['home']; go('sam', false);
+    samFoto('beschreibung');
+    return;
+  }
   stack = ['home']; go('board', false);
 };
 
@@ -6311,17 +6372,16 @@ const fotoAufnehmen = () => {
 };
 $('#btnPhoto').onclick       = fotoAufnehmen;
 $('#btnPhotoFinish').onclick = fotoAufnehmen;
-$('#photoFile').onchange = async e => {
-  const datei = e.target.files && e.target.files[0];
-  e.target.value = '';                       // dasselbe Bild soll erneut wählbar sein
-  if(!datei || !PROJ) return;
+/* Legt ein Kamerabild als Projektfoto ab. Liefert den Eintrag oder null, wenn
+   der Speicher es nicht nahm. Auch SAM geht diesen Weg. */
+async function fotoAblegen(datei){
   const fid = neueKennung('F');
   try { await Bilder.legen(fid, datei); }    // unverändert, so wie es die Kamera liefert
   catch(_){
     showDialog({title:'Foto nicht gesichert', danger:true, ok:'Verstanden',
       body:'Das Bild ließ sich nicht ablegen. Meist ist der Speicher des Geräts voll – '
          + 'nicht mehr benötigte Projekte oder Fotos löschen und es erneut versuchen.'});
-    return;
+    return null;
   }
   PROJ.photos = PROJ.photos || [];
   const eintrag = {fid, typ: datei.type || 'image/jpeg', groesse: datei.size, zeit: Date.now()};
@@ -6329,10 +6389,18 @@ $('#photoFile').onchange = async e => {
   saveProj();
   /* Vorschau zuerst örtlich bauen, damit die Kachel sofort steht. Das
      Hochschieben übernimmt die Warteschlange – vorn, vor allem Nachzügler. */
+  const pid = PROJ.id;
   vorschauBauen(datei)
     .then(v => Bilder.legen(VOR(fid), v))
     .catch(() => {})
-    .then(() => fotoEinreihen(PROJ.id, eintrag, true));
+    .then(() => fotoEinreihen(pid, eintrag, true));
+  return eintrag;
+}
+$('#photoFile').onchange = async e => {
+  const datei = e.target.files && e.target.files[0];
+  e.target.value = '';                       // dasselbe Bild soll erneut wählbar sein
+  if(!datei || !PROJ) return;
+  if(!await fotoAblegen(datei)) return;
   renderPhotos();
   /* Wird das Foto erst im Abschluss aufgenommen, muss es auch hinausgehen. Der
      Fingerabdruck wird gleich fortgeschrieben, damit die Vorwahl beim nächsten
@@ -6345,6 +6413,135 @@ $('#photoFile').onchange = async e => {
   }
   toast('Foto gesichert');
 };
+
+/* ============================================================
+   SAM (BETA) – Semi Automatic Mode
+
+   Etappe 1: Bei der Wiederholungsprüfung öffnet "Erfassung beginnen" die
+   Kamera für die Verteilerbeschreibung, danach für den Verteiler. Beide Bilder
+   hängen als gewöhnliche Fotos am Projekt und gehen zusätzlich in den
+   Trainingsordner – unabhängig davon, was später mit ihnen geschieht, auch
+   wenn das Projekt gelöscht wird. Das Auslesen (sam-werkstatt) folgt in
+   Etappe 2.
+   ============================================================ */
+const SAM_ARTEN = ['beschreibung', 'verteiler'];
+let samArt = null;                               // welcher Schritt gerade aufnimmt
+function samFoto(art){
+  if(!PROJ) return;
+  const alt = PROJ.sam && PROJ.sam[art];
+  const belegt = (PROJ.photos || []).length - (alt ? 1 : 0);
+  if(belegt >= FOTO_MAX){ toast(`Mehr als ${FOTO_MAX} Fotos sind nicht vorgesehen`); return; }
+  samArt = art;
+  $('#samFile').click();
+}
+SAM_ARTEN.forEach(art => { $('#samB_' + art).onclick = () => samFoto(art); });
+$('#samWeiter').onclick = () => { stack = ['home']; go('board', false); };
+$('#samFile').onchange = async e => {
+  const datei = e.target.files && e.target.files[0];
+  e.target.value = '';
+  const art = samArt; samArt = null;
+  if(!datei || !PROJ || !art) return;
+  /* Zuerst in den Trainingsordner: der ist das Einzige, was bei einem vollen
+     Projektspeicher nicht verloren gehen soll. */
+  trainingAblegen(datei, art);
+  const eintrag = await fotoAblegen(datei);
+  if(!eintrag) return;
+  PROJ.sam = PROJ.sam || {};
+  /* Neu aufgenommen ersetzt das bisherige Projektfoto dieses Schritts; im
+     Trainingsordner bleiben beide – gerade das misslungene Bild ist lehrreich. */
+  const alt = PROJ.sam[art];
+  if(alt){
+    PROJ.photos = PROJ.photos.filter(f => f.fid !== alt);
+    Bilder.weg(alt).catch(() => {}); fotoWeg(PROJ.id, alt); vorschauWeg(PROJ.id, alt);
+  }
+  PROJ.sam[art] = eintrag.fid;
+  saveProj();
+  renderSam();
+};
+function renderSam(){
+  if(!PROJ) return;
+  const sam = PROJ.sam || {};
+  const dran = SAM_ARTEN.find(a => !sam[a]);
+  SAM_ARTEN.forEach((art, i) => {
+    const fid = sam[art];
+    $('#samS_' + art).classList.toggle('dran', art === dran);
+    $('#samB_' + art).textContent = fid ? 'Neu aufnehmen' : 'Foto aufnehmen';
+    $('#samB_' + art).className = 'btn' + (art === dran ? ' primary' : ' ghost');
+    const feld = $('#samV_' + art);
+    feld.innerHTML = String(i + 1);
+    if(!fid) return;
+    Bilder.lesen(VOR(fid)).then(b => b || Bilder.lesen(fid)).then(b => {
+      if(!b || (PROJ.sam || {})[art] !== fid) return;
+      const img = document.createElement('img');
+      img.className = 'sam-bild'; img.alt = '';
+      img.src = URL.createObjectURL(b);
+      img.onload = () => URL.revokeObjectURL(img.src);
+      feld.innerHTML = ''; feld.appendChild(img);
+    }).catch(() => {});
+  });
+  $('#samWeiter').className = 'btn ' + (dran ? 'ghost' : 'primary');
+  $('#samWeiter').textContent = dran ? 'Ohne weiteres Foto zum Verteiler' : 'Weiter zum Verteiler';
+}
+
+/* --- Trainingsordner ---------------------------------------------------------
+   Eigene Liste auf dem Gerät, eigener Pfad in der Datenbank: training/info/<id>
+   trägt die Angaben, training/bild/<id> das Bild als Text wie bei den Fotos.
+   Getrennt, damit sich die Liste ansehen lässt, ohne alle Bilder zu laden.
+   Nach bestätigter Übertragung wird die Kopie auf dem Gerät gelöscht – sie
+   würde sonst mit jeder Prüfung einige Megabyte Speicher kosten. */
+const TRAIN_BILD = tid => 'T' + tid;
+let TRAINING = Store.get('samTraining', []);
+if(!Array.isArray(TRAINING)) TRAINING = [];
+const trainingSichern = () => Store.set('samTraining', TRAINING);
+let trainingFehler = '';
+async function trainingAblegen(datei, art){
+  const tid = neueKennung('T');
+  try { await Bilder.legen(TRAIN_BILD(tid), datei); }
+  catch(e){ return; }                            // der Projektweg meldet den vollen Speicher
+  TRAINING.push({tid, art, zeit: Date.now(), pid: PROJ ? PROJ.id : null,
+    adresse: PROJ ? (PROJ.address || '').split('\n')[0] : '', wohnung: PROJ ? PROJ.flat || '' : '',
+    konto: FB.konto || '', pruefer: PROJ ? PROJ.tester || '' : '',
+    typ: datei.type || 'image/jpeg', groesse: datei.size, hoch: false});
+  trainingSichern();
+  trainingHoch();
+}
+let trainingLaeuft = false;
+async function trainingHoch(){
+  if(trainingLaeuft || !fbEin) return;
+  trainingLaeuft = true;
+  try {
+    for(const t of TRAINING.filter(x => !x.hoch)){
+      let blob = null;
+      try { blob = await Bilder.lesen(TRAIN_BILD(t.tid)); } catch(e){}
+      if(!blob){ t.hoch = true; t.verloren = true; trainingSichern(); continue; }
+      const txt = await blobDataUrl(blob);
+      const info = Object.assign({}, t); delete info.hoch; delete info.tid;
+      const p = Promise.all([
+        FB.fn.set(FB.fn.ref(FB.db, 'training/bild/' + t.tid), txt),
+        FB.fn.set(FB.fn.ref(FB.db, 'training/info/' + t.tid), info)
+      ]);
+      let fehler = null;
+      p.catch(e => { fehler = e; });
+      if(!await mitFrist(p, Q_FRIST)){
+        trainingFehler = fehler ? (fehler.code || fehler.message || String(fehler)) : 'keine Antwort';
+        break;
+      }
+      trainingFehler = '';
+      t.hoch = true; trainingSichern();
+      Bilder.weg(TRAIN_BILD(t.tid)).catch(() => {});
+    }
+  } catch(e){ trainingFehler = e && e.message || String(e); }
+  trainingLaeuft = false;
+  if(current === 'settings') samTrainStatus();
+}
+function samTrainStatus(){
+  const el = $('#samTrainStatus'); if(!el) return;
+  const offen = TRAINING.filter(x => !x.hoch).length;
+  const oben  = TRAINING.length - offen;
+  el.textContent = !TRAINING.length ? 'Trainingsordner: von diesem Gerät noch keine Fotos.'
+    : `Trainingsordner: ${oben} von diesem Gerät übertragen` + (offen ? `, ${offen} warten` : '') + '.'
+    + (offen && trainingFehler ? ` Letzter Versuch: ${trainingFehler}.` : '');
+}
 
 $('#btnImport').onclick = () => $('#importFile').click();
 $('#importFile').onchange = e => {
@@ -7850,6 +8047,8 @@ function renderSettings(){
   $('#setMaterial').value = CFG.material.join('\n');
   $('#setInvHinweis').checked = invAn();
   $('#setInvMonate').value    = invMonate(CFG.invMonate);
+  $('#setSam').checked = !!CFG.sam;
+  samTrainStatus();
   fbStatusZeigen();
 }
 const lines = el => el.value.split('\n').map(s => s.trim()).filter(Boolean);
@@ -7869,6 +8068,7 @@ $('#btnSaveSettings').onclick = () => {
   CFG.material = lines($('#setMaterial'));
   CFG.invHinweis = $('#setInvHinweis').checked;
   CFG.invMonate  = invMonate($('#setInvMonate').value);
+  CFG.sam        = $('#setSam').checked;          // persönlich, geht nicht hinauf
   const sel = $('#setDevice').value;
   if(sel && CFG.devices.includes(sel)) CFG.devices = [sel, ...CFG.devices.filter(d => d !== sel)];
   saveCfg();
@@ -7936,7 +8136,7 @@ function netzSetzen(an){
     clearTimeout(netzTimer); netzTimer = null;
     document.body.dataset.netz = 'an';
     if(!vorher && fbProjEin){ fotosNachschieben(); ablageNachschieben(); }   // Funkpause vorbei
-    if(!vorher){ lagerNachschieben(); matHochschieben(); ratedHochschieben(); }
+    if(!vorher){ lagerNachschieben(); matHochschieben(); ratedHochschieben(); trainingHoch(); }
   } else if(!netzTimer){
     netzTimer = setTimeout(() => { netzTimer = null; document.body.dataset.netz = 'ab'; }, NETZ_VERZUG);
   }
@@ -8008,6 +8208,7 @@ FB.bereit.then(() => {
     if(!snap.exists()) fbHoch();                 // erste Inbetriebnahme
     matHochschieben();                           // umgestellte Materialliste zuerst hinauf
     ratedHochschieben();
+    trainingHoch();                              // SAM: liegengebliebene Trainingsfotos
     FB_ALLE.forEach(k => onValue(ref(FB.db, 'betrieb/' + k), s => {
       const v = s.val();
       if(v == null || v === fbWert(k)) return;
