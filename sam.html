@@ -1,7 +1,18 @@
 <!DOCTYPE html>
 <!--
   PaddleOCR-Test · Verteilerbeschreibung
-  v0.43 · 25.09.2026
+  v0.44 · 25.09.2026
+
+  v0.44: zwei Regeln aus Jeans eigenem Verteiler, der zurückgehalten bleibt
+  und nur beschrieben wurde (zweipoliger FI auf 18 und 19 kam als zwei
+  Einträge 10 und 13, dazu ein Eintrag aus dem Text unter der Tabelle).
+  Nummernfolge-Kreuzprobe (nummernfolgePruefen): Zeilen mit Nummern außer
+  der Reihe zwischen zwei passenden Nachbarn bekommen die fehlenden Nummern,
+  wenn ihre Zahl genau der Lücke entspricht - abgeleitet gekennzeichnet;
+  danach fasst geraeteZusammenfassen den FI zu 18-19 zusammen. Fußtext
+  (fussAmEnde): Zeilen am Ende ohne gelesene Nummer, ohne Absicherung und
+  ohne Listenwort fallen weg und stehen im Bericht unter "Unter der
+  Tabelle". Beide melden sich in den Messwerten.
 
   v0.43: Einbettung in den E-Assistenten (Jean, 25.09.2026: SAM als Beta in
   der App, Etappe 2). Die Seite liegt dort als sam.html neben der App und
@@ -804,7 +815,7 @@ pre.abgleich.gut{background:#EAF5DC;border-color:#8FBE36}
 
   <header>
     <h1>PaddleOCR-Test · Verteilerbeschreibung</h1>
-    <span class="ver">v0.43 · 25.09.2026</span>
+    <span class="ver">v0.44 · 25.09.2026</span>
   </header>
 
   <div class="karte">
@@ -979,7 +990,7 @@ const MODELLE = {
   latin: {name:'v5 lateinisch',  konstante:'V5_LATIN_MOBILE_MODEL'}
 };
 
-const VERSION = 'v0.43 · 25.09.2026';
+const VERSION = 'v0.44 · 25.09.2026';
 
 /* ==================== Schrittliste ==================== */
 
@@ -4326,6 +4337,7 @@ function verarbeite(erg, arbeit, winkel, leseDauer, nachleseBericht){
     tabellenText = gebaut.text;
     letzteReihen = gebaut.ist || null;
     if(gebaut.klammerBericht) mess.push('Klammern zusammengefasst: ' + gebaut.klammerBericht.join('; '));
+    mess.push('Nummernfolge: ' + (gebaut.folgeBericht && gebaut.folgeBericht.length ? gebaut.folgeBericht.join('; ') : 'keine Nummer außer der Reihe'));
     if(gebaut.fussBericht && gebaut.fussBericht.length) mess.push('Unter der Tabelle, nicht als Eintrag gezählt: ' + gebaut.fussBericht.map(t => '„' + t + '"').join('; '));
     if(letzteHalbeTE) mess.push('Halbe Teilungseinheiten: ' + letzteHalbeTE.text);
     if(gebaut.geraeteBericht && gebaut.geraeteBericht.length) mess.push('Gleiche Geräte zusammengefasst: ' + gebaut.geraeteBericht.join('; '));
@@ -5713,6 +5725,10 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
     klammerBericht.push('Schreibmaschinenklammer ' + von + '–' + bis + ': ' + gruppe.length + ' Zeilen, Inhalt aus ' + (voll.length ? 'der beschriebenen' : 'keiner – leer'));
   });
   klWeg.forEach(r => reihen.splice(reihen.indexOf(r), 1));
+  /* v0.44: Nummern außer der Reihe zwischen zwei passenden Nachbarn und
+     Fußtext direkt unter dem letzten Eintrag (Jeans Verteiler, blind) */
+  const folgeBericht = nummernfolgePruefen(reihen);
+  fussAmEnde(reihen, fussBericht);
   reihen.forEach(aufsSchema);
   const geraeteBericht = geraeteZusammenfassen(reihen);
   reihen.forEach(function(r){ [r.bez, r.ort].forEach(f => { if(f && f.text) f.text = f.text.replace(/\u00a0/g, ' '); }); });
@@ -5814,7 +5830,82 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
   const ist = reihen.map(r => ({nr: r.n.text || '', bez: r.bez.leer ? '' : r.bez.text,
     ort: (r.ort && !r.ort.leer) ? r.ort.text : '', sich: (r.sich && !r.sich.leer) ? r.sich.text : '',
     zweifel: {nr: !!(r.abgeleitet || r.n.unklar), bez: zw(r.bez), ort: zw(r.ort), sich: zw(r.sich)}}));
-  return {knoten: huelle, text, zuB, zuO, zweifel, ist, klammerBericht: klammerBericht.length ? klammerBericht : null, geraeteBericht, fussBericht};
+  return {knoten: huelle, text, zuB, zuO, zweifel, ist, klammerBericht: klammerBericht.length ? klammerBericht : null, geraeteBericht, fussBericht, folgeBericht};
+}
+
+/* v0.44 (Jean, 25.09.2026, sein eigener Verteiler, zurückgehalten und nur
+   beschrieben): ein zweipoliger FI auf 18 und 19, beide Zeilen
+   "Fehlerstromschutzschalter", kam als zwei Einträge 10 und 13 heraus - alle
+   übrigen Nummern richtig. Die Ziffern der beiden Zeilen waren also falsch
+   gelesen, und weil 10 und 13 nicht an 17 anschließen, fasste
+   geraeteZusammenfassen sie auch nicht zusammen.
+   Kreuzprobe: zwischen zwei Nachbarn, die selbst in die Folge passen, stehen
+   genau so viele Zeilen, wie Nummern fehlen, und keine davon trägt eine
+   Nummer aus der Lücke - dann bekommen sie die fehlenden Nummern, als
+   abgeleitet gekennzeichnet (in der App bernsteinfarben). Nicht bei halben
+   Teilungseinheiten (dort belegt jeder Eintrag zwei Nummern) und nicht über
+   Zeilen ohne Zahl ("Q1") hinweg. */
+function nummernfolgePruefen(reihen){
+  if(halbeTEPruefen(reihen).ja) return ['halbe Teilungseinheiten, nicht geprüft'];
+  const zahl = r => r.n && typeof r.n.b === 'number';
+  const echt = r => zahl(r) && !r.abgeleitet;
+  const von  = r => (typeof r.n.a === 'number') ? r.n.a : r.n.b;
+  const bericht = [];
+  /* ein Anker passt in die Folge, wenn der echte Nachbar davor kleiner und
+     der danach größer ist */
+  const vorher = i => { for(let k = i - 1; k >= 0; k--) if(echt(reihen[k])) return reihen[k]; return null; };
+  for(let p = 0; p < reihen.length; p++){
+    const rp = reihen[p];
+    if(!echt(rp)) continue;
+    const vp = vorher(p);
+    if(vp && vp.n.b >= von(rp)) continue;
+    for(let q = p + 2; q < reihen.length && q <= p + 4; q++){
+      const rq = reihen[q];
+      if(!echt(rq)) continue;
+      const ende = rp.n.b, anf = von(rq);
+      if(anf <= ende) continue;                    // selbst außer der Reihe
+      const zw = reihen.slice(p + 1, q);
+      let nq = null;
+      for(let k = q + 1; k < reihen.length; k++) if(echt(reihen[k])){ nq = reihen[k]; break; }
+      const passt = zw.every(zahl) && (!nq || von(nq) > rq.n.b) &&
+        anf - ende - 1 === zw.length &&
+        zw.some(r => !r.abgeleitet) &&
+        !zw.some(r => !r.abgeleitet && von(r) > ende && r.n.b < anf);
+      if(passt){
+        const alt = [];
+        zw.forEach(function(r, k){
+          const x = ende + 1 + k;
+          alt.push(r.n.text + ' → ' + x);
+          r.n = Object.assign({}, r.n, {text: String(x), a: x, b: x, herkunft: 'korrigiert'});
+          r.abgeleitet = true;
+        });
+        bericht.push(alt.join(', ') + ' (zwischen ' + ende + ' und ' + anf + ')');
+        p = q - 1;
+      }
+      break;
+    }
+  }
+  return bericht;
+}
+
+/* v0.44: Text direkt unter dem letzten Eintrag (Jeans Verteiler: er wurde
+   ein weiterer Kreis mit fortgezählter Nummer). Bisher fiel er nur unter
+   drei Leerzeilen oder als Hinweis weg. Jetzt auch: am Ende der Tabelle, ohne
+   gelesene Nummer, ohne Absicherung und ohne ein einziges Wort von den Listen
+   (Bezeichnungen, Räume). Fortgezählte echte Einträge wie Blatt 2, 45-48,
+   tragen Listenwörter und bleiben. */
+function fussAmEnde(reihen, fussBericht){
+  const woerter = r => [r.bez, r.ort].filter(f => f && !f.leer).map(f => f.text).join(' ')
+    .split(/[\s,\/;+]+/).filter(w => w.replace(/[^A-Za-zÄÖÜäöüß]/g, '').length >= 3);
+  const treffer = w => !!(teilDeuten(w, BEZEICHNUNGEN) || teilDeuten(w, ORTE));
+  while(reihen.length > 1){
+    const r = reihen[reihen.length - 1];
+    if(!r.abgeleitet || !r.n || r.n.herkunft !== 'frei' || (r.sich && !r.sich.leer)) break;
+    const ws = woerter(r);
+    if(!ws.length || ws.some(treffer)) break;
+    fussBericht.push(ws.join(' ').slice(0, 60));
+    reihen.pop();
+  }
 }
 
 /* v0.35 (Jean, 25.09.2026): aufeinanderfolgende Einzelnummern mit demselben
