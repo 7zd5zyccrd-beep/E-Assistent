@@ -10,6 +10,15 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.102 25.09.2026 SAM (Beta), Etappe 3: nach "Uebernehmen" steht das Projekt
+                    im Messen-Modus. Bei aus SAM uebernommenen Kreisen waehlt
+                    der Messen-Modus die Kabelart ueber grosse Flaechen, nach
+                    der Bezeichnung vorgefiltert wie bei den Namensvorschlaegen
+                    (E-Herd fuenfadrig, Waschmaschine die Geraetekabel), mit
+                    "Andere ..." fuer alle hinterlegten. Die gelesenen Angaben
+                    stehen oben nur zum Lesen; "Angaben aendern" blendet die
+                    Felder ein. Eine offene Kabelart zaehlt als fehlender Wert:
+                    die Kachel bleibt rot, "Speichern & weiter" laeuft sie an.
   v1.101 25.09.2026 SAM (Beta), Etappe 2: SAM liest die Verteilerbeschreibung.
                     Die Erkennung ist die Seite aus der Werkstatt (sam-werk-
                     statt, paddle-test.html v0.43), unveraendert als sam.html
@@ -918,6 +927,10 @@ main{flex:1;display:flex;flex-direction:column;padding:var(--pad);padding-bottom
 .sam-zeile .geraet{font-family:var(--f-data);font-size:12px;color:var(--ink-soft);text-align:right;flex:0 0 auto;max-width:40%}
 .sam-edit{border:1px solid var(--line);border-left:5px solid var(--ink);border-radius:var(--r);
   padding:12px;margin:-4px 0 12px;background:var(--surface)}
+/* Kabelwahl im Messen-Modus: große Flächen, der gewählte Eintrag gefüllt. */
+.sam-kabel .sug{min-height:52px;font-size:16px;padding:0 16px}
+.sam-kabel .sug.gewaehlt{background:var(--ink);border-color:var(--ink);color:var(--surface);font-weight:600}
+#samKabel.fehlt .eyebrow{color:var(--fault)}
 .beta{font-size:11px;letter-spacing:.08em;text-transform:uppercase;border:1px solid currentColor;
   border-radius:4px;padding:0 4px;margin-left:6px;vertical-align:middle}
 .muted{color:var(--ink-soft);font-size:14px}
@@ -2131,6 +2144,10 @@ function nameGross(s){
 
         <div class="pane">                     <!-- zweispaltig rechts: Messwerte -->
           <div class="card" id="messKopf" hidden style="margin-bottom:14px"></div>
+          <div id="samKabel" hidden style="margin-bottom:14px">
+            <div class="eyebrow">Kabelart</div>
+            <div class="chk-grid sam-kabel" id="samKabelWahl"></div>
+          </div>
           <div class="eyebrow">Messwerte</div>
           <div class="seg" id="segStatus" style="margin-bottom:14px">
             <button data-v="measured" aria-pressed="true">Gemessen</button>
@@ -2525,7 +2542,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.101';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.102';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 25.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -3750,7 +3767,9 @@ function renderBoard(){
 
 /* --- fehlende Pflichtwerte: Grundlage für die Rot-Markierung --- */
 function missingValues(c){
-  if(isSpecial(c) || c.status !== 'measured') return false;
+  if(isSpecial(c)) return false;
+  if(c.sam && devOf(c) !== 'rcd' && !c.cable) return true;   // SAM: Kabelart noch offen
+  if(c.status !== 'measured') return false;
   const need = [];
   const dev = devOf(c);
   if(dev !== 'rcd'){ need.push(c.m.iso, c.m.zs); }
@@ -3929,6 +3948,10 @@ function lsCode(d){                                  // "B16" für die Schleifen
 
 let draft = null;
 
+/* SAM, Etappe 3: bei aus SAM übernommenen Kreisen wählt der Messen-Modus die
+   Kabelart selbst. samKabelWahl ist dann die Wahl ('' = noch offen), sonst
+   null; samAendern blendet die gelesenen Angaben zum Korrigieren ein. */
+let samKabelWahl = null, samAendern = false;
 function openCircuit(idx){
   if(idx == null){ draft = blankCircuit(); editIdx = null; }
   else { draft = JSON.parse(JSON.stringify(PROJ.items[idx])); editIdx = idx; }
@@ -3940,6 +3963,8 @@ function openCircuit(idx){
   draft.char = draft.char || 'B'; draft.rated = draft.rated || '16 A';
   draft.reason = draft.reason || (draft.status === 'function' ? 'function_ok' : 'inaccessible');
   draft.status = normStatus(draft.status);
+  samKabelWahl = draft.sam ? (draft.cable || '') : null;
+  samAendern = false;
   cableFilter = null; paintCableList(draft.cable);
   ratedFilter = null; fillSelect($('#cRated'), CFG.rated, draft.rated);
   autoRoom = null;                     // gespeicherter Ort gilt als von Hand gesetzt
@@ -4409,10 +4434,11 @@ $('#cRated').onchange = () => {
   });
 };
 $('#cCable').onchange = () => {
-  if($('#cCable').value !== ANDERE){ draft.cable = $('#cCable').value; return; }
+  if($('#cCable').value !== ANDERE){ draft.cable = $('#cCable').value; if(samKabelWahl !== null) samKabelWahl = draft.cable; return; }
   $('#cCable').value = draft.cable;
   andereWaehlen('Kabelart', CFG.cables, draft.cable, v => {
     draft.cable = v; fillMitAndere($('#cCable'), cableOptions(), CFG.cables, v);
+    if(samKabelWahl !== null) samKabelWahl = v;
   });
 };
 $('#cPoles').onchange = () => { draft.poles = $('#cPoles').value; applyPoleTe(); };
@@ -4493,7 +4519,8 @@ function messKopfZeilen(c){
     const ger = c.device === 'rcbo'
       ? `FI/LS ${c.char} ${c.rated} / ${RCBO_IDN}`
       : (c.char === 'gG' ? `gG ${c.rated}` : `${c.char} ${c.rated}`);
-    z.push([ger, c.cable].filter(Boolean).join(', '));
+    const kabel = (c === draft && samKabelWahl !== null) ? '' : c.cable;   // SAM: steht in der Kabelwahl
+    z.push([ger, kabel].filter(Boolean).join(', '));
   }
   return z.filter(t => String(t).trim());
 }
@@ -4503,7 +4530,54 @@ function messKopfSetzen(an){
   const z = messKopfZeilen(draft);
   k.hidden = false;
   k.innerHTML = `<div><strong>${esc(z[0])}</strong></div>`
-    + z.slice(1).map(t => `<div class="muted small">${esc(t)}</div>`).join('');
+    + z.slice(1).map(t => `<div class="muted small">${esc(t)}</div>`).join('')
+    + (draft.sam ? '<div class="small" style="margin-top:6px"><button class="linkbtn" id="btnSamAendern" type="button">Angaben ändern</button></div>' : '');
+  if(draft.sam) $('#btnSamAendern').onclick = () => {
+    samAendern = true;
+    if(samKabelWahl) paintCableList(samKabelWahl);    // die Wahl steht dann im Feld
+    syncCircuitUi();
+  };
+}
+/* Die Kabelart ist im Idealfall das Einzige, was außer den Messwerten noch
+   einzutragen ist – deshalb große Flächen statt eines Auswahlfelds. Die Liste
+   folgt der Bezeichnung wie bei den Namensvorschlägen (E-Herd fünfadrig,
+   Waschmaschine die Gerätekabel); "Andere …" öffnet alle hinterlegten. */
+function samKabelVorschlag(name){
+  const n = samNorm(name);
+  const wurzel = NAME_SUGGESTIONS.filter(x => n === samNorm(x.label) || n.startsWith(samNorm(x.label) + ' '))
+    .sort((a, b) => b.label.length - a.label.length)[0];
+  if(!wurzel) return null;
+  const unter = (wurzel.subs || []).find(x => (' ' + n + ' ').includes(' ' + samNorm(x.label) + ' '));
+  return Object.assign({}, wurzel, unter || {});
+}
+function samKabelListe(){
+  const v = samKabelVorschlag(draft.name);
+  const f = v && (v.cables || v.maxSection || v.minCores || v.maxCores)
+    ? {list:v.cables, maxSection:v.maxSection, minCores:v.minCores, maxCores:v.maxCores} : null;
+  const alt = cableFilter; cableFilter = f;
+  const l = [...cableOptions()];
+  cableFilter = alt;
+  if(samKabelWahl && !l.includes(samKabelWahl)) l.push(samKabelWahl);
+  return l;
+}
+function samKabelZeigen(an){
+  const box = $('#samKabel');
+  box.hidden = !an;
+  if(!an) return;
+  const l = samKabelListe();
+  const mehr = CFG.cables.some(x => !l.includes(x));
+  box.classList.toggle('fehlt', !samKabelWahl);
+  $('#samKabelWahl').innerHTML = l.map((k, i) =>
+    `<button class="sug${k === samKabelWahl ? ' gewaehlt' : ''}" type="button" data-i="${i}">${esc(k)}</button>`).join('')
+    + (mehr ? `<button class="sug" type="button" data-andere="1">${esc(ANDERE)}</button>` : '');
+  $$('#samKabelWahl button').forEach(b => b.onclick = () => {
+    if(b.dataset.andere){
+      andereWaehlen('Kabelart', CFG.cables, samKabelWahl, v => { samKabelWahl = v; draft.cable = v; samKabelZeigen(true); });
+      return;
+    }
+    samKabelWahl = l[+b.dataset.i]; draft.cable = samKabelWahl;
+    samKabelZeigen(true);
+  });
 }
 /* Nächster offener Kreis: Lücken in der Nummerierung werden übersprungen, und
    angelaufen wird nur, wo noch Messwerte fehlen – fertige Kreise, "Keine
@@ -4593,8 +4667,9 @@ function syncCircuitUi(){
   const mess = messModus();
   /* Im Messen-Modus wird nichts mehr angelegt: der ganze linke Teil verschwindet,
      an seiner Stelle stehen die festen Angaben aus dem Bearbeiten-Modus. */
-  $('#paneGeraet').hidden = mess;
-  messKopfSetzen(mess);
+  $('#paneGeraet').hidden = mess && !samAendern;
+  messKopfSetzen(mess && !samAendern);
+  samKabelZeigen(mess && !samAendern && samKabelWahl !== null && !sp && dev !== 'rcd');
   $('#btnDelCircuit').hidden = mess || editIdx == null;
   $('#btnSaveCircuit').textContent = mess ? 'Speichern & weiter' : 'Speichern & nächster Kreis';
   $('#fldDevSeg').hidden = sp;              // Gerätewahl gilt dann nicht
@@ -4747,6 +4822,7 @@ function collectCircuit(){
   draft.te      = $('#cTe').value || '1';
   draft.covers  = draft.device === 'rcd' ? $('#cCovers').value.trim() : '';
   draft.cable   = draft.device === 'rcd' ? '' : $('#cCable').value;
+  if(samKabelWahl !== null && !samAendern && draft.device !== 'rcd') draft.cable = samKabelWahl;
   draft.status  = draft.special ? 'measured' : segVal('#segStatus');
   draft.reason  = (!draft.special && draft.status === 'nomeasure') ? $('#cReason').value : null;
   draft.note    = draft.reason === 'other' ? $('#cNote').value.trim() : '';
@@ -6895,6 +6971,7 @@ $('#samUebernehmen').onclick = () => {
     PROJ.items = (PROJ.items || []).concat(kreise);
     sortCircuits();
     l.uebernommen = Date.now();
+    PROJ.modus = 'mess';                     // im Idealfall bleiben nur Kabel und Messwerte
     saveProj();
     trainingNachtrag(PROJ.samTid, 'uebernommen', rs.map(z => ({nr:z.nr, bez:z.bez, ort:z.ort, sich:z.sich, geraet:z.geraet, special:z.special || ''})));
     toast(`${kreise.length} Stromkreise übernommen` + (umstellen ? ' – abweichende Nummerierung eingeschaltet' : ''));
