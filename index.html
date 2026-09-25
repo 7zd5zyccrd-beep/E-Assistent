@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.104 25.09.2026 SAM (Beta): Trainingsordner in den Einstellungen. Zeigt
+                    alle Fotos aller Geraete, neueste zuerst, mit dem Stand der
+                    Lesung. Antippen laedt ein Foto; "teilen" gibt die gewaehl-
+                    ten ueber das Teilen-Menue weiter, zum Foto der Beschreibung
+                    eine .json mit Gelesenem und Uebernommenem.
   v1.103 25.09.2026 SAM (Beta): ist SAM eingeschaltet, laedt die Erkennung
                     schon kurz nach dem Start der App im Hintergrund (sobald
                     der Browser frei ist, nicht im Datensparmodus). Das erste
@@ -936,6 +941,9 @@ main{flex:1;display:flex;flex-direction:column;padding:var(--pad);padding-bottom
 .sam-kabel .sug{min-height:52px;font-size:16px;padding:0 16px}
 .sam-kabel .sug.gewaehlt{background:var(--ink);border-color:var(--ink);color:var(--surface);font-weight:600}
 #samKabel.fehlt .eyebrow{color:var(--fault)}
+#trainListe .list-item{border-left-color:var(--line)}
+#trainListe .list-item.state-green{border-left-color:var(--pe)}
+#trainListe .list-item.state-red{border-left-color:var(--fault)}
 .beta{font-size:11px;letter-spacing:.08em;text-transform:uppercase;border:1px solid currentColor;
   border-radius:4px;padding:0 4px;margin-left:6px;vertical-align:middle}
 .muted{color:var(--ink-soft);font-size:14px}
@@ -2072,6 +2080,15 @@ function nameGross(s){
       </div></div>
     </section>
 
+    <!-- ========== SAM (BETA): TRAININGSORDNER ========== -->
+    <section class="view" id="view-training">
+      <p class="muted small" id="trainKopf" style="margin:0 0 12px"></p>
+      <div id="trainListe"></div>
+      <div class="actionbar"><div class="inner">
+        <button class="btn primary" id="trainTeilen" disabled>Auswählen zum Teilen</button>
+      </div></div>
+    </section>
+
     <!-- ========== SAM (BETA): ÜBERNAHMELISTE ========== -->
     <section class="view" id="view-samliste">
       <p class="muted small" id="samListeKopf" style="margin:0 0 12px"></p>
@@ -2350,7 +2367,8 @@ function nameGross(s){
             <input type="checkbox" id="setSam"><span>Wiederholungsprüfung mit SAM beginnen</span></label>
           <p class="muted small" style="margin:0 0 6px">Gilt nur auf diesem Gerät. Nach „Erfassung beginnen“
             öffnet sich die Kamera für die Verteilerbeschreibung, danach für den Verteiler.</p>
-          <p class="muted small" id="samTrainStatus" style="margin:0 0 14px"></p>
+          <p class="muted small" id="samTrainStatus" style="margin:0 0 8px"></p>
+          <button class="btn ghost" id="btnTraining" type="button" style="margin-bottom:14px">Trainingsordner öffnen</button>
           <div class="eyebrow">Adressen im Protokoll</div>
           <p class="muted small">Höchstens drei Zeilen je Feld – mehr zeigt das Protokoll nicht an.</p>
           <label class="field"><span>Auftraggeber / Anlagenbetreiber</span><textarea id="setAuftraggeber" rows="3"></textarea></label>
@@ -2547,7 +2565,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.103';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.104';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 25.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -3183,7 +3201,7 @@ const TITLES = {
   home:'E-Assistent', new:'Neues Projekt', board:'Verteiler', circuit:'Stromkreis',
   feed:'Zuleitung', material:'Material', finish:'Abschluss',
   mode:'Auswahl', resume:'Fortsetzen', archive:'Ablage', settings:'Einstellungen',
-  sheets:'Blätter', checks:'Angaben', sam:'SAM · Beta', samliste:'SAM · Prüfen',
+  sheets:'Blätter', checks:'Angaben', sam:'SAM · Beta', samliste:'SAM · Prüfen', training:'Trainingsordner',
   lager:'Materialbestand', lagerart:'Artikel', lagerbest:'Bestellliste', lagerein:'Lieferung'
 };
 const PROJECT_VIEWS = ['board','circuit','feed','material','finish','sheets','checks','sam','samliste'];
@@ -3278,6 +3296,7 @@ function go(name, push = true){
   if(name === 'board')    renderBoard();
   if(name === 'sam')      renderSam();
   if(name === 'samliste') renderSamListe();
+  if(name === 'training') trainingOeffnen();
   if(name === 'material'){ materialInit(); renderMaterial(); }
   if(name === 'finish')   renderFinish();
   if(name === 'mode')     renderModeMenu();
@@ -6703,6 +6722,99 @@ function samTrainStatus(){
     : `Trainingsordner: ${oben} von diesem Gerät übertragen` + (offen ? `, ${offen} warten` : '') + '.'
     + (offen && trainingFehler ? ` Letzter Versuch: ${trainingFehler}.` : '');
 }
+
+/* --- Trainingsordner ansehen und herunterladen (v1.104) -------------------------
+   Alle Fotos aller Geräte, neueste zuerst. Geladen wird zunächst nur die
+   Liste; ein Bild erst, wenn es angetippt wird – ein Original wiegt einige
+   Megabyte. Geteilt wird über das Teilen-Menü (in "Dateien" sichern, AirDrop),
+   zum Foto der Beschreibung dazu eine .json mit dem, was SAM gelesen und was
+   der Prüfer übernommen hat. Geteilt wird mit einem eigenen Antippen, weil
+   iOS das Teilen-Menü nach einem Ladevorgang nicht mehr öffnet. */
+let TRAIN_LISTE = [], trainWahl = new Map();          // tid -> {status, dateien}
+$('#btnTraining').onclick = () => go('training');
+async function trainingOeffnen(){
+  trainWahl = new Map();
+  $('#trainListe').innerHTML = '';
+  $('#trainKopf').textContent = fbEin ? 'Liste wird geladen …' : 'Ohne Verbindung zur Datenbank lässt sich der Trainingsordner nicht öffnen.';
+  trainTeilenKnopf();
+  if(!fbEin) return;
+  try {
+    const snap = await FB.fn.get(FB.fn.ref(FB.db, 'training/info'));
+    const v = snap.val() || {};
+    TRAIN_LISTE = Object.entries(v).map(([tid, i]) => Object.assign({tid}, i)).sort((a, b) => (b.zeit || 0) - (a.zeit || 0));
+  } catch(e){
+    $('#trainKopf').textContent = 'Der Trainingsordner ließ sich nicht laden (' + (e.code || e.message || e) + ').';
+    return;
+  }
+  renderTraining();
+}
+function trainName(t){
+  const d = new Date(t.zeit || 0);
+  const tag = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+            + `_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
+  const adr = String(t.adresse || '').replace(/[^0-9A-Za-zÄÖÜäöüß]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+  return [tag, adr, t.wohnung, t.art, t.tid.slice(-5)].filter(Boolean).join('_');
+}
+function renderTraining(){
+  const n = TRAIN_LISTE.length;
+  $('#trainKopf').textContent = n ? `${n} Fotos, neueste zuerst. Antippen wählt ein Foto aus und lädt es.`
+                                  : 'Im Trainingsordner liegt noch nichts.';
+  $('#trainListe').innerHTML = TRAIN_LISTE.map((t, i) => {
+    const w = trainWahl.get(t.tid);
+    const art = t.art === 'beschreibung' ? 'Beschreibung' : t.art === 'verteiler' ? 'Verteiler' : (t.art || 'Foto');
+    const sam = t.lesung ? (t.lesung.ok ? `SAM ${t.lesung.version || ''}: ${(t.lesung.reihen || []).length} gelesen` : 'SAM: nicht gelesen') : '';
+    const ueb = Array.isArray(t.uebernommen) ? `${t.uebernommen.length} übernommen` : '';
+    const stand = !w ? '' : w.status === 'laedt' ? ' · lädt …' : w.status === 'fehler' ? ' · nicht geladen' : ' · bereit';
+    return `<button class="list-item ${w ? (w.status === 'fehler' ? 'state-red' : 'state-green') : ''}" data-i="${i}" type="button">
+        <span class="body"><span class="t">${esc(dstr(t.zeit))} ${esc(tstr(t.zeit))} · ${esc(art)}${esc(stand)}</span>
+          <span class="s">${esc([t.adresse, t.wohnung, t.pruefer || t.konto].filter(Boolean).join(' · '))}</span>
+          ${sam || ueb ? `<span class="s">${esc([sam, ueb].filter(Boolean).join(' · '))}</span>` : ''}</span></button>`;
+  }).join('');
+  $$('#trainListe .list-item').forEach(b => b.onclick = () => trainWaehlen(TRAIN_LISTE[+b.dataset.i]));
+  trainTeilenKnopf();
+}
+async function trainWaehlen(t){
+  if(trainWahl.has(t.tid)){ trainWahl.delete(t.tid); renderTraining(); return; }
+  const w = {status:'laedt', dateien:[]};
+  trainWahl.set(t.tid, w); renderTraining();
+  try {
+    const snap = await FB.fn.get(FB.fn.ref(FB.db, 'training/bild/' + t.tid));
+    const u = snap.val();
+    if(!u) throw new Error('fehlt');
+    const blob = dataUrlBlob(u);
+    const name = trainName(t);
+    w.dateien.push(new File([blob], name + '.jpg', {type: blob.type || 'image/jpeg'}));
+    if(t.lesung || t.uebernommen){
+      const info = Object.assign({}, t); delete info.tid;
+      w.dateien.push(new File([JSON.stringify(info, null, 2)], name + '.sam.json', {type:'application/json'}));
+    }
+    w.status = 'bereit';
+  } catch(e){ w.status = 'fehler'; }
+  if(trainWahl.get(t.tid) === w) renderTraining();
+}
+function trainTeilenKnopf(){
+  const bereit = [...trainWahl.values()].filter(w => w.status === 'bereit');
+  const laedt  = [...trainWahl.values()].some(w => w.status === 'laedt');
+  const k = $('#trainTeilen');
+  k.disabled = !bereit.length || laedt;
+  k.textContent = laedt ? 'Fotos werden geladen …'
+    : bereit.length ? `${bereit.length} ${bereit.length === 1 ? 'Foto' : 'Fotos'} teilen` : 'Auswählen zum Teilen';
+}
+$('#trainTeilen').onclick = async () => {
+  const dateien = [].concat(...[...trainWahl.values()].filter(w => w.status === 'bereit').map(w => w.dateien));
+  if(!dateien.length) return;
+  if(navigator.canShare && navigator.canShare({files: dateien})){
+    try { await navigator.share({files: dateien}); } catch(e){}
+    return;
+  }
+  /* Ohne Teilen-Menü (Rechner): einzeln herunterladen */
+  dateien.forEach((f, i) => setTimeout(() => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(f); a.download = f.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }, i * 300));
+};
 
 /* --- Erkennung ----------------------------------------------------------------
    Gelesen wird mit der Seite aus der Werkstatt (sam-werkstatt, paddle-test.html),
