@@ -2379,7 +2379,7 @@ const MATERIAL_STD = [
 const DEFAULTS = {
   devices:  ['Benning IT 130','Gossen Metrawatt Profitest','Fluke 1664 FC'],
   chars:    ['B','C','gG'],
-  rated:    ['2 A','6 A','10 A','16 A','25 A','32 A','35 A','40 A'],
+  rated:    ['2 A','6 A','10 A','16 A','20 A','25 A','32 A','35 A','40 A'],
   rcds:     ['FI 25A / 30mA / 2-polig','FI 25A / 30mA / 4-polig',
              'FI 40A / 30mA / 2-polig','FI 40A / 30mA / 4-polig',
              'FI 63A / 30mA / 4-polig','FI 40A / 300mA / 4-polig',
@@ -2480,6 +2480,17 @@ if(!CFG._rcbo4 && Array.isArray(CFG.rcds)){          // 4-polige FI/LS einmalig 
   DEFAULTS.rcds.filter(r => /^FI\/LS/.test(r) && /4-polig/.test(r) && !CFG.rcds.includes(r))
                 .forEach(r => CFG.rcds.push(r));
   CFG._rcbo4 = true; Store.set('cfg', CFG);
+}
+/* B20 einmalig hinter 16 A nachtragen. Die Nennstromliste wird mit den anderen
+   Geräten abgeglichen; ratedHoch schiebt sie deshalb erst hinauf, sonst holte
+   der Abgleich den alten Stand ohne 20 A zurück. */
+if(!CFG._b20 && Array.isArray(CFG.rated)){
+  if(!CFG.rated.includes('20 A')){
+    const i = CFG.rated.indexOf('16 A');
+    if(i >= 0) CFG.rated.splice(i + 1, 0, '20 A'); else CFG.rated.push('20 A');
+    CFG.ratedHoch = true;
+  }
+  CFG._b20 = true; Store.set('cfg', CFG);
 }
 if('shortcutName' in CFG){                           // Übergabe an Numbers entfallen
   delete CFG.shortcutName; Store.set('cfg', CFG);
@@ -3495,8 +3506,33 @@ function ratedOptions(){
 function paintRatedList(want){
   const list = ratedOptions();
   const val  = list.includes(want) ? want : (list[0] || want);
-  fillSelect($('#cRated'), list, val);
+  fillMitAndere($('#cRated'), list, CFG.rated, val);
   if(val) draft.rated = val;
+}
+/* Ein Vorschlag engt Nennstrom und Kabelart ein. Altbestand hält sich nicht
+   immer an die Norm – "Andere …" steht deshalb immer dann am Ende, wenn die
+   Auswahl eingeschränkt ist, und öffnet die ganze hinterlegte Liste. Ein von
+   dort gewählter Wert bleibt in der Auswahl stehen. */
+const ANDERE = 'Andere …';
+function fillMitAndere(sel, list, alle, val){
+  const l = [...list];
+  if(val && !l.includes(val) && alle.includes(val)) l.push(val);
+  if(alle.some(x => !l.includes(x))) l.push(ANDERE);
+  fillSelect(sel, l, val);
+}
+function andereWaehlen(titel, alle, jetzt, fertig){
+  resetModal(false);
+  $('#modalTitle').textContent = titel;
+  $('#modalBody').innerHTML = `<div class="chk-grid">${alle.map((x, i) =>
+    `<button class="sug${x === jetzt ? ' back' : ''}" type="button" data-i="${i}">${esc(x)}</button>`).join('')}</div>`;
+  $('#modalOk').hidden = true;
+  $('#modalBack').textContent = 'Abbrechen';
+  pendingAck = null;
+  $$('#modalBody button').forEach(b => b.onclick = () => {
+    $('#modal').hidden = true;
+    fertig(alle[+b.dataset.i]);
+  });
+  $('#modal').hidden = false;
 }
 function cableSection(name){                         // "NYM-J 5x2,5" -> 2.5
   const m = /\d+\s*x\s*(\d+(?:[.,]\d+)?)/i.exec(String(name));
@@ -3521,7 +3557,7 @@ function cableOptions(){
 function paintCableList(want){
   const list = cableOptions();
   const val  = list.includes(want) ? want : (list[0] || want);
-  fillSelect($('#cCable'), list, val);
+  fillMitAndere($('#cCable'), list, CFG.cables, val);
   if(val) draft.cable = val;
 }
 function parseSpecial(line){                     // "Hauptschalter, 3" -> Name + TE-Vorgabe
@@ -4240,7 +4276,20 @@ function applyPoleTe(){
 }
 $('#cBreaker').onchange = () => { draft.breaker = $('#cBreaker').value; applyPoleTe(); };
 $('#cChar').onchange  = () => { draft.char  = $('#cChar').value;  };
-$('#cRated').onchange = () => { draft.rated = $('#cRated').value; };
+$('#cRated').onchange = () => {
+  if($('#cRated').value !== ANDERE){ draft.rated = $('#cRated').value; return; }
+  $('#cRated').value = draft.rated;                  // bis zur Wahl bleibt der bisherige Wert
+  andereWaehlen('Nennstrom', CFG.rated, draft.rated, v => {
+    draft.rated = v; fillMitAndere($('#cRated'), ratedOptions(), CFG.rated, v);
+  });
+};
+$('#cCable').onchange = () => {
+  if($('#cCable').value !== ANDERE){ draft.cable = $('#cCable').value; return; }
+  $('#cCable').value = draft.cable;
+  andereWaehlen('Kabelart', CFG.cables, draft.cable, v => {
+    draft.cable = v; fillMitAndere($('#cCable'), cableOptions(), CFG.cables, v);
+  });
+};
 $('#cPoles').onchange = () => { draft.poles = $('#cPoles').value; applyPoleTe(); };
 $('#cSpecial').onchange = () => {
   const v = $('#cSpecial').value;
@@ -7860,7 +7909,7 @@ function netzSetzen(an){
     clearTimeout(netzTimer); netzTimer = null;
     document.body.dataset.netz = 'an';
     if(!vorher && fbProjEin){ fotosNachschieben(); ablageNachschieben(); }   // Funkpause vorbei
-    if(!vorher){ lagerNachschieben(); matHochschieben(); }
+    if(!vorher){ lagerNachschieben(); matHochschieben(); ratedHochschieben(); }
   } else if(!netzTimer){
     netzTimer = setTimeout(() => { netzTimer = null; document.body.dataset.netz = 'ab'; }, NETZ_VERZUG);
   }
@@ -7903,6 +7952,16 @@ function matHochschieben(){
       .catch(() => {});
   } catch(e){}
 }
+/* Dasselbe für die Nennstromliste, seit B20 nachgetragen wurde. */
+function ratedHochschieben(){
+  if(!fbEin || !CFG.ratedHoch) return;
+  const {ref, set} = FB.fn;
+  try {
+    Promise.resolve(set(ref(FB.db, 'betrieb/rated'), fbWert('rated')))
+      .then(() => { delete CFG.ratedHoch; saveCfg(); })
+      .catch(() => {});
+  } catch(e){}
+}
 /* Der eigene Name, damit später auf den Projekten "Hagen" steht und nicht die
    Kennung. Er wird geschrieben, nie von anderen Geräten zurückgelesen. */
 function fbNameHoch(){
@@ -7921,12 +7980,14 @@ FB.bereit.then(() => {
   get(ref(FB.db, 'betrieb')).then(snap => {
     if(!snap.exists()) fbHoch();                 // erste Inbetriebnahme
     matHochschieben();                           // umgestellte Materialliste zuerst hinauf
+    ratedHochschieben();
     FB_ALLE.forEach(k => onValue(ref(FB.db, 'betrieb/' + k), s => {
       const v = s.val();
       if(v == null || v === fbWert(k)) return;
       /* Solange die eigenen, umgestellten Listen noch nicht oben stehen, wird
          der alte Stand übergangen statt übernommen. */
       if(CFG.matHoch && MAT_HOCH_KEYS.includes(k)){ matHochschieben(); return; }
+      if(CFG.ratedHoch && k === 'rated'){ ratedHochschieben(); return; }
       fbEmpfang = true;
       fbSetz(k, v);
       saveCfg();
