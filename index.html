@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.103 25.09.2026 SAM (Beta): ist SAM eingeschaltet, laedt die Erkennung
+                    schon kurz nach dem Start der App im Hintergrund (sobald
+                    der Browser frei ist, nicht im Datensparmodus). Das erste
+                    Foto der Beschreibung muss dann nicht mehr auf das Modell
+                    warten.
   v1.102 25.09.2026 SAM (Beta), Etappe 3: nach "Uebernehmen" steht das Projekt
                     im Messen-Modus. Bei aus SAM uebernommenen Kreisen waehlt
                     der Messen-Modus die Kabelart ueber grosse Flaechen, nach
@@ -2542,7 +2547,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.102';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.103';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 25.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6751,6 +6756,17 @@ function samVorbereiten(){
   SAM_LESER.vorbereitet = true;
   samAnfrage('vorbereiten').catch(() => { SAM_LESER.vorbereitet = false; });
 }
+/* v1.103 (Jean: das erste Laden dauert beim ersten Foto zu lange): ist SAM
+   eingeschaltet, lädt die Erkennung schon kurz nach dem Start der App – aber
+   erst, wenn der Browser nichts anderes zu tun hat, und nicht im Datensparmodus.
+   Danach liegt das Modell bereit, bis die App geschlossen wird. */
+function samVorladen(){
+  if(!CFG.sam || SAM_LESER.vorbereitet) return;
+  if(navigator.connection && navigator.connection.saveData) return;
+  const los = () => samVorbereiten();
+  setTimeout(() => ('requestIdleCallback' in window) ? requestIdleCallback(los, {timeout: 8000}) : los(), 3000);
+}
+samVorladen();
 
 const samAnsicht = () => { if(current === 'sam') renderSam(); };
 async function samLesen(P, fid, datei, tidP){
@@ -8515,6 +8531,7 @@ $('#btnSaveSettings').onclick = () => {
   CFG.invHinweis = $('#setInvHinweis').checked;
   CFG.invMonate  = invMonate($('#setInvMonate').value);
   CFG.sam        = $('#setSam').checked;          // persönlich, geht nicht hinauf
+  samVorladen();
   const sel = $('#setDevice').value;
   if(sel && CFG.devices.includes(sel)) CFG.devices = [sel, ...CFG.devices.filter(d => d !== sel)];
   saveCfg();
