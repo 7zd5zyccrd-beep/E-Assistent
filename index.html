@@ -10,6 +10,21 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.101 25.09.2026 SAM (Beta), Etappe 2: SAM liest die Verteilerbeschreibung.
+                    Die Erkennung ist die Seite aus der Werkstatt (sam-werk-
+                    statt, paddle-test.html v0.43), unveraendert als sam.html
+                    neben der App; sie laeuft unsichtbar in einem iframe und
+                    liest, waehrend der Verteiler fotografiert wird. Danach die
+                    Uebernahmeliste "SAM - Pruefen": je Eintrag Nummer,
+                    Bezeichnung, Ort, Geraet; Zweifel bernsteinfarben, Antippen
+                    oeffnet die Korrektur. "Uebernehmen" legt die Stromkreise
+                    an: Geraeteart aus Bezeichnung und Absicherung (FI, FI/LS,
+                    sonstige Geraete, sonst LS), Breite aus dem Nummern-
+                    bereich, "Stromkreis 9-10" am FI wird "Deckt Kreise ab",
+                    E-Herd dreipolig. Eine Nummer ohne Zahl ("Q1") schaltet
+                    die abweichende Nummerierung ein. Die Kabelart bleibt
+                    offen. Gelesenes und Uebernommenes gehen zum Foto in den
+                    Trainingsordner - zusammen eine Musterloesung.
   v1.100 25.09.2026 SAM (Semi Automatic Mode) als Beta, Etappe 1. Neuer
                     Schalter in den Einstellungen, je Geraet: "Wieder-
                     holungspruefung mit SAM beginnen". Dann oeffnet "Erfassung
@@ -894,6 +909,15 @@ main{flex:1;display:flex;flex-direction:column;padding:var(--pad);padding-bottom
   object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--ink-soft)}
 .sam-schritt .sam-text{flex:1;min-width:0}
 .sam-schritt .sam-text .btn{margin-top:8px}
+.sam-lesung{margin-top:6px;font-size:13px;color:var(--ink-soft)}
+.sam-lesung.gut{color:var(--ink)}
+.sam-lesung.schlecht{color:var(--fault)}
+/* Übernahmeliste: gelesen ist schwarz, Zweifel bernsteinfarben hinterlegt –
+   dieselbe Farbe wie "bitte ansehen" in der Verteilerliste. */
+.sam-zeile .zw{background:var(--sig-bg);border-radius:3px;padding:0 3px;box-shadow:inset 0 -2px 0 var(--signal)}
+.sam-zeile .geraet{font-family:var(--f-data);font-size:12px;color:var(--ink-soft);text-align:right;flex:0 0 auto;max-width:40%}
+.sam-edit{border:1px solid var(--line);border-left:5px solid var(--ink);border-radius:var(--r);
+  padding:12px;margin:-4px 0 12px;background:var(--surface)}
 .beta{font-size:11px;letter-spacing:.08em;text-transform:uppercase;border:1px solid currentColor;
   border-radius:4px;padding:0 4px;margin-left:6px;vertical-align:middle}
 .muted{color:var(--ink-soft);font-size:14px}
@@ -2012,6 +2036,7 @@ function nameGross(s){
         <div class="sam-bild" id="samV_beschreibung">1</div>
         <div class="sam-text"><strong>Verteilerbeschreibung</strong>
           <div class="muted small">Die ganze Liste, möglichst gerade und formatfüllend.</div>
+          <div class="sam-lesung" id="samLesung" hidden></div>
           <button class="btn" id="samB_beschreibung" type="button">Foto aufnehmen</button></div>
       </div>
       <div class="card sam-schritt" id="samS_verteiler">
@@ -2021,10 +2046,21 @@ function nameGross(s){
           <button class="btn" id="samB_verteiler" type="button">Foto aufnehmen</button></div>
       </div>
       <input type="file" id="samFile" accept="image/*" capture="environment" hidden>
-      <p class="muted small">Beta: das Auslesen der Beschreibung folgt in der nächsten Stufe.
-        Bis dahin werden die Kreise wie gewohnt angelegt.</p>
+      <p class="muted small">SAM liest die Beschreibung, während du den Verteiler fotografierst.
+        Danach prüfst du die erkannten Einträge und übernimmst sie als Stromkreise.</p>
+      <button class="btn ghost" id="samOhne" type="button" hidden>Ohne SAM zum Verteiler</button>
       <div class="actionbar"><div class="inner">
         <button class="btn primary" id="samWeiter">Weiter zum Verteiler</button>
+      </div></div>
+    </section>
+
+    <!-- ========== SAM (BETA): ÜBERNAHMELISTE ========== -->
+    <section class="view" id="view-samliste">
+      <p class="muted small" id="samListeKopf" style="margin:0 0 12px"></p>
+      <div id="samListe"></div>
+      <button class="btn ghost" id="samZeileNeu" type="button">Eintrag hinzufügen</button>
+      <div class="actionbar"><div class="inner">
+        <button class="btn primary" id="samUebernehmen">Übernehmen</button>
       </div></div>
     </section>
 
@@ -2489,7 +2525,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.100';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.101';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 25.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -3125,10 +3161,10 @@ const TITLES = {
   home:'E-Assistent', new:'Neues Projekt', board:'Verteiler', circuit:'Stromkreis',
   feed:'Zuleitung', material:'Material', finish:'Abschluss',
   mode:'Auswahl', resume:'Fortsetzen', archive:'Ablage', settings:'Einstellungen',
-  sheets:'Blätter', checks:'Angaben', sam:'SAM · Beta',
+  sheets:'Blätter', checks:'Angaben', sam:'SAM · Beta', samliste:'SAM · Prüfen',
   lager:'Materialbestand', lagerart:'Artikel', lagerbest:'Bestellliste', lagerein:'Lieferung'
 };
-const PROJECT_VIEWS = ['board','circuit','feed','material','finish','sheets','checks','sam'];
+const PROJECT_VIEWS = ['board','circuit','feed','material','finish','sheets','checks','sam','samliste'];
 /* Die Ansicht "Neues Projekt" dient auch zum Nachbessern eines laufenden
    Projekts; dieser Schalter unterscheidet beides (siehe projektAendern). */
 let projEdit = false;
@@ -3219,6 +3255,7 @@ function go(name, push = true){
   if(name === 'home')     renderHome();
   if(name === 'board')    renderBoard();
   if(name === 'sam')      renderSam();
+  if(name === 'samliste') renderSamListe();
   if(name === 'material'){ materialInit(); renderMaterial(); }
   if(name === 'finish')   renderFinish();
   if(name === 'mode')     renderModeMenu();
@@ -6435,7 +6472,12 @@ function samFoto(art){
   $('#samFile').click();
 }
 SAM_ARTEN.forEach(art => { $('#samB_' + art).onclick = () => samFoto(art); });
-$('#samWeiter').onclick = () => { stack = ['home']; go('board', false); };
+$('#samOhne').onclick = () => { stack = ['home']; go('board', false); };
+$('#samWeiter').onclick = () => {
+  const l = PROJ && PROJ.samLesung;
+  if(l && l.ok && !l.uebernommen){ go('samliste'); return; }
+  stack = ['home']; go('board', false);
+};
 $('#samFile').onchange = async e => {
   const datei = e.target.files && e.target.files[0];
   e.target.value = '';
@@ -6443,7 +6485,7 @@ $('#samFile').onchange = async e => {
   if(!datei || !PROJ || !art) return;
   /* Zuerst in den Trainingsordner: der ist das Einzige, was bei einem vollen
      Projektspeicher nicht verloren gehen soll. */
-  trainingAblegen(datei, art);
+  const tidP = trainingAblegen(datei, art);
   const eintrag = await fotoAblegen(datei);
   if(!eintrag) return;
   PROJ.sam = PROJ.sam || {};
@@ -6457,9 +6499,11 @@ $('#samFile').onchange = async e => {
   PROJ.sam[art] = eintrag.fid;
   saveProj();
   renderSam();
+  if(art === 'beschreibung') samLesen(PROJ, eintrag.fid, datei, tidP);
 };
 function renderSam(){
   if(!PROJ) return;
+  samVorbereiten();
   const sam = PROJ.sam || {};
   const dran = SAM_ARTEN.find(a => !sam[a]);
   SAM_ARTEN.forEach((art, i) => {
@@ -6479,8 +6523,26 @@ function renderSam(){
       feld.innerHTML = ''; feld.appendChild(img);
     }).catch(() => {});
   });
-  $('#samWeiter').className = 'btn ' + (dran ? 'ghost' : 'primary');
-  $('#samWeiter').textContent = dran ? 'Ohne weiteres Foto zum Verteiler' : 'Weiter zum Verteiler';
+  const l = PROJ.samLesung;
+  const z = $('#samLesung');
+  z.hidden = !l;
+  z.className = 'sam-lesung' + (!l || l.laeuft ? '' : l.ok ? ' gut' : ' schlecht');
+  if(l) z.textContent = l.laeuft ? `SAM: ${l.stand || 'liest'} …`
+    : l.ok ? `SAM: ${l.reihen.length} Einträge erkannt` + (samZweifelZahl(l.reihen) ? `, ${samZweifelZahl(l.reihen)} zum Prüfen` : '')
+    : 'SAM konnte die Liste nicht lesen' + (l.fehler ? ` (${l.fehler})` : '') + ' – näher heran und neu aufnehmen.';
+  const pruefen = l && l.ok && !l.uebernommen;
+  const w = $('#samWeiter');
+  w.disabled = false;
+  if(dran){
+    w.className = 'btn ghost';
+    w.textContent = pruefen ? `Ohne weiteres Foto prüfen (${l.reihen.length})` : 'Ohne weiteres Foto zum Verteiler';
+  } else if(l && l.laeuft){
+    w.className = 'btn primary'; w.disabled = true; w.textContent = 'SAM liest die Beschreibung …';
+  } else {
+    w.className = 'btn primary';
+    w.textContent = pruefen ? `Einträge prüfen (${l.reihen.length})` : 'Weiter zum Verteiler';
+  }
+  $('#samOhne').hidden = !(pruefen || (l && l.laeuft));
 }
 
 /* --- Trainingsordner ---------------------------------------------------------
@@ -6497,11 +6559,24 @@ let trainingFehler = '';
 async function trainingAblegen(datei, art){
   const tid = neueKennung('T');
   try { await Bilder.legen(TRAIN_BILD(tid), datei); }
-  catch(e){ return; }                            // der Projektweg meldet den vollen Speicher
+  catch(e){ return null; }                       // der Projektweg meldet den vollen Speicher
   TRAINING.push({tid, art, zeit: Date.now(), pid: PROJ ? PROJ.id : null,
     adresse: PROJ ? (PROJ.address || '').split('\n')[0] : '', wohnung: PROJ ? PROJ.flat || '' : '',
     konto: FB.konto || '', pruefer: PROJ ? PROJ.tester || '' : '',
     typ: datei.type || 'image/jpeg', groesse: datei.size, hoch: false});
+  trainingSichern();
+  trainingHoch();
+  return tid;
+}
+/* Zum Foto der Beschreibung gehören, was SAM gelesen hat (lesung) und was der
+   Prüfer daraus übernommen hat (uebernommen) – zusammen eine Musterlösung für
+   die Werkstatt. Ist das Foto schon oben, geht nur das Feld hinterher. */
+async function trainingNachtrag(tidP, feld, wert){
+  const tid = await tidP;
+  const t = tid && TRAINING.find(x => x.tid === tid);
+  if(!t) return;
+  t[feld] = wert;
+  if(t.hoch) t.nachtrag = true;
   trainingSichern();
   trainingHoch();
 }
@@ -6510,12 +6585,17 @@ async function trainingHoch(){
   if(trainingLaeuft || !fbEin) return;
   trainingLaeuft = true;
   try {
+    for(const t of TRAINING.filter(x => x.hoch && x.nachtrag && !x.verloren)){
+      const info = Object.assign({}, t); delete info.hoch; delete info.tid; delete info.nachtrag;
+      if(!await mitFrist(Promise.resolve(FB.fn.set(FB.fn.ref(FB.db, 'training/info/' + t.tid), info)), Q_FRIST)) break;
+      delete t.nachtrag; trainingSichern();
+    }
     for(const t of TRAINING.filter(x => !x.hoch)){
       let blob = null;
       try { blob = await Bilder.lesen(TRAIN_BILD(t.tid)); } catch(e){}
       if(!blob){ t.hoch = true; t.verloren = true; trainingSichern(); continue; }
       const txt = await blobDataUrl(blob);
-      const info = Object.assign({}, t); delete info.hoch; delete info.tid;
+      const info = Object.assign({}, t); delete info.hoch; delete info.tid; delete info.nachtrag;
       const p = Promise.all([
         FB.fn.set(FB.fn.ref(FB.db, 'training/bild/' + t.tid), txt),
         FB.fn.set(FB.fn.ref(FB.db, 'training/info/' + t.tid), info)
@@ -6542,6 +6622,295 @@ function samTrainStatus(){
     : `Trainingsordner: ${oben} von diesem Gerät übertragen` + (offen ? `, ${offen} warten` : '') + '.'
     + (offen && trainingFehler ? ` Letzter Versuch: ${trainingFehler}.` : '');
 }
+
+/* --- Erkennung ----------------------------------------------------------------
+   Gelesen wird mit der Seite aus der Werkstatt (sam-werkstatt, paddle-test.html),
+   die hier unverändert als sam.html liegt. Sie läuft unsichtbar in einem
+   iframe; die App schickt das Foto, die Seite antwortet mit den fertigen
+   Zeilen. So gibt es die Erkennung nur einmal, und jede neue Fassung aus der
+   Werkstatt wird einfach herüberkopiert. Das Modell (rund 6 MB) lädt die Seite
+   beim ersten Mal aus dem Netz, danach aus dem Zwischenspeicher. */
+const SAM_LESER = {frame:null, geladen:null, wartend:new Map(), n:0, version:''};
+function samLeser(){
+  if(SAM_LESER.geladen) return SAM_LESER.geladen;
+  SAM_LESER.geladen = new Promise((res, rej) => {
+    const f = document.createElement('iframe');
+    f.setAttribute('aria-hidden', 'true'); f.tabIndex = -1; f.title = 'SAM';
+    /* Nicht display:none – dann rechnen manche Browser in der Seite nicht. */
+    f.style.cssText = 'position:fixed;left:-10000px;top:0;width:600px;height:400px;border:0;visibility:hidden';
+    const frist = setTimeout(() => rej(new Error('SAM lädt nicht')), 60000);
+    SAM_LESER.aufGeladen = v => { clearTimeout(frist); SAM_LESER.version = v || ''; res(f); };
+    SAM_LESER.frame = f;
+    f.src = 'sam.html?einbettung&v=' + encodeURIComponent(VERSION);   // je App-Fassung frisch
+    document.body.appendChild(f);
+  });
+  SAM_LESER.geladen.catch(() => {
+    if(SAM_LESER.frame) SAM_LESER.frame.remove();
+    SAM_LESER.frame = null; SAM_LESER.geladen = null;
+  });
+  return SAM_LESER.geladen;
+}
+window.addEventListener('message', e => {
+  if(e.origin !== location.origin || !SAM_LESER.frame || e.source !== SAM_LESER.frame.contentWindow) return;
+  const d = e.data || {};
+  if(d.sam === 'geladen'){ if(SAM_LESER.aufGeladen) SAM_LESER.aufGeladen(d.version); return; }
+  if(d.sam !== 'antwort') return;
+  const w = SAM_LESER.wartend.get(d.id);
+  if(!w) return;
+  if(d.stand) w.stand(d.stand);
+  if(d.fertig || d.bereit){ SAM_LESER.wartend.delete(d.id); w.res(d); }
+});
+async function samAnfrage(art, bild, stand){
+  const f = await samLeser();
+  const id = ++SAM_LESER.n;
+  return new Promise(res => {
+    SAM_LESER.wartend.set(id, {res, stand: stand || (() => {})});
+    f.contentWindow.postMessage({sam: art, id, bild}, location.origin);
+  });
+}
+/* Beim Öffnen der Ansicht schon laden – bis das erste Foto im Kasten ist,
+   steht das Modell meist bereit. Fehler zeigt erst das Lesen. */
+function samVorbereiten(){
+  if(SAM_LESER.vorbereitet) return;
+  SAM_LESER.vorbereitet = true;
+  samAnfrage('vorbereiten').catch(() => { SAM_LESER.vorbereitet = false; });
+}
+
+const samAnsicht = () => { if(current === 'sam') renderSam(); };
+async function samLesen(P, fid, datei, tidP){
+  P.samLesung = {fid, laeuft:true, stand:'wird vorbereitet'};
+  samAnsicht();
+  let d;
+  try {
+    d = await samAnfrage('lesen', datei, st => {
+      if(P.samLesung && P.samLesung.fid === fid){ P.samLesung.stand = st; samAnsicht(); }
+    });
+  } catch(e){ d = {ok:false, fehler: e && e.message || String(e)}; }
+  if(!P.samLesung || P.samLesung.fid !== fid) return;      // inzwischen neu aufgenommen
+  const reihen = samZeilen(d.reihen || []);
+  P.samLesung = {fid, laeuft:false, ok: !!d.ok && reihen.length > 0, fehler: d.fehler || '',
+                 version: d.version || '', zeit: Date.now(), reihen};
+  if(P === PROJ) saveProj(); else { saveProjects(); fbProjHoch(P); }
+  trainingNachtrag(tidP, 'lesung', {version: d.version || '', ok: !!d.ok, fehler: d.fehler || '',
+                                    reihen: d.reihen || [], bericht: d.bericht || ''});
+  P.samTid = await tidP;
+  samAnsicht();
+}
+
+/* --- Von der Zeile zum Stromkreis ----------------------------------------------
+   SAM liefert je Eintrag Nummer, Bezeichnung, Ort und Absicherung im Schema
+   des E-Assistenten. Die Geräteart steht nicht auf dem Blatt; sie folgt aus
+   der Bezeichnung (FI, sonstige Geräte aus den Einstellungen) oder der
+   Absicherung, sonst ist es ein LS. */
+const samNorm = t => String(t || '').toLowerCase().replace(/[^a-z0-9äöüß]+/g, ' ').trim();
+function samSonder(bez){
+  const b = samNorm(bez);
+  if(!b) return '';
+  return specialNames().find(n => { const k = samNorm(n);
+    return k === b || k.startsWith(b + ' ') || b.startsWith(k + ' ') || b === k.split(' ')[0]; }) || '';
+}
+function samGeraet(z){
+  const b = z.bez || '', sich = z.sich || '';
+  if(/FI\s*\/\s*LS/i.test(b + ' ' + sich)) return 'rcbo';
+  if(/FI-?Schutzschalter|Fehlerstrom|^FI\b/i.test(b) || /^FI\b/i.test(sich)) return 'rcd';
+  if(samSonder(b)) return 'other';
+  return 'ls';
+}
+function samZeilen(reihen){
+  const rs = reihen
+    .filter(r => (r.bez || r.ort || r.sich))                 // Reserveplätze nur mit Nummer fallen weg
+    .map(r => {
+      const z = {nr: r.nr || '', bez: r.bez || '', ort: r.ort || '', sich: r.sich || '',
+                 zweifel: Object.assign({nr:false, bez:false, ort:false, sich:false}, r.zweifel || {})};
+      z.geraet  = samGeraet(z);
+      z.special = z.geraet === 'other' ? samSonder(z.bez) : '';
+      return z;
+    });
+  /* Nach Nummer ordnen, wenn alle eine tragen – bei zwei Spalten auf dem Blatt
+     (Münch) kommt ein nachgetragener Kreis sonst mitten in die Liste. */
+  if(rs.every(z => samNummer(z.nr))) rs.sort((a, b) => samNummer(a.nr).start - samNummer(b.nr).start);
+  return rs;
+}
+const samZweifelZahl = rs => (rs || []).filter(z => Object.values(z.zweifel || {}).some(Boolean)).length;
+/* "3–8" → 3 und 6 TE; "Q1" oder Freitext → keine Zahl */
+function samNummer(nr){
+  const m = /^\s*(\d+)\s*(?:[–—-]\s*(\d+))?\s*$/.exec(String(nr || ''));
+  if(!m) return null;
+  const a = +m[1], b = m[2] ? +m[2] : a;
+  return b >= a ? {start:a, te:b - a + 1} : {start:a, te:1};
+}
+function samTe(n){                                      // auf die wählbaren Breiten
+  const w = TE_OPTIONS.map(Number).filter(x => x <= n);
+  return String(w.length ? w[w.length - 1] : 1);
+}
+function samAbsicherung(sich){                          // "B 16 A" → B, 16 A
+  const m = /^\s*([BCDK]|gG)\s*(\d+)\s*A?\s*$/i.exec(String(sich || ''));
+  if(m) return {char: m[1].length > 1 ? 'gG' : m[1].toUpperCase(), rated: m[2] + ' A'};
+  const n = /^\s*(\d+)\s*A\s*$/i.exec(String(sich || ''));
+  return n ? {char:null, rated: n[1] + ' A'} : null;
+}
+function samFiTyp(sich, te){
+  const m = /(\d+)\s*A\D*?(\d+)\s*mA/i.exec(String(sich || ''));
+  const pole = te === '2' ? '2' : '4';
+  const liste = typeList('rcd');
+  if(m){
+    const t = liste.find(x => new RegExp('^FI\\s*' + m[1] + '\\s*A\\s*/\\s*' + m[2] + '\\s*mA', 'i').test(x) && poleTe(x) === pole)
+           || liste.find(x => new RegExp('^FI\\s*' + m[1] + '\\s*A\\s*/\\s*' + m[2] + '\\s*mA', 'i').test(x));
+    if(t) return t;
+  }
+  return liste.find(x => /40A/.test(x) && poleTe(x) === pole) || liste[0];
+}
+function samKreis(z, frei){
+  const c = blankCircuit();
+  const nr = samNummer(z.nr);
+  if(frei){ c.no = z.nr; c.te = nr ? samTe(nr.te) : '1'; }
+  else { c.no = String(nr.start); c.te = samTe(nr.te); }
+  c.name = z.bez; c.room = z.ort; c.cable = '';
+  c.sam = true;                                          // aus SAM übernommen
+  if(z.geraet === 'rcd'){
+    c.device = 'rcd'; c.room = '';
+    const bereich = /^Stromkreis\s+(.+)$/i.exec(z.ort);
+    c.covers = bereich ? bereich[1].trim() : '';
+    if(!bereich) c.room = z.ort;                         // Beschreibung am FI bleibt lesbar stehen
+    c.name = c.name || AUTO_NAMES.rcd;
+    if(!POLES.includes(c.te)) c.te = '4';
+    c.breaker = samFiTyp(z.sich, c.te);
+    c.te = poleTe(c.breaker) || c.te;
+    return c;
+  }
+  if(z.geraet === 'other'){
+    c.device = 'other'; c.special = z.special || samSonder(z.bez);
+    const e = specialList().find(x => x.name === c.special);
+    if(e && e.te && !nr) c.te = e.te;
+    c.breaker = breakerOf(c);
+    return c;
+  }
+  const a = samAbsicherung(z.sich);
+  /* Ohne Absicherung auf dem Blatt: Vorgaben wie bei den Namensvorschlägen
+     (E-Herd B 16 A dreipolig, reine Beleuchtung B 10 A). */
+  const v = NAME_SUGGESTIONS.find(x => x.rated && (samNorm(z.bez) === samNorm(x.label) || (x.label === 'E-Herd' && /^e herd/.test(samNorm(z.bez)))));
+  c.device = z.geraet === 'rcbo' ? 'rcbo' : 'ls';
+  c.char  = (a && a.char) || (v && v.char) || 'B';
+  c.rated = (a && a.rated) || (v && v.rated) || '16 A';
+  if(c.device === 'rcbo'){ c.char = c.char === 'gG' ? 'B' : c.char; c.poles = c.te === '4' ? '4' : '2'; if(!POLES.includes(c.te)) c.te = '2'; }
+  else c.poles = parseInt(c.te, 10) >= 3 ? '3' : '1';
+  /* Der E-Herd ist immer dreipolig. Bei eigener Nummerierung trägt er oft nur
+     eine Nummer – die Breite folgt dann dem Gerät, nicht dem Blatt. */
+  if(c.device === 'ls' && /^e herd/.test(samNorm(z.bez))){ c.poles = '3'; if(frei && (!nr || nr.te === 1)) c.te = '3'; }
+  c.breaker = breakerOf(c);
+  return c;
+}
+
+/* --- Übernahmeliste ----------------------------------------------------------- */
+let samOffen = null;                                    // Index der Zeile im Bearbeiten
+const SAM_GERAETE = {ls:'LS', rcbo:'FI/LS', rcd:'FI', other:'Sonstiges'};
+function samGeraetText(z){
+  if(z.geraet === 'other') return z.special || 'Sonstiges';
+  if(z.geraet === 'rcd') return z.sich || 'FI';
+  return (SAM_GERAETE[z.geraet] || 'LS') + (z.sich ? ' ' + z.sich : '');
+}
+function renderSamListe(){
+  const l = PROJ && PROJ.samLesung;
+  if(!l || !l.reihen){ stack = ['home']; go('board', false); return; }
+  const rs = l.reihen, zw = samZweifelZahl(rs);
+  $('#samListeKopf').textContent = `${rs.length} Einträge erkannt` +
+    (zw ? `, ${zw} davon bernsteinfarben markiert – bitte ansehen.` : '.') + ' Antippen zum Ändern.';
+  const f = (txt, zweifelt) => txt ? `<span class="${zweifelt ? 'zw' : ''}">${esc(txt)}</span>` : '';
+  $('#samListe').innerHTML = rs.map((z, i) => {
+    const kopf = `<button class="list-item sam-zeile ${Object.values(z.zweifel).some(Boolean) ? 'state-yellow' : ''}" data-i="${i}" type="button">
+        <span class="no">${f(z.nr || '–', z.zweifel.nr)}</span>
+        <span class="body"><span class="t">${f(z.bez || '—', z.zweifel.bez)}</span>
+          <span class="s">${f(z.ort, z.zweifel.ort)}</span></span>
+        <span class="geraet">${f(samGeraetText(z), z.zweifel.sich)}</span></button>`;
+    if(samOffen !== i) return kopf;
+    const opt = Object.entries(SAM_GERAETE).map(([k, t]) => `<option value="${k}"${z.geraet === k ? ' selected' : ''}>${t}</option>`).join('');
+    const sp  = specialNames().map(n => `<option${z.special === n ? ' selected' : ''}>${esc(n)}</option>`).join('');
+    return kopf + `<div class="sam-edit">
+        <div class="row">
+          <label class="field narrow"><span>Nr.</span><input class="data" id="seNr" value="${esc(z.nr)}"></label>
+          <label class="field"><span>Gerät</span><select id="seGeraet">${opt}</select></label>
+        </div>
+        <label class="field" id="seSpFeld"${z.geraet === 'other' ? '' : ' hidden'}><span>Sonstiges Gerät</span><select id="seSp">${sp}</select></label>
+        <label class="field"><span>Bezeichnung</span><input id="seBez" value="${esc(z.bez)}"></label>
+        <label class="field"><span>${z.geraet === 'rcd' ? 'Deckt ab / Beschreibung' : 'Ort'}</span><input id="seOrt" value="${esc(z.ort)}"></label>
+        <label class="field"><span>Absicherung</span><input id="seSich" value="${esc(z.sich)}" placeholder="z.B. B 16 A oder FI 40 A / 30 mA"></label>
+        <div class="btn-row">
+          <button class="btn ghost" id="seWeg" type="button">Eintrag entfernen</button>
+          <button class="btn primary" id="seOk" type="button">Fertig</button>
+        </div></div>`;
+  }).join('');
+  $$('#samListe .sam-zeile').forEach(b => b.onclick = () => {
+    const i = +b.dataset.i;
+    if(samOffen != null && samOffen !== i) samZeileSichern();
+    samOffen = samOffen === i ? null : i;
+    renderSamListe();
+    const e = $('#samListe .sam-edit'); if(e) e.scrollIntoView({block:'nearest'});
+  });
+  if(samOffen != null && $('#seOk')){
+    $('#seGeraet').onchange = () => { $('#seSpFeld').hidden = $('#seGeraet').value !== 'other'; };
+    $('#seOk').onclick  = () => { samZeileSichern(); samOffen = null; renderSamListe(); };
+    $('#seWeg').onclick = () => { rs.splice(samOffen, 1); samOffen = null; saveProj(); renderSamListe(); };
+  }
+  const neu = rs.length;
+  $('#samUebernehmen').textContent = neu === 1 ? '1 Stromkreis übernehmen' : `${neu} Stromkreise übernehmen`;
+  $('#samUebernehmen').disabled = !neu;
+}
+/* Wer eine Zeile geöffnet und bestätigt hat, hat sie geprüft: die Zweifel
+   fallen, auch wenn nichts geändert wurde. */
+function samZeileSichern(){
+  const z = PROJ.samLesung.reihen[samOffen];
+  if(!z || !$('#seOk')) return;
+  z.nr  = $('#seNr').value.trim().replace(/\s*[\/-]\s*/g, '–');
+  z.bez = $('#seBez').value.trim();
+  z.ort = $('#seOrt').value.trim();
+  z.sich = $('#seSich').value.trim();
+  z.geraet = $('#seGeraet').value;
+  z.special = z.geraet === 'other' ? $('#seSp').value : '';
+  z.zweifel = {nr:false, bez:false, ort:false, sich:false};
+  z.geprueft = true;
+  saveProj();
+}
+$('#samZeileNeu').onclick = () => {
+  if(samOffen != null) samZeileSichern();
+  const rs = PROJ.samLesung.reihen;
+  const letzte = [...rs].reverse().map(z => samNummer(z.nr)).find(Boolean);
+  rs.push({nr: letzte ? String(letzte.start + letzte.te) : '', bez:'', ort:'', sich:'', geraet:'ls', special:'',
+           zweifel:{nr:false, bez:false, ort:false, sich:false}});
+  samOffen = rs.length - 1;
+  renderSamListe();
+  const e = $('#seBez'); if(e) e.focus();
+};
+$('#samUebernehmen').onclick = () => {
+  if(samOffen != null){ samZeileSichern(); samOffen = null; }
+  const l = PROJ.samLesung, rs = l.reihen;
+  const offen = samZweifelZahl(rs);
+  const los = () => {
+    /* Trägt auch nur eine Nummer keine Zahl ("Q1"), ist die Nummerierung des
+       Verteilers eine eigene – dann gilt der Schalter "Abweichende
+       Nummerierung", und alle Nummern stehen, wie sie auf dem Blatt stehen. */
+    const umstellen = !abwNr() && rs.some(z => !samNummer(z.nr));
+    if(umstellen) abwNrUmschalten(true);
+    const frei = abwNr();
+    const kreise = rs.map(z => samKreis(z, frei));
+    PROJ.items = (PROJ.items || []).concat(kreise);
+    sortCircuits();
+    l.uebernommen = Date.now();
+    saveProj();
+    trainingNachtrag(PROJ.samTid, 'uebernommen', rs.map(z => ({nr:z.nr, bez:z.bez, ort:z.ort, sich:z.sich, geraet:z.geraet, special:z.special || ''})));
+    toast(`${kreise.length} Stromkreise übernommen` + (umstellen ? ' – abweichende Nummerierung eingeschaltet' : ''));
+    stack = ['home']; go('board', false);
+  };
+  const vorhanden = circuits().length;
+  if(offen || vorhanden){
+    showDialog({title:'Übernehmen?', ok:'Übernehmen', cancel:'Zurück zur Liste',
+      body: [offen ? `${offen} Einträge sind noch markiert und wurden nicht angesehen.` : '',
+             vorhanden ? `Die ${vorhanden} schon angelegten Kreise bleiben, die erkannten kommen dazu.` : '']
+            .filter(Boolean).join(' '),
+      onOk: los});
+    return;
+  }
+  los();
+};
 
 $('#btnImport').onclick = () => $('#importFile').click();
 $('#importFile').onchange = e => {
