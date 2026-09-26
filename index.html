@@ -10,6 +10,18 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.111 26.09.2026 SAM (Beta): erster Versuch, Beschreibung und Verteiler zu
+                    verknuepfen. Das zweite Foto liest die Geraeteerkennung
+                    der Werkstatt (verteiler-test.html v0.4, hier als
+                    sam-geraete.html), nach der Beschreibung und im eigenen
+                    unsichtbaren Fenster. Die Eintraege werden der Reihe nach
+                    den Geraeten (Reihe fuer Reihe, links nach rechts)
+                    zugeordnet. Passt die Art, ergaenzt der Aufdruck eine
+                    fehlende Absicherung ("B 16 A · Verteiler"); weicht er ab
+                    oder passt die Art nicht, wird der Eintrag bernsteinfarben
+                    markiert. Ein LS ohne Angabe wird zum FI/LS, wenn das
+                    Geraet einer ist. Passen weniger als die Haelfte, bleibt
+                    die Liste unveraendert. Neu lesen liest beide Fotos.
   v1.110 26.09.2026 SAM (Beta): sam.html auf Werkstatt-Stand v0.45. Die
                     abgedeckten Kreise am FI stehen einheitlich als
                     "(fuer 18-23)"; die Uebernahme liest daraus weiter das
@@ -982,6 +994,8 @@ main{flex:1 0 auto;display:flex;flex-direction:column;padding:var(--pad);padding
    dieselbe Farbe wie "bitte ansehen" in der Verteilerliste. */
 .sam-zeile .zw{background:var(--sig-bg);border-radius:3px;padding:0 3px;box-shadow:inset 0 -2px 0 var(--signal)}
 .sam-zeile .geraet{font-family:var(--f-data);font-size:12px;color:var(--ink-soft);text-align:right;flex:0 0 auto;max-width:40%}
+.sam-zeile .geraet .vt{display:block;font-size:11px;margin-top:2px}
+.sam-lesung .vt-zeile{display:block}
 .sam-edit{border:1px solid var(--line);border-left:5px solid var(--ink);border-radius:var(--r);
   padding:12px;margin:-4px 0 12px;background:var(--surface)}
 /* Kabelwahl im Messen-Modus: große Flächen, der gewählte Eintrag gefüllt. */
@@ -2125,6 +2139,7 @@ function nameGross(s){
         <div class="sam-bild" id="samV_verteiler">2</div>
         <div class="sam-text"><strong>Verteiler</strong>
           <div class="muted small">Alle Geräte mit ihren Aufdrucken.</div>
+          <div class="sam-lesung" id="samGeraeteStand" hidden></div>
           <button class="btn" id="samB_verteiler" type="button">Foto aufnehmen</button></div>
       </div>
       <input type="file" id="samFile" accept="image/*" capture="environment" hidden>
@@ -2628,7 +2643,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.110';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.111';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 26.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6657,6 +6672,7 @@ $('#btnSamBoard').onclick = () => go('sam');
 $('#samOhne').onclick = () => {
   const l = PROJ && PROJ.samLesung;
   if(l && l.ok && !l.laeuft && !samOffenZahl(l)){ go('samliste'); return; }   // nur ansehen
+  if(l && l.ok && !l.laeuft && PROJ.samGeraete && PROJ.samGeraete.laeuft){ go('samliste'); return; }   // nicht warten
   stack = ['home']; go('board', false);
 };
 $('#samWeiter').onclick = () => {
@@ -6666,14 +6682,22 @@ $('#samWeiter').onclick = () => {
 };
 /* Dasselbe Foto mit dem aktuellen SAM-Stand noch einmal lesen – zum
    Vergleich neuer Fassungen, ohne neu zu fotografieren. */
-$('#samNeuLesen').onclick = async () => {
-  const fid = PROJ && PROJ.sam && PROJ.sam.beschreibung;
-  if(!fid) return;
+async function samFotoBlob(fid){
   let blob = null;
   try { blob = await Bilder.lesen(fid); } catch(e){}
   if(!blob) try { blob = await fotoHolen(PROJ.id, fid); } catch(e){}
+  return blob;
+}
+$('#samNeuLesen').onclick = async () => {
+  const fid = PROJ && PROJ.sam && PROJ.sam.beschreibung;
+  if(!fid) return;
+  const P = PROJ, blob = await samFotoBlob(fid);
   if(!blob){ toast('Das Foto liegt nicht auf diesem Gerät'); return; }
-  samLesen(PROJ, fid, blob, PROJ.samTid || null, true);
+  samLesen(P, fid, blob, P.samTid || null, true);
+  /* v1.111: das Verteilerfoto gleich mit, danach wird neu verknüpft */
+  const gid = P.sam && P.sam.verteiler;
+  const gblob = gid && await samFotoBlob(gid);
+  if(gblob) samGeraeteLesen(P, gid, gblob, P.samGeraeteTid || null, true);
 };
 $('#samFile').onchange = async e => {
   const datei = e.target.files && e.target.files[0];
@@ -6697,6 +6721,7 @@ $('#samFile').onchange = async e => {
   saveProj();
   renderSam();
   if(art === 'beschreibung') samLesen(PROJ, eintrag.fid, datei, tidP);
+  if(art === 'verteiler') samGeraeteLesen(PROJ, eintrag.fid, datei, tidP);
 };
 function renderSam(){
   if(!PROJ) return;
@@ -6742,7 +6767,25 @@ function renderSam(){
   const ansehen = l && l.ok && !l.laeuft && !offen;
   $('#samOhne').hidden = !(offen || (l && l.laeuft) || ansehen);
   $('#samOhne').textContent = ansehen ? 'Liste ansehen' : 'Ohne SAM zum Verteiler';
-  $('#samNeuLesen').hidden = !sam.beschreibung || !!(l && l.laeuft);
+  /* v1.111: Stand der Geräteerkennung unter dem zweiten Foto. Solange sie
+     liest, wartet "Einträge prüfen" auf sie – wer nicht warten will, kommt
+     über den zweiten Knopf zur Liste, die sich nachträglich ergänzt. */
+  const g = PROJ.samGeraete && PROJ.samGeraete.fid === sam.verteiler ? PROJ.samGeraete : null;
+  const gz = $('#samGeraeteStand');
+  gz.hidden = !g;
+  gz.className = 'sam-lesung' + (!g || g.laeuft ? '' : g.ok ? ' gut' : ' schlecht');
+  if(g){
+    const ab = l && l.abgleich;
+    gz.textContent = g.laeuft ? `SAM: ${g.stand || 'liest'} …`
+      : !g.ok ? 'SAM hat keine Geräte gefunden' + (g.fehler ? ` (${g.fehler})` : '') + '.'
+      : `SAM ${(g.version || '').split(' ')[0]}: ${g.reihen.flat().length} Geräte in ${g.reihen.length} Reihen` + (g.dauer ? ` (${g.dauer} s)` : '')
+        + (ab ? (ab.angewandt ? `, ${ab.gleich} von ${ab.eintraege} Einträgen passen` : ` – passt nicht zur Beschreibung (${ab.gleich} von ${ab.eintraege})`) : '');
+  }
+  if(g && g.laeuft && l && l.ok && !l.laeuft && offen){
+    w.className = 'btn primary'; w.disabled = true; w.textContent = 'SAM liest den Verteiler …';
+    $('#samOhne').hidden = false; $('#samOhne').textContent = 'Nicht warten – Einträge prüfen';
+  }
+  $('#samNeuLesen').hidden = !sam.beschreibung || !!(l && l.laeuft) || !!(g && g.laeuft);
 }
 
 /* --- Trainingsordner ---------------------------------------------------------
@@ -6931,10 +6974,15 @@ $('#trainTeilen').onclick = async () => {
    Zeilen. So gibt es die Erkennung nur einmal, und jede neue Fassung aus der
    Werkstatt wird einfach herüberkopiert. Das Modell (rund 6 MB) lädt die Seite
    beim ersten Mal aus dem Netz, danach aus dem Zwischenspeicher. */
-const SAM_LESER = {frame:null, geladen:null, wartend:new Map(), n:0, version:''};
-function samLeser(){
-  if(SAM_LESER.geladen) return SAM_LESER.geladen;
-  SAM_LESER.geladen = new Promise((res, rej) => {
+const SAM_LESER = {frame:null, geladen:null, wartend:new Map(), n:0, version:'', seite:'sam.html'};
+/* v1.111: zweites Fenster für das Verteilerfoto – die Geräteerkennung der
+   Werkstatt (verteiler-test.html), hier als sam-geraete.html. Es lädt erst,
+   wenn das zweite Foto da ist. */
+const SAM_GER = {frame:null, geladen:null, wartend:new Map(), n:0, version:'', seite:'sam-geraete.html'};
+function samLeser(L){
+  L = L || SAM_LESER;
+  if(L.geladen) return L.geladen;
+  L.geladen = new Promise((res, rej) => {
     const f = document.createElement('iframe');
     f.setAttribute('aria-hidden', 'true'); f.tabIndex = -1; f.title = 'SAM';
     /* Nicht display:none – dann rechnen manche Browser in der Seite nicht.
@@ -6951,28 +6999,38 @@ function samLeser(){
     f.style.cssText = 'border:0;width:600px;height:400px;display:block';
     huelle.appendChild(f);
     const frist = setTimeout(() => rej(new Error('SAM lädt nicht')), 60000);
-    SAM_LESER.aufGeladen = v => { clearTimeout(frist); SAM_LESER.version = v || ''; res(f); };
-    SAM_LESER.frame = f;
-    f.src = 'sam.html?einbettung&v=' + encodeURIComponent(VERSION);   // je App-Fassung frisch
+    L.aufGeladen = v => { clearTimeout(frist); L.version = v || ''; res(f); };
+    L.frame = f;
+    f.src = L.seite + '?einbettung&v=' + encodeURIComponent(VERSION);   // je App-Fassung frisch
     document.body.appendChild(huelle);
-    SAM_LESER.huelle = huelle;
+    L.huelle = huelle;
   });
-  SAM_LESER.geladen.catch(() => {
-    if(SAM_LESER.huelle) SAM_LESER.huelle.remove();
-    SAM_LESER.frame = null; SAM_LESER.huelle = null; SAM_LESER.geladen = null;
+  L.geladen.catch(() => {
+    if(L.huelle) L.huelle.remove();
+    L.frame = null; L.huelle = null; L.geladen = null;
   });
-  return SAM_LESER.geladen;
+  return L.geladen;
 }
 window.addEventListener('message', e => {
-  if(e.origin !== location.origin || !SAM_LESER.frame || e.source !== SAM_LESER.frame.contentWindow) return;
+  if(e.origin !== location.origin) return;
+  const L = [SAM_LESER, SAM_GER].find(x => x.frame && e.source === x.frame.contentWindow);
+  if(!L) return;
   const d = e.data || {};
-  if(d.sam === 'geladen'){ if(SAM_LESER.aufGeladen) SAM_LESER.aufGeladen(d.version); return; }
+  if(d.sam === 'geladen'){ if(L.aufGeladen) L.aufGeladen(d.version); return; }
   if(d.sam !== 'antwort') return;
-  const w = SAM_LESER.wartend.get(d.id);
+  const w = L.wartend.get(d.id);
   if(!w) return;
   if(d.stand) w.stand(d.stand);
-  if(d.fertig || d.bereit){ SAM_LESER.wartend.delete(d.id); w.res(d); }
+  if(d.fertig || d.bereit){ L.wartend.delete(d.id); w.res(d); }
 });
+/* Beide Fenster rechnen nacheinander, nie gleichzeitig – auf dem Telefon
+   teilen sie sich Rechenzeit und Speicher. */
+let samKetteP = Promise.resolve();
+function samKette(fn){
+  const p = samKetteP.then(fn, fn);
+  samKetteP = p.catch(() => {});
+  return p;
+}
 /* Stand von SAM für die Anzeige unter der Kopfzeile: 'laedt', 'bereit',
    'liest' oder 'fehler'. Bereit zeigt nichts an – im Normalfall soll dort
    nichts stehen. */
@@ -6991,20 +7049,21 @@ $('#samStand').onclick = () => {
   SAM_LESER.vorbereitet = false;
   samVorbereiten();
 };
-async function samAnfrage(art, bild, stand){
-  if(!SAM_LESER.geladen || SAM_LESER.zustand === 'fehler') samStandSetzen('laedt');
+async function samAnfrage(art, bild, stand, L){
+  L = L || SAM_LESER;
+  if(!L.geladen || SAM_LESER.zustand === 'fehler') samStandSetzen('laedt');
   let f;
-  try { f = await samLeser(); }
+  try { f = await samLeser(L); }
   catch(e){ samStandSetzen('fehler', e && e.message); throw e; }
-  const id = ++SAM_LESER.n;
+  const id = ++L.n;
   if(art === 'lesen') samStandSetzen('liest');
   const d = await new Promise(res => {
-    SAM_LESER.wartend.set(id, {res, stand: stand || (() => {})});
+    L.wartend.set(id, {res, stand: stand || (() => {})});
     f.contentWindow.postMessage({sam: art, id, bild}, location.origin);
   });
   /* Ein Fehler beim Laden des Modells kommt als Antwort, nicht als Ausnahme */
   if(d.fehler && !d.ok && !d.bereit) samStandSetzen('fehler', d.fehler);
-  else if(!SAM_LESER.wartend.size) samStandSetzen('bereit');
+  else if(!SAM_LESER.wartend.size && !SAM_GER.wartend.size) samStandSetzen('bereit');
   return d;
 }
 /* Beim Öffnen der Ansicht schon laden – bis das erste Foto im Kasten ist,
@@ -7033,9 +7092,9 @@ async function samLesen(P, fid, datei, tidP, nochmal){
   samAnsicht();
   let d;
   try {
-    d = await samAnfrage('lesen', datei, st => {
+    d = await samKette(() => samAnfrage('lesen', datei, st => {
       if(P.samLesung && P.samLesung.fid === fid){ P.samLesung.stand = st; samAnsicht(); }
-    });
+    }));
   } catch(e){ d = {ok:false, fehler: e && e.message || String(e)}; }
   if(!P.samLesung || P.samLesung.fid !== fid) return;      // inzwischen neu aufgenommen
   const reihen = samZeilen(d.reihen || []);
@@ -7048,6 +7107,7 @@ async function samLesen(P, fid, datei, tidP, nochmal){
   P.samLesung = {fid, laeuft:false, ok: !!d.ok && reihen.length > 0, fehler: d.fehler || '',
                  version: d.version || '', zeit: Date.now(), reihen,
                  uebernommen: vorher ? vorher.uebernommen : undefined};
+  samVerknuepfen(P);
   if(P === PROJ) saveProj(); else { saveProjects(); fbProjHoch(P); }
   const lesung = {version: d.version || '', zeit: Date.now(), ok: !!d.ok, fehler: d.fehler || '', reihen: d.reihen || []};
   trainingNachtrag(tidP, 'lesung', Object.assign({bericht: d.bericht || ''}, lesung));
@@ -7055,6 +7115,159 @@ async function samLesen(P, fid, datei, tidP, nochmal){
   if(tidP) P.samTid = await tidP;
   if(nochmal) toast(d.ok ? `Neu gelesen mit SAM ${(d.version || '').split(' ')[0]}` : 'SAM konnte das Foto nicht lesen');
   samAnsicht();
+  samListeAuffrischen(P);
+}
+
+/* --- Verteilerfoto (v1.111) ------------------------------------------------------
+   Die Geräteerkennung liefert je Reihe die Geräte von links nach rechts mit
+   Art (LS, FI, FI/LS, Hauptschalter, …, "—" wenn unklar), Aufdruck (B16,
+   25A/30mA) und Marke. Gespeichert wird nur das; die ganze Antwort geht in
+   den Trainingsordner. */
+async function samGeraeteLesen(P, fid, datei, tidP, nochmal){
+  P.samGeraete = {fid, laeuft:true, stand: P.samLesung && P.samLesung.laeuft ? 'wartet auf die Beschreibung' : 'wird vorbereitet'};
+  samAnsicht();
+  let d;
+  try {
+    d = await samKette(() => samAnfrage('lesen', datei, st => {
+      if(P.samGeraete && P.samGeraete.fid === fid){ P.samGeraete.stand = st; samAnsicht(); }
+    }, SAM_GER));
+  } catch(e){ d = {ok:false, fehler: e && e.message || String(e)}; }
+  if(!P.samGeraete || P.samGeraete.fid !== fid) return;
+  const reihen = (d.reihen || []).map(r => (r.geraete || []).map(g => ({art: g.art || '—', aufdruck: g.aufdruck || '', marke: g.marke || ''})))
+                                 .filter(r => r.length);
+  P.samGeraete = {fid, laeuft:false, ok: !!d.ok && reihen.length > 0, fehler: d.fehler || '',
+                  version: d.version || '', zeit: Date.now(), dauer: Math.round(d.dauer || 0), reihen};
+  samVerknuepfen(P);
+  if(P === PROJ) saveProj(); else { saveProjects(); fbProjHoch(P); }
+  trainingNachtrag(tidP, 'geraete', {version: d.version || '', zeit: Date.now(), ok: !!d.ok, fehler: d.fehler || '',
+    reihen: d.reihen || [], h: d.h || 0, te: d.te || 0, dauer: d.dauer || 0, nachlese: d.nachlese || ''});
+  if(tidP) P.samGeraeteTid = await tidP;
+  if(nochmal) toast(d.ok ? `Verteiler neu gelesen (${(d.version || '').split(' ')[0]})` : 'SAM konnte den Verteiler nicht lesen');
+  samAnsicht();
+  samListeAuffrischen(P);
+}
+function samListeAuffrischen(P){
+  if(P === PROJ && current === 'samliste' && samOffen == null) renderSamListe();
+}
+
+/* Art eines Eintrags so, wie die Geräteerkennung sie nennt */
+function samBlattArt(z){
+  if(z.geraet === 'rcd') return 'FI';
+  if(z.geraet === 'rcbo') return 'FI/LS';
+  const s = samNorm(z.special || z.bez);
+  /* "Relais Beleuchtung": auf dem Blatt ein Kreis, im Verteiler sitzt dort
+     der Stromstoßschalter */
+  if(z.geraet !== 'other') return /relais|stromsto|eltako|fernschalt/.test(s) ? 'Stromstoßschalter' : 'LS';
+  return /stromsto|eltako|fernschalt|telegraf/.test(s) ? 'Stromstoßschalter'
+       : /überspann|ueberspann|blitz/.test(s) ? 'Überspannungsableiter'
+       : /hauptschalt/.test(s) ? 'Hauptschalter'
+       : /trafo|klingel/.test(s) ? 'Trafo' : 'Sonstiges';
+}
+/* Aufdruck in der Schreibweise der Liste: B16 → "B 16 A", 25A/30mA →
+   "25 A / 30 mA", B16/30mA → "B 16 A / 30 mA" */
+function samAufdruckText(a){
+  let m = /^([BCDK])(\d+)(?:\/(\d+)mA)?$/.exec(a || '');
+  if(m) return m[1] + ' ' + m[2] + ' A' + (m[3] ? ' / ' + m[3] + ' mA' : '');
+  m = /^(\d+)A\/(\d+)mA$/.exec(a || '');
+  if(m) return m[1] + ' A / ' + m[2] + ' mA';
+  m = /^(\d+)A$/.exec(a || '');
+  return m ? m[1] + ' A' : '';
+}
+/* Vergleichsschlüssel für Absicherungen: Charakteristik und Zahlen,
+   0,03 A als 30 mA */
+const samSichSchluessel = t => (String(t || '').replace(/0[,.]03\s*A?/gi, '30mA').replace(/0[,.]3\s*A?/gi, '300mA')
+  .match(/[BCDK](?=\s*\d)|\d+/gi) || []).join('|').toUpperCase();
+
+/* Einträge der Beschreibung (nach Nummer) den Geräten (Reihe für Reihe,
+   links nach rechts) zuordnen – Ausrichtung zweier Folgen wie beim
+   Textvergleich: gleiche Art +3, unklares Gerät +1, andere Art −2, ein
+   übersprungener Eintrag −1, ein übersprungenes Gerät −0,5 (Hauptschalter,
+   Ableiter und Klemmen stehen oft nicht auf dem Blatt). Ein Eintrag über
+   mehrere Nummern darf mehrere gleiche Geräte nebeneinander belegen (E-Herd
+   als drei einpolige LS). Die Reihenfolge ist dabei die einzige Annahme –
+   welche Kreise ein FI abdeckt, bleibt beim Blatt. */
+function samAusrichten(A, T, G){
+  const n = A.length, m = G.length;
+  /* "LS?": LS nur, weil auf dem Blatt nichts anderes steht – dann ist ein
+     FI/LS fast so gut */
+  const wert = (a, g) => g === a || (a === 'LS?' && g === 'LS') ? 3 : a === 'LS?' && g === 'FI/LS' ? 2 : g === '—' ? 1 : -2;
+  const D = Array.from({length: n + 1}, () => new Array(m + 1).fill(-Infinity));
+  const Z = Array.from({length: n + 1}, () => new Array(m + 1).fill(null));
+  D[0][0] = 0;
+  for(let i = 0; i <= n; i++) for(let j = 0; j <= m; j++){
+    if(i === 0 && j === 0) continue;
+    let best = -Infinity, zug = null;
+    if(i > 0 && D[i-1][j] - 1 > best){ best = D[i-1][j] - 1; zug = [1, 0]; }
+    if(j > 0 && D[i][j-1] - 0.5 > best){ best = D[i][j-1] - 0.5; zug = [0, 1]; }
+    if(i > 0) for(let k = 1; k <= T[i-1] && k <= j; k++){
+      let sum = 0, gut = true;
+      for(let t = j - k; t < j; t++){ const w = wert(A[i-1], G[t]); if(k > 1 && w < 2) gut = false; sum += w; }
+      if(!gut) break;
+      if(D[i-1][j-k] + sum > best){ best = D[i-1][j-k] + sum; zug = [1, k]; }
+    }
+    D[i][j] = best; Z[i][j] = zug;
+  }
+  const paar = new Array(n).fill(null);
+  for(let i = n, j = m; i > 0 || j > 0;){
+    const [di, dj] = Z[i][j];
+    if(di && dj) paar[i-1] = [j - dj, j - 1];
+    i -= di; j -= dj;
+  }
+  return paar;
+}
+function samVerknuepfen(P){
+  const l = P.samLesung, g = P.samGeraete;
+  if(!l || !l.reihen) return;
+  /* Was ein früherer Abgleich eingetragen hat, zuerst zurücknehmen */
+  l.reihen.forEach(z => {
+    if(z.uebernommen) return;
+    if(z.vt){
+      if(z.vt.sich != null) z.sich = z.vt.sich;
+      if(z.vt.geraet != null) z.geraet = z.vt.geraet;
+      if(z.vt.zw != null && z.zweifel) z.zweifel.sich = z.vt.zw;
+    }
+    delete z.vt; delete z.verteiler; delete z.sichVt;
+    if(z.zweifel) z.zweifel.geraet = false;
+  });
+  delete l.abgleich;
+  if(!l.ok || !g || !g.ok || !g.reihen || !g.reihen.length) return;
+  const geraete = g.reihen.flat();
+  const rs = l.reihen;
+  const vermutet = z => z.geraet === 'ls' && !/\bLS\b/i.test(z.bez + ' ' + z.sich);
+  const paar = samAusrichten(rs.map(z => { const a = samBlattArt(z); return a === 'LS' && vermutet(z) ? 'LS?' : a; }),
+    rs.map(z => { const n = samNummer(z.nr); return n ? Math.min(n.te, 4) : 1; }),
+    geraete.map(x => x.art));
+  let zugeordnet = 0, gleich = 0;
+  paar.forEach((p, i) => {
+    if(!p) return;
+    const gs = geraete.slice(p[0], p[1] + 1), z = rs[i];
+    const art = gs[0].art, aufdruck = (gs.find(x => x.aufdruck) || {}).aufdruck || '';
+    z.verteiler = {art, aufdruck, n: gs.length, passt: art === samBlattArt(z)};
+    zugeordnet++; if(z.verteiler.passt) gleich++;
+  });
+  l.abgleich = {geraete: geraete.length, eintraege: rs.length, zugeordnet, gleich};
+  /* Passt weniger als die Hälfte, ist die Zuordnung eher Zufall – dann nur
+     anzeigen, nichts ändern und nichts markieren. */
+  l.abgleich.angewandt = zugeordnet > 0 && gleich >= 0.5 * Math.max(zugeordnet, Math.min(rs.length, geraete.length));
+  if(!l.abgleich.angewandt) return;
+  rs.forEach(z => {
+    const v = z.verteiler;
+    if(!v || z.uebernommen || z.geprueft) return;
+    z.zweifel = z.zweifel || {nr:false, bez:false, ort:false, sich:false};
+    const text = samAufdruckText(v.aufdruck);
+    if(!v.passt && v.art === 'FI/LS' && vermutet(z)){
+      z.vt = {geraet: z.geraet}; z.geraet = 'rcbo'; z.zweifel.geraet = true;
+      v.passt = true;
+    } else if(!v.passt && v.art !== '—'){
+      z.zweifel.geraet = true;
+      return;
+    }
+    if(!text || !v.passt) return;
+    if(!z.sich){ z.vt = Object.assign(z.vt || {}, {sich: ''}); z.sich = text; z.sichVt = true; }
+    else if(samSichSchluessel(z.sich) !== samSichSchluessel(text)){
+      v.abweichend = true; z.vt = Object.assign(z.vt || {}, {zw: z.zweifel.sich}); z.zweifel.sich = true;
+    }
+  });
 }
 
 /* --- Von der Zeile zum Stromkreis ----------------------------------------------
@@ -7148,7 +7361,7 @@ function samKreis(z, frei){
     c.breaker = breakerOf(c);
     return c;
   }
-  const a = samAbsicherung(z.sich);
+  const a = samAbsicherung(z.sich) || samAbsicherung(String(z.sich || '').split('/')[0]);
   /* Ohne Absicherung auf dem Blatt: Vorgaben wie bei den Namensvorschlägen
      (E-Herd B 16 A dreipolig, reine Beleuchtung B 10 A). */
   const v = NAME_SUGGESTIONS.find(x => x.rated && (samNorm(z.bez) === samNorm(x.label) || (x.label === 'E-Herd' && /^e herd/.test(samNorm(z.bez)))));
@@ -7172,6 +7385,25 @@ function samGeraetText(z){
   if(z.geraet === 'rcd') return z.sich || 'FI';
   return (SAM_GERAETE[z.geraet] || 'LS') + (z.sich ? ' ' + z.sich : '');
 }
+/* v1.111: was die Geräteerkennung zum Eintrag sagt – "Verteiler ✓" wenn Art
+   und Aufdruck stimmen, sonst was dort steht */
+function samVtText(z, l){
+  const v = z.verteiler;
+  if(!v || !l.abgleich || !l.abgleich.angewandt) return '';
+  const was = v.art === '—' ? 'unklar' : v.art + (v.aufdruck ? ' ' + v.aufdruck : '') + (v.n > 1 ? ` (${v.n}×)` : '');
+  const ok = v.passt && !v.abweichend && v.art !== '—';
+  return `<span class="vt">${ok ? (z.sichVt ? 'vom Verteiler' : 'Verteiler ✓') : 'Verteiler: ' + esc(was)}</span>`;
+}
+function samAbgleichText(l){
+  const g = PROJ.samGeraete;
+  if(!g || !PROJ.sam || g.fid !== PROJ.sam.verteiler) return '';
+  if(g.laeuft) return ' Der Verteiler wird noch gelesen, die Liste ergänzt sich danach.';
+  if(!g.ok) return ' Auf dem Verteilerfoto wurden keine Geräte gefunden.';
+  const ab = l.abgleich;
+  if(!ab) return '';
+  return ab.angewandt ? ` Verteiler: ${ab.geraete} Geräte, ${ab.gleich} von ${ab.eintraege} Einträgen passen.`
+                      : ` Verteiler: ${ab.geraete} Geräte, passt nicht zur Beschreibung – nicht verwendet.`;
+}
 function renderSamListe(){
   const l = PROJ && PROJ.samLesung;
   if(!l || !l.reihen){ stack = ['home']; go('board', false); return; }
@@ -7179,7 +7411,8 @@ function renderSamListe(){
   const schon = rs.filter(z => z.uebernommen).length;
   $('#samListeKopf').textContent = `${rs.length} Einträge erkannt` + (l.version ? ` (SAM ${l.version.split(' ')[0]})` : '') +
     (schon ? `, ${schon} schon übernommen` : '') +
-    (zw ? `, ${zw} bernsteinfarben markiert – bitte ansehen.` : '.') + (schon < rs.length ? ' Antippen zum Ändern.' : '');
+    (zw ? `, ${zw} bernsteinfarben markiert – bitte ansehen.` : '.') + (schon < rs.length ? ' Antippen zum Ändern.' : '') +
+    samAbgleichText(l);
   const f = (txt, zweifelt) => txt ? `<span class="${zweifelt ? 'zw' : ''}">${esc(txt)}</span>` : '';
   $('#samListe').innerHTML = rs.map((z, i) => {
     if(z.uebernommen) return `<div class="list-item sam-zeile" style="opacity:.6">
@@ -7190,7 +7423,7 @@ function renderSamListe(){
         <span class="no">${f(z.nr || '–', z.zweifel.nr)}</span>
         <span class="body"><span class="t">${f(z.bez || '—', z.zweifel.bez)}</span>
           <span class="s">${f(z.ort, z.zweifel.ort)}</span></span>
-        <span class="geraet">${f(samGeraetText(z), z.zweifel.sich)}</span></button>`;
+        <span class="geraet">${f(samGeraetText(z), z.zweifel.sich || z.zweifel.geraet)}${samVtText(z, l)}</span></button>`;
     if(samOffen !== i) return kopf;
     const opt = Object.entries(SAM_GERAETE).map(([k, t]) => `<option value="${k}"${z.geraet === k ? ' selected' : ''}>${t}</option>`).join('');
     const sp  = specialNames().map(n => `<option${z.special === n ? ' selected' : ''}>${esc(n)}</option>`).join('');
@@ -7236,8 +7469,10 @@ function samZeileSichern(){
   z.sich = $('#seSich').value.trim();
   z.geraet = $('#seGeraet').value;
   z.special = z.geraet === 'other' ? $('#seSp').value : '';
-  z.zweifel = {nr:false, bez:false, ort:false, sich:false};
+  z.zweifel = {nr:false, bez:false, ort:false, sich:false, geraet:false};
   z.geprueft = true;
+  if(z.sichVt && z.vt && z.sich !== samAufdruckText((z.verteiler || {}).aufdruck)) delete z.sichVt;
+  delete z.vt;                                          // bestätigt: der Abgleich nimmt nichts mehr zurück
   saveProj();
 }
 $('#samZeileNeu').onclick = () => {
@@ -7271,7 +7506,8 @@ $('#samUebernehmen').onclick = () => {
     PROJ.modus = 'mess';                     // im Idealfall bleiben nur Kabel und Messwerte
     saveProj();
     trainingNachtrag(PROJ.samTid, 'uebernommen', l.reihen.filter(z => z.uebernommen)
-      .map(z => ({nr:z.nr, bez:z.bez, ort:z.ort, sich:z.sich, geraet:z.geraet, special:z.special || ''})));
+      .map(z => ({nr:z.nr, bez:z.bez, ort:z.ort, sich:z.sich, geraet:z.geraet, special:z.special || '',
+                  verteiler: z.verteiler ? z.verteiler.art + (z.verteiler.aufdruck ? ' ' + z.verteiler.aufdruck : '') : ''})));
     toast(`${kreise.length} Stromkreise übernommen` + (umstellen ? ' – abweichende Nummerierung eingeschaltet' : ''));
     stack = ['home']; go('board', false);
     /* Gemessen wird mit der Zuleitung zuerst; ist sie noch offen, geht es

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<!--
+  SAM · Geräte auf dem Verteilerfoto
+  v0.4 · 26.09.2026
+
+  v0.4: normierter Aufdruck je Gerät (B16, 25A/30mA, B16/30mA, 63A) und
+  Einbettung in den E-Assistenten (?einbettung, wie paddle-test.html) - für
+  den ersten Versuch, Beschriftungsblatt und Verteiler zu verknüpfen.
+
+  v0.3: zweiter, vergrößerter Durchgang über den Gerätebereich, wenn die
+  Schrift klein ist (Foto aus Abstand); ABB-Leseschwankungen.
+
+  v0.2: Geräte zuerst (senkrechte Gruppen von Aufdrucken), Reihen danach;
+  allgemeine Gerätetexte (6000, 230/400, IP40) als weitere Anker.
+
+  v0.1: Stufe 1, Etappe (a) (Jean, 26.09.2026). Das Foto des Verteilers wird
+  in voller Auflösung kachelweise gelesen - im ganzen, auf 2000 Punkte
+  verkleinerten Foto gingen die kleinen Aufdrucke der ABB-Geräte unter
+  ("821" statt "B16", IMG_6744). Aus den Wörtern entstehen Reihen und Geräte:
+  Herstellernamen und Gerätekennungen sind die Anker, je Gerät steht meist
+  genau ein Herstellername. Gedeutet wird die Art (LS, FI, FI/LS,
+  Hauptschalter, Überspannungsableiter, Stromstoßschalter, Trafo); was sich
+  nicht zuordnen lässt, bleibt "—". Aufdrucke und TE kommen in (b) und (c).
+-->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAM · Geräte</title>
+<style>
+  body{font-family:system-ui,sans-serif;margin:16px;max-width:900px}
+  pre{white-space:pre-wrap;font-size:13px;background:#f4f4f0;padding:10px}
+  .ver{font-size:12px;color:#666}
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "onnxruntime-web": "https://esm.sh/onnxruntime-web@1.23.0"
+  }
+}
+</script>
+</head>
+<body>
+<h1>SAM · Geräte <span class="ver">v0.4 · 26.09.2026</span></h1>
+<p><button id="start">Erkennung laden</button> <input type="file" id="datei" accept="image/*" disabled></p>
+<pre id="aus"></pre>
+
+<script type="module">
+const VERSION = 'v0.4 · 26.09.2026';
+const WEGE = [
+  'https://esm.sh/ppu-paddle-ocr/web?external=onnxruntime-web',
+  'https://esm.sh/ppu-paddle-ocr/web',
+  'https://cdn.jsdelivr.net/npm/ppu-paddle-ocr/+esm'
+];
+let dienst = null;
+async function starte(){
+  if(dienst) return;
+  let Sdk = null, fehler = [];
+  for(const u of WEGE){
+    try{ const m = await import(u); Sdk = m.PaddleOcrService || (m.default && m.default.PaddleOcrService); if(Sdk) break; }
+    catch(e){ fehler.push(e.message); }
+  }
+  if(!Sdk) throw new Error('Bibliothek nicht geladen: ' + fehler.join(' | '));
+  dienst = new Sdk({recognition:{mainThreadYieldMs: 24}, debugging:{verbose:false}});
+  await dienst.initialize();
+  schwelleNachruesten();
+}
+/* v0.2: Schwelle für die Textkarte des Detektors, wie paddle-test.html seit
+   v0.37 bei der Notlesung. Ohne sie nimmt die Bibliothek jeden Wert über
+   null als Text; auf einem Verteiler stehen die Aufdrucke so dicht, dass
+   ganze Geräte zu einem Kasten verschmolzen und als Unsinn gelesen wurden
+   ("CCCC", "D" – IMG_8029, der FI "F 372" fehlte ganz). */
+let KARTEN_SCHWELLE = 0.3, schwelleStand = 'nicht geprüft';
+function schwelleNachruesten(){
+  try{
+    let p = dienst && dienst.detector ? Object.getPrototypeOf(dienst.detector) : null;
+    while(p && !Object.prototype.hasOwnProperty.call(p, 'runInference')) p = Object.getPrototypeOf(p);
+    if(!p){ schwelleStand = 'nicht nachrüstbar'; return; }
+    if(!p.__samSchwelle){
+      const alt = p.runInference;
+      p.runInference = async function(){
+        const d = await alt.apply(this, arguments);
+        if(d && KARTEN_SCHWELLE > 0){ for(let i = 0; i < d.length; i++) if(d[i] < KARTEN_SCHWELLE) d[i] = 0; }
+        return d;
+      };
+      p.__samSchwelle = true;
+    }
+    schwelleStand = 'Schwelle ' + KARTEN_SCHWELLE;
+  }catch(e){ schwelleStand = 'nicht nachrüstbar (' + e.message + ')'; }
+}
+
+/* ==================== Lesen ==================== */
+/* Kacheln von 1200 Punkten mit 25 % Überlappung aus dem Original (höchstens
+   4032 lang). Die Erkennung verkleinert intern; eine Kachel bleibt dabei nah
+   an ihrer Auflösung, das ganze Foto nicht. */
+function woerterAus(erg, dx, dy){
+  const raus = [];
+  (Array.isArray(erg.lines) ? erg.lines : []).forEach(zeile => {
+    const ws = Array.isArray(zeile) ? zeile : (zeile && zeile.words) ? zeile.words : [zeile];
+    ws.forEach(w => {
+      const b = w && (w.box || w.bbox || w.rect); if(!b) return;
+      const x0 = (b.x !== undefined) ? b.x : b.x0, y0 = (b.y !== undefined) ? b.y : b.y0;
+      const br = (b.width !== undefined) ? b.width : (b.x1 - b.x0), ho = (b.height !== undefined) ? b.height : (b.y1 - b.y0);
+      const text = String(w.text || '').replace(/[^ -ɏ]/g, '').trim();
+      if(!/[0-9A-Za-z]/.test(text)) return;
+      raus.push({text, conf: w.confidence ?? w.score ?? 0, x0: x0 + dx, y0: y0 + dy, x1: x0 + br + dx, y1: y0 + ho + dy});
+    });
+  });
+  return raus;
+}
+async function kachelnLesen(bild){
+  const K = window.__kachel || 1200, U = Math.round(K / 4), alle = [];
+  const xs = [], ys = [];
+  for(let x = 0; ; x += K - U){ xs.push(Math.min(x, Math.max(0, bild.width - K))); if(x + K >= bild.width) break; }
+  for(let y = 0; ; y += K - U){ ys.push(Math.min(y, Math.max(0, bild.height - K))); if(y + K >= bild.height) break; }
+  for(const y of ys) for(const x of xs){
+    const c = document.createElement('canvas');
+    c.width = Math.min(K, bild.width); c.height = Math.min(K, bild.height);
+    c.getContext('2d').drawImage(bild, x, y, c.width, c.height, 0, 0, c.width, c.height);
+    const erg = await dienst.recognize(c, {noCache: true});
+    alle.push(...woerterAus(erg, x, y).map(w => Object.assign(w, {kachel: x + ',' + y})));
+  }
+  /* Doppelte aus der Überlappung: liegt die Mitte eines Kastens in einem
+     anderen, bleibt der sicherere und bei Gleichstand der längere */
+  return zusammenfuehren(alle);
+}
+function zusammenfuehren(alle){
+  /* v0.2: nur Kästen ähnlicher Größe verdrängen sich - ein Klecks von
+     250 × 240 Punkten ("D", IMG_8029) schluckte sonst alle Aufdrucke des FI
+     darunter. Kästen, die viel höher als eine Schriftzeile sind, sind kein
+     Aufdruck. */
+  const hoehen = alle.map(w => w.y1 - w.y0).sort((a, b) => a - b);
+  const hm = hoehen[Math.floor(hoehen.length / 2)] || 20;
+  const gut = alle.filter(w => w.y1 - w.y0 < 3 * hm);
+  gut.sort((a, b) => (b.conf - a.conf) || (b.text.length - a.text.length));
+  const raus = [];
+  const flaeche = w => (w.x1 - w.x0) * (w.y1 - w.y0);
+  for(const w of gut){
+    const doppelt = raus.some(v => {
+      const ix = Math.min(v.x1, w.x1) - Math.max(v.x0, w.x0), iy = Math.min(v.y1, w.y1) - Math.max(v.y0, w.y0);
+      return ix > 0 && iy > 0 && ix * iy > 0.5 * Math.min(flaeche(v), flaeche(w));
+    });
+    if(!doppelt) raus.push(w);
+  }
+  return raus;
+}
+
+/* ==================== Deuten ==================== */
+const HERSTELLER = /^(ABB|AEG|legrand|hager|Hager|schupa|Doepke|Siemens|SIEMENS|Eltako|DEHN|Finder|finder|Schneider|GE|Busch|F&G|Moeller|Grothe|GROTHE|EGB|Theben|Striebel)$/;
+/* Leseschwankungen der Markennamen: "ABE", "ABH", "A!B", "A3B", "legrand一" */
+function marke(t){
+  const s = t.replace(/[^A-Za-z&]/g, '');
+  /* v0.3: aus Abstand fotografiert kommt ABB als "ABS", "ASS", "AEB", "ASB" */
+  if(/^A.?B.?[BEHDS8]$/i.test(s) || /^A[BSE][BS]$/.test(s) || s === 'ABB') return 'ABB';
+  if(/^[lc-]?e?grand$/i.test(s) || /legrand/i.test(s)) return 'legrand';
+  if(/^hager$/i.test(s)) return 'hager';
+  if(/^AEG$/i.test(s)) return 'AEG';
+  if(/^s[cç]hupa$/i.test(s)) return 'schupa';
+  if(/doepke/i.test(s)) return 'Doepke';
+  if(/siemens/i.test(s)) return 'Siemens';
+  if(/eltako|ellako|eltak/i.test(s)) return 'Eltako';
+  if(/dehn/i.test(s)) return 'DEHN';
+  if(/^finder$/i.test(s)) return 'Finder';
+  if(/grothe|rothe/i.test(s)) return 'Grothe';
+  return '';
+}
+/* Hinweise auf die Art eines Geräts aus einem einzelnen Wort */
+function artHinweis(t){
+  const s = t.replace(/\s+/g, '');
+  if(/DEHN|guard|DGMOD|Surge|Protective|SPD/i.test(s)) return 'Überspannungsableiter';
+  if(/E463|3KB|63A.?400|AC22|Hauptschalter/i.test(s)) return 'Hauptschalter';
+  if(/^E25[15]$|^E2[5]\d$|S12-?1\d0|EPN5|^E251|TR19|Stromsto/i.test(s)) return 'Stromstoßschalter';
+  if(/PKT12|GT3158|TS\d{1,2}\/\d|Trafo|222070|12V.?1[,.]?\dA|SEC/i.test(s)) return 'Trafo';
+  if(/NPFI\/?LS|FI\/?LS|DS201|B\d{1,2}\/0[,.]03/i.test(s)) return 'FI/LS';
+  if(/mA|IΔn|I.n=?0[,.]03|0[,.]03A?|F20[24]|F37[24]|NPFI|RCCB|CDA\d|DFS|25\/0[,.]?03|30m/i.test(s)) return 'FI';
+  if(/^[BCK]\d{1,2}$|^S2\d{2}M?$|^S261|^S201|MBN\d|^NLS/i.test(s)) return 'LS';
+  return '';
+}
+
+/* Allgemeine Gerätetexte: stehen auf fast jedem Gerät genau einmal und
+   helfen, Geräte ohne gelesene Marke zu finden ("6000", "230/400", "IP40",
+   "Test"). Allein machen sie keine Art. */
+const GERAETETEXT = /^\[?[6e]0{3}\]?$|^\[?10000\]?$|230\s*[\/1]\s*400|^IP\s?[24]0|^Test$|^TEST$|^T$|^O[- ]?OFF$|^I[- ]?ON$|400V/i;
+
+/* v0.4: Aufdruck eines Geräts in der Schreibweise der Musterlösungen.
+   Gesucht wird in allen Wörtern der Gruppe; Nennströme nur aus der Reihe
+   der üblichen Werte, damit Typnummern ("S 261", "F 204") nicht als Strom
+   gelesen werden. LS "B16", FI "25A/30mA" (ohne gelesenen Fehlerstrom gilt
+   30 mA), FI/LS "B16/30mA", Hauptschalter "63A". Nichts Sicheres: "". */
+const STROM = '(?:6|10|13|16|20|25|32|40|50|63|80|100|125)';
+function aufdruck(art, texte){
+  const t = texte.join(' ').replace(/\s+/g, ' ');
+  const ls = () => { const m = new RegExp('(?:^|[^A-Za-z])([BCK])\\s?(' + STROM + ')(?:\\s?A)?(?!\\d)').exec(t); return m ? m[1] + m[2] : ''; };
+  const ma = () => /0[,.]3\s?A?(?!\d)|300\s?mA/i.test(t) ? '300mA' : /0[,.]01\s?A?(?!\d)|10\s?mA/i.test(t) ? '10mA'
+                 : /0[,.]03|30\s?m/i.test(t) ? '30mA' : '';
+  const nenn = () => {
+    const b = new RegExp('(?:^|\\D)(' + STROM + ')\\s?\\/\\s?0[,.]\\d').exec(t);
+    if(b) return b[1];
+    const m = new RegExp('(?:^|[^\\d,.])(' + STROM + ')\\s?A(?![a-z])').exec(t);
+    return m ? m[1] : '';
+  };
+  if(art === 'LS') return ls();
+  if(art === 'FI'){ const n = nenn(); return n ? n + 'A/' + (ma() || '30mA') : ''; }
+  if(art === 'FI/LS'){ const l = ls(); return l ? l + '/' + (ma() || '30mA') : ''; }
+  if(art === 'Hauptschalter'){ const n = nenn(); return n ? n + 'A' : ''; }
+  return '';
+}
+
+/* v0.2: Geräte zuerst, Reihen danach. Die Aufdrucke eines Geräts stehen
+   übereinander (oben "S 261 B16", unten "6000", beim legrand die Marke
+   unten) - als Reihen gezählt, zerfiel eine Hutschiene in zwei (IMG_7038).
+   Zwei Anker gehören zum selben Gerät, wenn sich ihre Mitten waagerecht um
+   weniger als 0,45 TE unterscheiden und sie senkrecht höchstens 14
+   Worthöhen auseinander liegen. Die TE schätzt der häufige waagerechte
+   Abstand benachbarter Marken auf gleicher Höhe. */
+function geraeteFinden(woerter){
+  const anker = woerter.map(w => ({w, marke: marke(w.text), art: artHinweis(w.text), allg: GERAETETEXT.test(w.text.trim())}))
+                       .filter(a => a.marke || a.art || a.allg);
+  if(!anker.length) return {reihen: []};
+  const hs = anker.map(a => a.w.y1 - a.w.y0).sort((a, b) => a - b);
+  const h = hs[Math.floor(hs.length / 2)] || 20;
+  const mx = a => (a.w.x0 + a.w.x1) / 2, my = a => (a.w.y0 + a.w.y1) / 2;
+  /* TE: nächster Nachbar auf gleicher Höhe unter den Marken (und LS-Kennungen) */
+  const glatt = anker.filter(a => a.marke || a.art === 'LS');
+  const nn = [];
+  glatt.forEach(a => {
+    let best = Infinity;
+    glatt.forEach(b => { if(b !== a && Math.abs(my(a) - my(b)) < 1.5 * h){ const d = Math.abs(mx(a) - mx(b)); if(d > 2 * h && d < best) best = d; } });
+    /* eine TE ist 17,5 mm, die Aufdrucke 2–4 mm hoch: plausibel 3–12 Worthöhen */
+    if(isFinite(best) && best < 12 * h) nn.push(best);
+  });
+  nn.sort((a, b) => a - b);
+  const te = nn.length >= 3 ? nn[Math.floor(nn.length / 2)] : 6.5 * h;
+  /* Verbinden (Union-Find) */
+  const vater = anker.map((a, i) => i);
+  const wurzel = i => vater[i] === i ? i : (vater[i] = wurzel(vater[i]));
+  /* v0.2: lange Texte ("NPFI/LS-B 16/0,03-2 SK", "Fl-Schutzschalter")
+     verbinden nicht - über ihre Breite ketteten sie eine ganze Reihe zu
+     einem Gerät (IMG_8029). Sie kommen danach zu dem Gerät, dessen Mitte
+     unter ihnen liegt. */
+  const lang = a => a.w.x1 - a.w.x0 > 0.8 * te;
+  for(let i = 0; i < anker.length; i++) for(let j = i + 1; j < anker.length; j++){
+    const a = anker[i], b = anker[j];
+    if(lang(a) || lang(b)) continue;
+    if(Math.abs(my(a) - my(b)) > 14 * h) continue;
+    if(Math.abs(mx(a) - mx(b)) < 0.45 * te) vater[wurzel(i)] = wurzel(j);
+  }
+  const gruppen = new Map();
+  anker.forEach((a, i) => { if(lang(a)) return; const r = wurzel(i); if(!gruppen.has(r)) gruppen.set(r, []); gruppen.get(r).push(a); });
+  anker.filter(lang).forEach(a => {
+    let best = null, bd = Infinity;
+    gruppen.forEach(g => {
+      const gx = g.reduce((s, b) => s + mx(b), 0) / g.length, gy = g.reduce((s, b) => s + my(b), 0) / g.length;
+      if(gx < a.w.x0 || gx > a.w.x1) return;
+      const d = Math.abs(gy - my(a)) + Math.abs(gx - mx(a)) * 0.2;
+      if(d < bd && Math.abs(gy - my(a)) < 14 * h){ bd = d; best = g; }
+    });
+    if(best) best.push(a); else gruppen.set('L' + gruppen.size, [a]);
+  });
+  let geraete = [...gruppen.values()].map(g => {
+    const x0 = Math.min(...g.map(a => a.w.x0)), x1 = Math.max(...g.map(a => a.w.x1));
+    const y0 = Math.min(...g.map(a => a.w.y0)), y1 = Math.max(...g.map(a => a.w.y1));
+    return {x0, x1, y0, y1, xm: g.reduce((s, a) => s + mx(a), 0) / g.length, ym: (y0 + y1) / 2,
+            marke: (g.find(a => a.marke) || {}).marke || '', anker: g,
+            hinweise: g.filter(a => a.art).map(a => ({art: a.art, text: a.w.text}))};
+  });
+  /* Einzelne allgemeine Wörter ohne Marke und ohne Art sind oft Beifang
+     (Nummernstreifen, Aufkleber) - ein Gerät braucht mindestens zwei Anker
+     oder eine Marke oder einen Art-Hinweis */
+  geraete = geraete.filter(g => g.marke || g.hinweise.length || g.anker.length >= 2);
+  geraete.forEach(g => {
+    const arten = g.hinweise.map(x => x.art);
+    const zahl = k => arten.filter(a => a === k).length;
+    g.art = zahl('FI/LS') ? 'FI/LS'
+      : zahl('Überspannungsableiter') ? 'Überspannungsableiter'
+      : zahl('Hauptschalter') ? 'Hauptschalter'
+      : zahl('Trafo') ? 'Trafo'
+      : zahl('Stromstoßschalter') ? 'Stromstoßschalter'
+      : zahl('FI') && zahl('LS') ? (zahl('FI') >= zahl('LS') ? 'FI' : 'LS')
+      : zahl('FI') ? 'FI' : zahl('LS') ? 'LS' : '—';
+    if(g.art === '—' && g.marke === 'Eltako') g.art = 'Stromstoßschalter';
+    if(g.art === '—' && g.marke === 'DEHN') g.art = 'Überspannungsableiter';
+    if(g.art === '—' && g.marke === 'Grothe') g.art = 'Trafo';
+    g.aufdruck = aufdruck(g.art, g.anker.map(a => a.w.text));
+  });
+  /* Reihen: Geräte, deren senkrechte Spannen sich überdecken */
+  geraete.sort((a, b) => a.ym - b.ym);
+  const reihen = [];
+  geraete.forEach(g => {
+    const r = reihen.find(r => Math.min(r.y1, g.y1) - Math.max(r.y0, g.y0) > -2 * h && Math.abs(r.ym - g.ym) < 10 * h);
+    if(r){ r.geraete.push(g); r.y0 = Math.min(r.y0, g.y0); r.y1 = Math.max(r.y1, g.y1); r.ym = (r.y0 + r.y1) / 2; }
+    else reihen.push({geraete: [g], y0: g.y0, y1: g.y1, ym: g.ym});
+  });
+  reihen.sort((a, b) => a.ym - b.ym);
+  reihen.forEach(r => r.geraete.sort((a, b) => a.xm - b.xm));
+  return {h, te, reihen: reihen.map(r => ({y: r.ym, te, geraete: r.geraete}))};
+}
+
+async function lies(blob){
+  await starte();
+  const t0 = performance.now();
+  const bm = await createImageBitmap(blob, {imageOrientation: 'from-image'});
+  /* v0.3: kleine Fotos (900 × 1600, weitergeleitet über einen Messenger)
+     auf 3000 Punkte vergrößern - sonst findet der erste Durchgang nichts,
+     woran sich der zweite festhalten könnte (IMG_7795.v2: ein Wort) */
+  const f = Math.min(Math.max(1, 3000 / Math.max(bm.width, bm.height)), 4032 / Math.max(bm.width, bm.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bm.width * f); c.height = Math.round(bm.height * f);
+  { const k = c.getContext('2d'); k.imageSmoothingQuality = 'high'; k.drawImage(bm, 0, 0, c.width, c.height); }
+  let woerter = await kachelnLesen(c);
+  let g = geraeteFinden(woerter);
+  /* v0.3: zweiter Durchgang, vergrößert. Ist die Schrift der Geräte kleiner
+     als etwa 30 Punkte (Foto aus Abstand, IMG_6615: 23), wird der Bereich,
+     in dem Geräte gefunden wurden, so vergrößert, dass sie etwa 36 Punkte
+     hoch wird, und noch einmal gelesen. Die Wörter beider Durchgänge
+     werden zusammengeführt, der sicherere gewinnt. */
+  let nachlese = 'nicht nötig';
+  const ank = g.reihen.flatMap(r => r.geraete);
+  if(ank.length && g.h && g.h < 30){
+    const f = Math.min(2.5, 36 / g.h);
+    const rand = 2 * (g.te || 6 * g.h);
+    const x0 = Math.max(0, Math.min(...ank.map(a => a.x0)) - rand), x1 = Math.min(c.width, Math.max(...ank.map(a => a.x1)) + rand);
+    const y0 = Math.max(0, Math.min(...ank.map(a => a.y0)) - rand), y1 = Math.min(c.height, Math.max(...ank.map(a => a.y1)) + rand);
+    const g2 = document.createElement('canvas');
+    g2.width = Math.round((x1 - x0) * f); g2.height = Math.round((y1 - y0) * f);
+    const k2 = g2.getContext('2d'); k2.imageSmoothingQuality = 'high';
+    k2.drawImage(c, x0, y0, x1 - x0, y1 - y0, 0, 0, g2.width, g2.height);
+    const w2 = (await kachelnLesen(g2)).map(w => Object.assign(w, {x0: x0 + w.x0 / f, x1: x0 + w.x1 / f, y0: y0 + w.y0 / f, y1: y0 + w.y1 / f}));
+    woerter = zusammenfuehren(woerter.concat(w2));
+    g = geraeteFinden(woerter);
+    nachlese = 'Bereich ' + Math.round(x1 - x0) + ' × ' + Math.round(y1 - y0) + ' um ' + f.toFixed(1) + ' vergrößert, ' + w2.length + ' Wörter';
+  }
+  return {version: VERSION, nachlese, h: Math.round(g.h || 0), te: Math.round(g.te || 0), dauer: (performance.now() - t0) / 1000, breite: c.width, hoehe: c.height,
+          woerter, reihen: g.reihen.map(r => ({y: Math.round(r.y), te: Math.round(r.te),
+            geraete: r.geraete.map(x => ({art: x.art, aufdruck: x.aufdruck || '', marke: x.marke, x0: Math.round(x.x0), x1: Math.round(x.x1), y0: Math.round(x.y0), y1: Math.round(x.y1),
+              anker: (x.anker || []).map(a => [a.w.text, Math.round(a.w.x0), Math.round(a.w.y0), Math.round(a.w.x1), Math.round(a.w.y1)]),
+              hinweise: x.hinweise.map(h => h.text)}))}))};
+}
+
+window.__geraete = {starte, lies, version: VERSION, schwelle: v => { KARTEN_SCHWELLE = v; }, stand: () => schwelleStand};
+document.getElementById('start').onclick = async () => {
+  document.getElementById('aus').textContent = 'lädt …';
+  try{ await starte(); document.getElementById('datei').disabled = false; document.getElementById('aus').textContent = 'bereit'; }
+  catch(e){ document.getElementById('aus').textContent = e.message; }
+};
+document.getElementById('datei').onchange = async e => {
+  const d = e.target.files && e.target.files[0]; if(!d) return;
+  document.getElementById('aus').textContent = 'liest …';
+  const r = await lies(d);
+  document.getElementById('aus').textContent = r.reihen.map((x, i) =>
+    'Reihe ' + (i + 1) + ': ' + x.geraete.map(g => g.art + (g.aufdruck ? ' ' + g.aufdruck : '') + (g.marke ? ' (' + g.marke + ')' : '')).join(' · ')).join('\n') +
+    '\n\n' + r.dauer.toFixed(1) + ' s';
+};
+
+/* ==================== Einbettung in den E-Assistenten (v0.4) ====================
+   Wie paddle-test.html: nur mit ?einbettung und nur für die eigene Herkunft.
+   Die App schickt {sam:'lesen', id, bild} mit dem Verteilerfoto, die Seite
+   antwortet mit {stand} und zum Schluss {fertig, ok, reihen} - je Reihe die
+   Geräte von links nach rechts mit Art, Aufdruck und Marke. */
+if(new URLSearchParams(location.search).has('einbettung') && window.parent !== window){
+  let laeuft = Promise.resolve();
+  window.addEventListener('message', e => {
+    if(e.origin !== location.origin || e.source !== window.parent) return;
+    const d = e.data || {};
+    if(d.sam !== 'lesen' && d.sam !== 'vorbereiten') return;
+    const antwort = x => window.parent.postMessage(Object.assign({sam:'antwort', id:d.id, version:VERSION}, x), location.origin);
+    laeuft = laeuft.then(async () => {
+      try{
+        if(!dienst){ antwort({stand:'Geräteerkennung wird geladen'}); await starte(); }
+        if(d.sam === 'vorbereiten'){ antwort({bereit:true}); return; }
+        antwort({stand:'Verteiler wird gelesen'});
+        const r = await lies(d.bild);
+        const reihen = r.reihen.map(x => ({geraete: x.geraete.map(g => ({art: g.art, aufdruck: g.aufdruck, marke: g.marke,
+          x0: g.x0, x1: g.x1, y0: g.y0, y1: g.y1, texte: g.anker.map(a => a[0])}))}));
+        antwort({fertig:true, ok: reihen.some(x => x.geraete.length), reihen, h: r.h, te: r.te,
+                 breite: r.breite, hoehe: r.hoehe, dauer: r.dauer, nachlese: r.nachlese});
+      }catch(err){ antwort({fertig:true, ok:false, fehler: (err && err.message) ? err.message : String(err)}); }
+    });
+  });
+  window.parent.postMessage({sam:'geladen', version:VERSION}, location.origin);
+}
+</script>
+</body>
+</html>
