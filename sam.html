@@ -1,7 +1,12 @@
 <!DOCTYPE html>
 <!--
   PaddleOCR-Test · Verteilerbeschreibung
-  v0.44 · 25.09.2026
+  v0.45 · 26.09.2026
+
+  v0.45: die abgedeckten Kreise am FI stehen einheitlich als "(für 18–23)"
+  (Jean, 26.09.2026) - statt "Stromkreis 18–23" oder wörtlich "für 5–8".
+  Nur die Schreibweise am Ende von aufsSchema; die Lesung bleibt, wie sie
+  war. Musterlösungen entsprechend umgestellt.
 
   v0.44: zwei Regeln aus Jeans eigenem Verteiler, der zurückgehalten bleibt
   und nur beschrieben wurde (zweipoliger FI auf 18 und 19 kam als zwei
@@ -815,7 +820,7 @@ pre.abgleich.gut{background:#EAF5DC;border-color:#8FBE36}
 
   <header>
     <h1>PaddleOCR-Test · Verteilerbeschreibung</h1>
-    <span class="ver">v0.44 · 25.09.2026</span>
+    <span class="ver">v0.45 · 26.09.2026</span>
   </header>
 
   <div class="karte">
@@ -990,7 +995,7 @@ const MODELLE = {
   latin: {name:'v5 lateinisch',  konstante:'V5_LATIN_MOBILE_MODEL'}
 };
 
-const VERSION = 'v0.44 · 25.09.2026';
+const VERSION = 'v0.45 · 26.09.2026';
 
 /* ==================== Schrittliste ==================== */
 
@@ -5239,6 +5244,15 @@ function aufsSchema(r){
         return u || w;
       });
       setze(r.ort, roh ? kreisStriche(roh) : '');
+    }
+    /* v0.45 (Jean, 26.09.2026): die abgedeckten Kreise stehen einheitlich als
+       "(für 18–23)" - ob das Blatt "Stromkreis 9 und 10", "für 5 · 8",
+       "(für 18 - 23)" oder in der Ortsspalte nur "Stromkreis 6" schreibt.
+       Beschreibende Texte ("für nachfolgende Stromkreise", "Wohnräume …")
+       bleiben wörtlich. */
+    if(r.ort && !r.ort.leer){
+      const fuer = /^\(?\s*(?:f[üu]r\s+)?(?:Stromkreis(?:e)?\s+)?(\d{1,2}(?:\s*[–-]\s*\d{1,2})?)\s*\)?$/i.exec(r.ort.text);
+      if(fuer) setze(r.ort, '(für ' + fuer[1].replace(/\s*[–-]\s*/, '–') + ')');
     }
     return;
   }
