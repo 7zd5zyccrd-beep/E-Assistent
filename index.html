@@ -10,6 +10,12 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.107 26.09.2026 Fehlerbehebung (iPad): der Knopf "Abschluss" klebte mitten
+                    in der Liste. Verdacht auf das unsichtbare Fenster, in dem
+                    SAM rechnet (600 x 400 links ausserhalb des Bildes, seit
+                    v1.103 schon beim Start geladen); iOS zieht eingebettete
+                    Seiten gern auf ihre Laenge auf. Es steckt jetzt in einer
+                    Huelle von einem Punkt, die alles abschneidet.
   v1.106 26.09.2026 Fehlerbehebung: nach "Uebernehmen" in der SAM-Liste blieb
                     der Verteiler leer. Firebase meldet jeden eigenen
                     Schreibvorgang sofort zurueck; die erste Meldung (neuer
@@ -2578,7 +2584,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.106';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.107';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 26.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6842,17 +6848,29 @@ function samLeser(){
   SAM_LESER.geladen = new Promise((res, rej) => {
     const f = document.createElement('iframe');
     f.setAttribute('aria-hidden', 'true'); f.tabIndex = -1; f.title = 'SAM';
-    /* Nicht display:none – dann rechnen manche Browser in der Seite nicht. */
-    f.style.cssText = 'position:fixed;left:-10000px;top:0;width:600px;height:400px;border:0;visibility:hidden';
+    /* Nicht display:none – dann rechnen manche Browser in der Seite nicht.
+       v1.107 (Jean, iPad: der Knopf "Abschluss" klebte mitten in der Liste):
+       das Fenster lag bis dahin 600 × 400 groß links außerhalb des Bildes.
+       iOS zieht eingebettete Seiten gern auf ihre volle Länge auf, und die
+       Werkstattseite ist lang – das kann den Bereich verschieben, an dem die
+       Fußleiste klebt. Jetzt steckt es in einer Hülle von einem Punkt, die
+       alles abschneidet und aus dem Aufbau der Seite nichts mitnimmt. */
+    const huelle = document.createElement('div');
+    huelle.setAttribute('aria-hidden', 'true');
+    huelle.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;overflow:hidden;opacity:0;'
+                         + 'pointer-events:none;z-index:-1;contain:strict';
+    f.style.cssText = 'border:0;width:600px;height:400px;display:block';
+    huelle.appendChild(f);
     const frist = setTimeout(() => rej(new Error('SAM lädt nicht')), 60000);
     SAM_LESER.aufGeladen = v => { clearTimeout(frist); SAM_LESER.version = v || ''; res(f); };
     SAM_LESER.frame = f;
     f.src = 'sam.html?einbettung&v=' + encodeURIComponent(VERSION);   // je App-Fassung frisch
-    document.body.appendChild(f);
+    document.body.appendChild(huelle);
+    SAM_LESER.huelle = huelle;
   });
   SAM_LESER.geladen.catch(() => {
-    if(SAM_LESER.frame) SAM_LESER.frame.remove();
-    SAM_LESER.frame = null; SAM_LESER.geladen = null;
+    if(SAM_LESER.huelle) SAM_LESER.huelle.remove();
+    SAM_LESER.frame = null; SAM_LESER.huelle = null; SAM_LESER.geladen = null;
   });
   return SAM_LESER.geladen;
 }
