@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.108 26.09.2026 Fehlerbehebung (iPhone): die Fussleiste ("Abschluss")
+                    stand anfangs unten, scrollte dann aber mit der Liste weg.
+                    Safari rechnete die Ansicht mit flex:1 nur bildschirmhoch;
+                    jetzt waechst sie mit dem Inhalt (flex:1 0 auto), und die
+                    klebende Leiste bleibt am unteren Rand.
   v1.107 26.09.2026 Fehlerbehebung (iPad): der Knopf "Abschluss" klebte mitten
                     in der Liste. Verdacht auf das unsichtbare Fenster, in dem
                     SAM rechnet (600 x 400 links ausserhalb des Bildes, seit
@@ -917,9 +922,16 @@ header .tag{
 }
 
 /* ---------- Inhalt ---------- */
-main{flex:1;display:flex;flex-direction:column;padding:var(--pad);padding-bottom:0}
+/* v1.108 (Jean, iPhone: "Abschluss" stand anfangs unten, scrollte dann aber
+   mit der Liste weg): flex:1 heißt Grundgröße 0. Safari rechnet die Ansicht
+   damit nur bildschirmhoch, die Liste läuft darüber hinaus – und die klebende
+   Fußleiste darf ihre Ansicht nicht verlassen, bleibt also nach einer
+   Bildschirmhöhe stehen. "1 0 auto": so hoch wie der Inhalt, mindestens der
+   Bildschirm, nie kleiner. Die Blattvorschau bleibt unberührt – ihr
+   Scrollbereich hat min-height:0 und nimmt keine Höhe aus dem Inhalt. */
+main{flex:1 0 auto;display:flex;flex-direction:column;padding:var(--pad);padding-bottom:0}
 .view{display:none}
-.view.active{display:flex;flex-direction:column;flex:1}
+.view.active{display:flex;flex-direction:column;flex:1 0 auto}
 /* Ansichten ohne Fußleiste brauchen unten etwas eigene Luft */
 #view-home,#view-finish,#view-archive,#view-checks{padding-bottom:28px}
 
@@ -2584,7 +2596,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.107';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.108';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 26.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
