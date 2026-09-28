@@ -1,7 +1,14 @@
 <!DOCTYPE html>
 <!--
   SAM · Geräte auf dem Verteilerfoto
-  v0.4 · 26.09.2026
+  v0.5 · 28.09.2026
+
+  v0.5: ein FI wird nicht mehr in zwei Geräte zerlegt. Links stehen Marke,
+  Typ und Nennwerte ("ABB F202 A 25A 0,03A"), rechts Prüftaste und
+  Bestellnummer ("TEST", "2CSF202101R1250") - als zwei senkrechte Gruppen
+  wurden daraus zwei FI (24 Paare in den Lernsätzen, 5 in den
+  Musterlösungen). Auf Jeans eigenem Verteiler bestätigte das den falsch
+  gelesenen zweiten FI auf dem Blatt.
 
   v0.4: normierter Aufdruck je Gerät (B16, 25A/30mA, B16/30mA, 63A) und
   Einbettung in den E-Assistenten (?einbettung, wie paddle-test.html) - für
@@ -41,12 +48,12 @@
 </script>
 </head>
 <body>
-<h1>SAM · Geräte <span class="ver">v0.4 · 26.09.2026</span></h1>
+<h1>SAM · Geräte <span class="ver">v0.5 · 28.09.2026</span></h1>
 <p><button id="start">Erkennung laden</button> <input type="file" id="datei" accept="image/*" disabled></p>
 <pre id="aus"></pre>
 
 <script type="module">
-const VERSION = 'v0.4 · 26.09.2026';
+const VERSION = 'v0.5 · 28.09.2026';
 const WEGE = [
   'https://esm.sh/ppu-paddle-ocr/web?external=onnxruntime-web',
   'https://esm.sh/ppu-paddle-ocr/web',
@@ -293,6 +300,28 @@ function geraeteFinden(woerter){
   });
   reihen.sort((a, b) => a.ym - b.ym);
   reihen.forEach(r => r.geraete.sort((a, b) => a.xm - b.xm));
+  /* v0.5: zwei Hälften eines FI zusammenlegen. Nebeneinander, die Texte
+     berühren sich fast (Lücke unter 1 TE, Mitten unter 1,6 TE - zwei echte
+     FI mit je 2 TE liegen rund 2 TE auseinander), höchstens eine Hälfte
+     trägt eine Marke, und die andere ist FI oder trägt nur Prüftaste und
+     Bestellnummer. */
+  const nurTaste = g => g.anker.every(a => /^(T|TEST|Test)$|^2CS/i.test(a.w.text.trim()));
+  reihen.forEach(r => {
+    for(let i = 0; i + 1 < r.geraete.length;){
+      const a = r.geraete[i], b = r.geraete[i + 1];
+      const fa = a.art === 'FI', fb = b.art === 'FI';
+      const eins = (fa || fb) && (fa || nurTaste(a)) && (fb || nurTaste(b)) && !(a.marke && b.marke) &&
+                   b.xm - a.xm < 1.6 * te && b.x0 - a.x1 < te;
+      if(!eins){ i++; continue; }
+      const anker = a.anker.concat(b.anker);
+      const g = {x0: Math.min(a.x0, b.x0), x1: Math.max(a.x1, b.x1), y0: Math.min(a.y0, b.y0), y1: Math.max(a.y1, b.y1),
+                 xm: anker.reduce((s, x) => s + mx(x), 0) / anker.length, marke: a.marke || b.marke, anker,
+                 hinweise: a.hinweise.concat(b.hinweise), art: 'FI', zusammen: true};
+      g.ym = (g.y0 + g.y1) / 2;
+      g.aufdruck = aufdruck('FI', anker.map(x => x.w.text));
+      r.geraete.splice(i, 2, g);
+    }
+  });
   return {h, te, reihen: reihen.map(r => ({y: r.ym, te, geraete: r.geraete}))};
 }
 

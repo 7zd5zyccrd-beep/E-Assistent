@@ -10,6 +10,13 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.113 28.09.2026 SAM (Beta): ein FI belegt mindestens zwei Plaetze. Zwei
+                    gleiche FI-Zeilen mit aufeinanderfolgenden einzelnen
+                    Nummern (18, 19) werden zu einem Eintrag 18-19
+                    zusammengefasst, ein FI auf nur einer Nummer wird
+                    markiert - beides mit Hinweis in der Zeile. Geraete-
+                    erkennung auf Werkstatt-Stand v0.5: ein FI wird nicht
+                    mehr in zwei Geraete zerlegt (Prueftaste rechts).
   v1.112 28.09.2026 SAM (Beta): sam.html auf Werkstatt-Stand v0.46. Eine
                     sauber gelesene Nummer, die ueber leere Plaetze springt
                     (9 -> 18), bleibt stehen, wenn die naechste Zeile weiter-
@@ -1000,6 +1007,7 @@ main{flex:1 0 auto;display:flex;flex-direction:column;padding:var(--pad);padding
 .sam-zeile .zw{background:var(--sig-bg);border-radius:3px;padding:0 3px;box-shadow:inset 0 -2px 0 var(--signal)}
 .sam-zeile .geraet{font-family:var(--f-data);font-size:12px;color:var(--ink-soft);text-align:right;flex:0 0 auto;max-width:40%}
 .sam-zeile .geraet .vt{display:block;font-size:11px;margin-top:2px}
+.sam-zeile .body .hw{font-style:italic;color:var(--ink-soft);white-space:normal;overflow:visible;text-overflow:clip}
 .sam-lesung .vt-zeile{display:block}
 .sam-edit{border:1px solid var(--line);border-left:5px solid var(--ink);border-radius:var(--r);
   padding:12px;margin:-4px 0 12px;background:var(--surface)}
@@ -2648,7 +2656,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.112';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.113';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 28.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -7307,7 +7315,36 @@ function samZeilen(reihen){
   /* Nach Nummer ordnen, wenn alle eine tragen – bei zwei Spalten auf dem Blatt
      (Münch) kommt ein nachgetragener Kreis sonst mitten in die Liste. */
   if(rs.every(z => samNummer(z.nr))) rs.sort((a, b) => samNummer(a.nr).start - samNummer(b.nr).start);
+  samFiPlaetze(rs);
   return rs;
+}
+/* v1.113 (Jean, eigener Verteiler: zweipoliger FI auf 18 und 19, auf dem
+   Blatt zwei Zeilen "Fehlerstromschutzschalter"): ein FI belegt immer
+   mindestens zwei Plätze – in allen Musterlösungen der Werkstatt 2 oder 4 TE.
+   Zwei gleiche FI-Zeilen mit aufeinanderfolgenden einzelnen Nummern sind
+   deshalb ein Gerät und werden zu "18–19" zusammengefasst; ein einzelner FI
+   auf nur einer Nummer wird zum Prüfen markiert. Beides bleibt sichtbar
+   (Nummer bernsteinfarben, Hinweis in der Zeile). */
+function samFiPlaetze(rs){
+  for(let i = 0; i + 1 < rs.length; i++){
+    const a = rs[i], b = rs[i + 1];
+    if(a.geraet !== 'rcd' || b.geraet !== 'rcd') continue;
+    const na = samNummer(a.nr), nb = samNummer(b.nr);
+    if(!na || !nb || na.te !== 1 || nb.te !== 1 || nb.start !== na.start + 1) continue;
+    if(samNorm(a.bez) !== samNorm(b.bez) || (a.ort && b.ort && a.ort !== b.ort)) continue;
+    a.nr = na.start + '–' + nb.start;
+    a.ort = a.ort || b.ort; a.sich = a.sich || b.sich;
+    a.zweifel.nr = true;
+    a.hinweis = `aus ${na.start} und ${nb.start} zusammengefasst – ein FI belegt mindestens 2 Plätze`;
+    rs.splice(i + 1, 1);
+  }
+  rs.forEach(z => {
+    const n = samNummer(z.nr);
+    if(z.geraet === 'rcd' && !z.hinweis && n && n.te === 1){
+      z.zweifel.nr = true;
+      z.hinweis = 'ein FI belegt mindestens 2 Plätze – Nummer prüfen';
+    }
+  });
 }
 const samZweifelZahl = rs => (rs || []).filter(z => !z.uebernommen && Object.values(z.zweifel || {}).some(Boolean)).length;
 const samOffenZahl   = l => l && l.ok && l.reihen ? l.reihen.filter(z => !z.uebernommen).length : 0;
@@ -7427,7 +7464,7 @@ function renderSamListe(){
     const kopf = `<button class="list-item sam-zeile ${Object.values(z.zweifel).some(Boolean) ? 'state-yellow' : ''}" data-i="${i}" type="button">
         <span class="no">${f(z.nr || '–', z.zweifel.nr)}</span>
         <span class="body"><span class="t">${f(z.bez || '—', z.zweifel.bez)}</span>
-          <span class="s">${f(z.ort, z.zweifel.ort)}</span></span>
+          <span class="s">${f(z.ort, z.zweifel.ort)}</span>${z.hinweis ? `<span class="s hw">${esc(z.hinweis)}</span>` : ''}</span>
         <span class="geraet">${f(samGeraetText(z), z.zweifel.sich || z.zweifel.geraet)}${samVtText(z, l)}</span></button>`;
     if(samOffen !== i) return kopf;
     const opt = Object.entries(SAM_GERAETE).map(([k, t]) => `<option value="${k}"${z.geraet === k ? ' selected' : ''}>${t}</option>`).join('');
@@ -7476,6 +7513,7 @@ function samZeileSichern(){
   z.special = z.geraet === 'other' ? $('#seSp').value : '';
   z.zweifel = {nr:false, bez:false, ort:false, sich:false, geraet:false};
   z.geprueft = true;
+  delete z.hinweis;
   if(z.sichVt && z.vt && z.sich !== samAufdruckText((z.verteiler || {}).aufdruck)) delete z.sichVt;
   delete z.vt;                                          // bestätigt: der Abgleich nimmt nichts mehr zurück
   saveProj();
