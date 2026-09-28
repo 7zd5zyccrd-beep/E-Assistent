@@ -1,7 +1,14 @@
 <!DOCTYPE html>
 <!--
   SAM · Geräte auf dem Verteilerfoto
-  v0.5 · 28.09.2026
+  v0.6 · 28.09.2026
+
+  v0.6: schneller über mehrere Kerne. Die Kacheln sind voneinander
+  unabhängig; sie gehen jetzt an 2-3 Hintergrundprozesse (Web Worker) mit je
+  eigener Erkennung statt nacheinander durch eine. Geht das nicht (alter
+  Browser, Fehler beim Laden), liest die Seite wie bisher allein. Dazu meldet
+  die Seite den Fortschritt als Anteil (für die Anzeige in der App) und womit
+  gerechnet wird (WebGPU oder WASM, Zahl der Prozesse).
 
   v0.5: ein FI wird nicht mehr in zwei Geräte zerlegt. Links stehen Marke,
   Typ und Nennwerte ("ABB F202 A 25A 0,03A"), rechts Prüftaste und
@@ -48,12 +55,12 @@
 </script>
 </head>
 <body>
-<h1>SAM · Geräte <span class="ver">v0.5 · 28.09.2026</span></h1>
+<h1>SAM · Geräte <span class="ver">v0.6 · 28.09.2026</span></h1>
 <p><button id="start">Erkennung laden</button> <input type="file" id="datei" accept="image/*" disabled></p>
 <pre id="aus"></pre>
 
 <script type="module">
-const VERSION = 'v0.5 · 28.09.2026';
+const VERSION = 'v0.6 · 28.09.2026';
 const WEGE = [
   'https://esm.sh/ppu-paddle-ocr/web?external=onnxruntime-web',
   'https://esm.sh/ppu-paddle-ocr/web',
@@ -61,6 +68,10 @@ const WEGE = [
 ];
 let dienst = null;
 async function starte(){
+  if((await helferStarten()).length) return;
+  await starteAllein();
+}
+async function starteAllein(){
   if(dienst) return;
   let Sdk = null, fehler = [];
   for(const u of WEGE){
@@ -96,6 +107,79 @@ function schwelleNachruesten(){
   }catch(e){ schwelleStand = 'nicht nachrüstbar (' + e.message + ')'; }
 }
 
+/* ==================== Mehrere Kerne (v0.6) ====================
+   Jeder Hintergrundprozess lädt die Bibliothek selbst (ohne Importmap, daher
+   die Wege ohne "external"), rüstet die Kartenschwelle nach und liest
+   Kacheln, die als ImageBitmap kommen. Zurück gehen fertige Wörter. */
+const HELFER_CODE = `
+const WEGE = ['https://esm.sh/ppu-paddle-ocr/web?deps=onnxruntime-web@1.23.0', 'https://cdn.jsdelivr.net/npm/ppu-paddle-ocr/+esm'];
+let dienst = null, KARTEN_SCHWELLE = 0.3;
+${woerterAusText()}
+async function starte(){
+  let Sdk = null, fehler = [];
+  for(const u of WEGE){
+    try{ const m = await import(u); Sdk = m.PaddleOcrService || (m.default && m.default.PaddleOcrService); if(Sdk) break; }
+    catch(e){ fehler.push(e.message); }
+  }
+  if(!Sdk) throw new Error('Bibliothek nicht geladen: ' + fehler.join(' | '));
+  dienst = new Sdk({debugging:{verbose:false}});
+  await dienst.initialize();
+  let p = dienst.detector ? Object.getPrototypeOf(dienst.detector) : null;
+  while(p && !Object.prototype.hasOwnProperty.call(p, 'runInference')) p = Object.getPrototypeOf(p);
+  if(p && !p.__samSchwelle){
+    const alt = p.runInference;
+    p.runInference = async function(){
+      const d = await alt.apply(this, arguments);
+      if(d && KARTEN_SCHWELLE > 0){ for(let i = 0; i < d.length; i++) if(d[i] < KARTEN_SCHWELLE) d[i] = 0; }
+      return d;
+    };
+    p.__samSchwelle = true;
+  }
+  return ((dienst.options && dienst.options.session && dienst.options.session.executionProviders) || []).map(x => typeof x === 'string' ? x : x.name).join('+');
+}
+self.onmessage = async e => {
+  const d = e.data;
+  try{
+    if(d.art === 'start'){ KARTEN_SCHWELLE = d.schwelle; self.postMessage({id: d.id, ok: true, rechner: await starte()}); return; }
+    const c = new OffscreenCanvas(d.bild.width, d.bild.height);
+    c.getContext('2d').drawImage(d.bild, 0, 0); d.bild.close();
+    const erg = await dienst.recognize(c, {noCache: true});
+    self.postMessage({id: d.id, ok: true, woerter: woerterAus(erg, d.x, d.y)});
+  }catch(err){ self.postMessage({id: d.id, ok: false, fehler: String(err && err.message || err)}); }
+};`;
+function woerterAusText(){ return woerterAus.toString(); }
+let helfer = null, helferStand = 'allein';
+async function helferStarten(){
+  if(helfer !== null) return helfer;
+  helfer = [];
+  /* auf Telefon und Tablet höchstens 2 - jeder Prozess hält ein eigenes
+     Modell im Speicher, und iOS beendet eine Seite, die zu viel braucht */
+  const mobil = /iPhone|iPad|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent));
+  const n = Math.max(1, Math.min(mobil ? 2 : 3, (navigator.hardwareConcurrency || 2) - 1));
+  if(n < 2 || typeof Worker === 'undefined' || typeof OffscreenCanvas === 'undefined' || window.__alleinLesen) return helfer;
+  try{
+    const url = URL.createObjectURL(new Blob([HELFER_CODE], {type: 'text/javascript'}));
+    const alle = [];
+    for(let i = 0; i < n; i++){
+      const w = new Worker(url, {type: 'module'});
+      const h = {w, n: 0, offen: new Map()};
+      w.onmessage = e => { const o = h.offen.get(e.data.id); if(o){ h.offen.delete(e.data.id); o(e.data); } };
+      w.onerror = e => { h.offen.forEach(o => o({ok: false, fehler: e.message || 'Worker'})); h.offen.clear(); };
+      h.frage = (d, uebergabe) => new Promise(res => { const id = ++h.n; h.offen.set(id, res); w.postMessage(Object.assign({id}, d), uebergabe || []); });
+      alle.push(h);
+    }
+    const antworten = await Promise.all(alle.map(h => h.frage({art: 'start', schwelle: KARTEN_SCHWELLE})));
+    if(antworten.every(a => a.ok)){ helfer = alle; helferStand = n + ' Prozesse, ' + (antworten[0].rechner || '?'); schwelleStand = 'Schwelle ' + KARTEN_SCHWELLE + ' (je Prozess)'; }
+    else { alle.forEach(h => h.w.terminate()); helferStand = 'allein (' + (antworten.find(a => !a.ok).fehler || '') + ')'; }
+  }catch(e){ helferStand = 'allein (' + e.message + ')'; }
+  return helfer;
+}
+function rechnerText(){
+  if(helfer && helfer.length) return helferStand;
+  const eps = dienst && dienst.options && dienst.options.session && dienst.options.session.executionProviders;
+  return '1 Prozess, ' + ((eps || []).map(x => typeof x === 'string' ? x : x.name).join('+') || '?') + (helferStand !== 'allein' ? ' · ' + helferStand : '');
+}
+
 /* ==================== Lesen ==================== */
 /* Kacheln von 1200 Punkten mit 25 % Überlappung aus dem Original (höchstens
    4032 lang). Die Erkennung verkleinert intern; eine Kachel bleibt dabei nah
@@ -115,17 +199,43 @@ function woerterAus(erg, dx, dy){
   });
   return raus;
 }
-async function kachelnLesen(bild){
+async function kachelnLesen(bild, fortschritt){
   const K = window.__kachel || 1200, U = Math.round(K / 4), alle = [];
   const xs = [], ys = [];
   for(let x = 0; ; x += K - U){ xs.push(Math.min(x, Math.max(0, bild.width - K))); if(x + K >= bild.width) break; }
   for(let y = 0; ; y += K - U){ ys.push(Math.min(y, Math.max(0, bild.height - K))); if(y + K >= bild.height) break; }
-  for(const y of ys) for(const x of xs){
-    const c = document.createElement('canvas');
-    c.width = Math.min(K, bild.width); c.height = Math.min(K, bild.height);
-    c.getContext('2d').drawImage(bild, x, y, c.width, c.height, 0, 0, c.width, c.height);
-    const erg = await dienst.recognize(c, {noCache: true});
-    alle.push(...woerterAus(erg, x, y).map(w => Object.assign(w, {kachel: x + ',' + y})));
+  const kacheln = [];
+  for(const y of ys) for(const x of xs) kacheln.push({x, y});
+  const bw = Math.min(K, bild.width), bh = Math.min(K, bild.height);
+  let fertig = 0;
+  const melde = () => { fertig++; if(fortschritt) fortschritt(fertig / kacheln.length); };
+  if(helfer && helfer.length){
+    /* v0.6: jeder Prozess holt sich die nächste freie Kachel; die Wörter
+       kommen danach in der alten Reihenfolge zusammen, damit das Ergebnis
+       nicht von der Laufzeit abhängt */
+    const je = new Array(kacheln.length);
+    let naechste = 0;
+    await Promise.all(helfer.map(async h => {
+      while(naechste < kacheln.length){
+        const i = naechste++, k = kacheln[i];
+        const b = await createImageBitmap(bild, k.x, k.y, bw, bh);
+        const a = await h.frage({art: 'lesen', bild: b, x: k.x, y: k.y}, [b]);
+        if(!a.ok) throw new Error(a.fehler);
+        je[i] = a.woerter.map(w => Object.assign(w, {kachel: k.x + ',' + k.y}));
+        melde();
+      }
+    }));
+    je.forEach(w => alle.push(...w));
+  } else {
+    if(!dienst){ helfer = []; await starteAllein(); }
+    for(const k of kacheln){
+      const c = document.createElement('canvas');
+      c.width = bw; c.height = bh;
+      c.getContext('2d').drawImage(bild, k.x, k.y, c.width, c.height, 0, 0, c.width, c.height);
+      const erg = await dienst.recognize(c, {noCache: true});
+      alle.push(...woerterAus(erg, k.x, k.y).map(w => Object.assign(w, {kachel: k.x + ',' + k.y})));
+      melde();
+    }
   }
   /* Doppelte aus der Überlappung: liegt die Mitte eines Kastens in einem
      anderen, bleibt der sicherere und bei Gleichstand der längere */
@@ -325,8 +435,9 @@ function geraeteFinden(woerter){
   return {h, te, reihen: reihen.map(r => ({y: r.ym, te, geraete: r.geraete}))};
 }
 
-async function lies(blob){
+async function lies(blob, fortschritt){
   await starte();
+  const melde = fortschritt || (() => {});
   const t0 = performance.now();
   const bm = await createImageBitmap(blob, {imageOrientation: 'from-image'});
   /* v0.3: kleine Fotos (900 × 1600, weitergeleitet über einen Messenger)
@@ -336,7 +447,7 @@ async function lies(blob){
   const c = document.createElement('canvas');
   c.width = Math.round(bm.width * f); c.height = Math.round(bm.height * f);
   { const k = c.getContext('2d'); k.imageSmoothingQuality = 'high'; k.drawImage(bm, 0, 0, c.width, c.height); }
-  let woerter = await kachelnLesen(c);
+  let woerter = await kachelnLesen(c, f => melde(0.8 * f));
   let g = geraeteFinden(woerter);
   /* v0.3: zweiter Durchgang, vergrößert. Ist die Schrift der Geräte kleiner
      als etwa 30 Punkte (Foto aus Abstand, IMG_6615: 23), wird der Bereich,
@@ -354,19 +465,20 @@ async function lies(blob){
     g2.width = Math.round((x1 - x0) * f); g2.height = Math.round((y1 - y0) * f);
     const k2 = g2.getContext('2d'); k2.imageSmoothingQuality = 'high';
     k2.drawImage(c, x0, y0, x1 - x0, y1 - y0, 0, 0, g2.width, g2.height);
-    const w2 = (await kachelnLesen(g2)).map(w => Object.assign(w, {x0: x0 + w.x0 / f, x1: x0 + w.x1 / f, y0: y0 + w.y0 / f, y1: y0 + w.y1 / f}));
+    const w2 = (await kachelnLesen(g2, f => melde(0.8 + 0.2 * f))).map(w => Object.assign(w, {x0: x0 + w.x0 / f, x1: x0 + w.x1 / f, y0: y0 + w.y0 / f, y1: y0 + w.y1 / f}));
     woerter = zusammenfuehren(woerter.concat(w2));
     g = geraeteFinden(woerter);
     nachlese = 'Bereich ' + Math.round(x1 - x0) + ' × ' + Math.round(y1 - y0) + ' um ' + f.toFixed(1) + ' vergrößert, ' + w2.length + ' Wörter';
   }
-  return {version: VERSION, nachlese, h: Math.round(g.h || 0), te: Math.round(g.te || 0), dauer: (performance.now() - t0) / 1000, breite: c.width, hoehe: c.height,
+  melde(1);
+  return {version: VERSION, rechner: rechnerText(), nachlese, h: Math.round(g.h || 0), te: Math.round(g.te || 0), dauer: (performance.now() - t0) / 1000, breite: c.width, hoehe: c.height,
           woerter, reihen: g.reihen.map(r => ({y: Math.round(r.y), te: Math.round(r.te),
             geraete: r.geraete.map(x => ({art: x.art, aufdruck: x.aufdruck || '', marke: x.marke, x0: Math.round(x.x0), x1: Math.round(x.x1), y0: Math.round(x.y0), y1: Math.round(x.y1),
               anker: (x.anker || []).map(a => [a.w.text, Math.round(a.w.x0), Math.round(a.w.y0), Math.round(a.w.x1), Math.round(a.w.y1)]),
               hinweise: x.hinweise.map(h => h.text)}))}))};
 }
 
-window.__geraete = {starte, lies, version: VERSION, schwelle: v => { KARTEN_SCHWELLE = v; }, stand: () => schwelleStand};
+window.__geraete = {starte, lies, version: VERSION, schwelle: v => { KARTEN_SCHWELLE = v; }, stand: () => schwelleStand + ' · ' + rechnerText()};
 document.getElementById('start').onclick = async () => {
   document.getElementById('aus').textContent = 'lädt …';
   try{ await starte(); document.getElementById('datei').disabled = false; document.getElementById('aus').textContent = 'bereit'; }
@@ -378,7 +490,7 @@ document.getElementById('datei').onchange = async e => {
   const r = await lies(d);
   document.getElementById('aus').textContent = r.reihen.map((x, i) =>
     'Reihe ' + (i + 1) + ': ' + x.geraete.map(g => g.art + (g.aufdruck ? ' ' + g.aufdruck : '') + (g.marke ? ' (' + g.marke + ')' : '')).join(' · ')).join('\n') +
-    '\n\n' + r.dauer.toFixed(1) + ' s';
+    '\n\n' + r.dauer.toFixed(1) + ' s · ' + r.rechner;
 };
 
 /* ==================== Einbettung in den E-Assistenten (v0.4) ====================
@@ -398,10 +510,11 @@ if(new URLSearchParams(location.search).has('einbettung') && window.parent !== w
         if(!dienst){ antwort({stand:'Geräteerkennung wird geladen'}); await starte(); }
         if(d.sam === 'vorbereiten'){ antwort({bereit:true}); return; }
         antwort({stand:'Verteiler wird gelesen'});
-        const r = await lies(d.bild);
+        let zuletzt = -1;
+        const r = await lies(d.bild, a => { const p = Math.round(a * 100); if(p !== zuletzt){ zuletzt = p; antwort({stand: 'Verteiler wird gelesen', anteil: a}); } });
         const reihen = r.reihen.map(x => ({geraete: x.geraete.map(g => ({art: g.art, aufdruck: g.aufdruck, marke: g.marke,
           x0: g.x0, x1: g.x1, y0: g.y0, y1: g.y1, texte: g.anker.map(a => a[0])}))}));
-        antwort({fertig:true, ok: reihen.some(x => x.geraete.length), reihen, h: r.h, te: r.te,
+        antwort({fertig:true, ok: reihen.some(x => x.geraete.length), reihen, h: r.h, te: r.te, rechner: r.rechner,
                  breite: r.breite, hoehe: r.hoehe, dauer: r.dauer, nachlese: r.nachlese});
       }catch(err){ antwort({fertig:true, ok:false, fehler: (err && err.message) ? err.message : String(err)}); }
     });
