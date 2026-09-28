@@ -1,7 +1,16 @@
 <!DOCTYPE html>
 <!--
   PaddleOCR-Test · Verteilerbeschreibung
-  v0.45 · 26.09.2026
+  v0.46 · 28.09.2026
+
+  v0.46: eine sauber gelesene Nummer, die weiter springt, bleibt stehen,
+  wenn die nächste Zeile den Sprung fortsetzt (Jean, 28.09.2026, eigener
+  Verteiler: FI auf 18 und 19 nach 1-9, die Plätze dazwischen leer). Bisher
+  wurde zuerst in Ziffernverwechslungen gesucht, ob sich die erwartete
+  Nummer ergibt - aus "18" wurde über 8->0 die erwartete 10, aus "19" über
+  9->3 die 13. Setzt die nächste Zeile den Sprung nicht fort ("71" statt
+  11, danach 12), bleibt es bei der Verwechslung. Grundsatz (Jean): bei
+  Unsicherheit steht die Regel erst nach Abwägung der Beweise, nicht davor.
 
   v0.45: die abgedeckten Kreise am FI stehen einheitlich als "(für 18–23)"
   (Jean, 26.09.2026) - statt "Stromkreis 18–23" oder wörtlich "für 5–8".
@@ -820,7 +829,7 @@ pre.abgleich.gut{background:#EAF5DC;border-color:#8FBE36}
 
   <header>
     <h1>PaddleOCR-Test · Verteilerbeschreibung</h1>
-    <span class="ver">v0.45 · 26.09.2026</span>
+    <span class="ver">v0.46 · 28.09.2026</span>
   </header>
 
   <div class="karte">
@@ -995,7 +1004,7 @@ const MODELLE = {
   latin: {name:'v5 lateinisch',  konstante:'V5_LATIN_MOBILE_MODEL'}
 };
 
-const VERSION = 'v0.45 · 26.09.2026';
+const VERSION = 'v0.46 · 28.09.2026';
 
 /* ==================== Schrittliste ==================== */
 
@@ -2660,7 +2669,7 @@ function versuche(t, erwartet){
 
 /* Stromkreisnummern laufen aufsteigend und lückenlos. Trifft eine spätere
    Nummer, fehlt dazwischen eine Zeile – das wird gemeldet statt verschoben. */
-function nummerDeuten(roh, erwartet){
+function nummerDeuten(roh, erwartet, sprung){
   /* v0.33: Gerätekennung statt Kreisnummer (Wohnungsverteiler: "Q1 FI-Schalter
      für Stromkreis 9 und 10") - bleibt als Nummer stehen, zählt aber nicht in
      der Folge mit. Jean, 25.09.2026: Q1 wird die Nummer. */
@@ -2682,6 +2691,16 @@ function nummerDeuten(roh, erwartet){
      2 näher an der erwarteten 1 liegt und 3↔2 als Verwechslung gilt. */
   const genau = zerlege(t);
   if(genau && genau.a >= erwartet && genau.a <= erwartet + 4 && genau.b >= genau.a){
+    erg.a = genau.a; erg.b = genau.b; erg.text = schreibe(genau);
+    erg.luecke = genau.a - erwartet;
+    return erg;
+  }
+  /* v0.46 (Jean, 28.09.2026): steht in der Zelle sauber eine Zahl, die weiter
+     springt, ist das ein Sprung über leere Plätze - kein Lesefehler. Vorher
+     lief erst die Suche nach Verwechslungen und machte aus "18" (8->0) die
+     erwartete 10 und aus der folgenden "19" (9->3) die 13. Ob der Sprung gilt,
+     entscheidet der Aufrufer mit der nächsten Zeile (sprungBestaetigt). */
+  if(sprung && genau && genau.a > erwartet + 4 && genau.b >= genau.a && /^[\d\s\-–—\/]+$/.test((roh || '').trim())){
     erg.a = genau.a; erg.b = genau.b; erg.text = schreibe(genau);
     erg.luecke = genau.a - erwartet;
     return erg;
@@ -5477,6 +5496,16 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
   }
   const klammerZeilen = {};
 
+  const sprungBestaetigt = function(lk, b){
+    for(let k = lk + 1; k < reihenListe.length; k++){
+      const zk = reihenListe[k].zi;
+      if(zk < 0) continue;
+      const roh = (nr[zk].text || '').trim();
+      const zz = /^[\d\s\-–—\/]+$/.test(roh) ? zerlege(nurNummer(roh)) : null;
+      return !!zz && zz.a === b + 1;
+    }
+    return false;
+  };
   reihenListe.forEach(function(eintrag, lk){
     const zi = eintrag.zi, r = eintrag.r;
     let n;
@@ -5503,6 +5532,13 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
       const z = nr[zi];
       n = nach ? nummerDeuten(z.text, erwartet)
                : {text: saeubern(z.text) || '—', roh:z.text, geaendert:false, unklar:false, luecke:0, b:null};
+      /* v0.46: aus einer sauberen Zahl wurde über eine Verwechslung die
+         erwartete Nummer - gilt stattdessen der Sprung, wenn die nächste
+         Zeile genau dort weiterzählt (18 → 19), nicht bei der erwarteten */
+      if(nach && n.geaendert){
+        const sp = nummerDeuten(z.text, erwartet, true);
+        if(typeof sp.b === 'number' && sp.a !== n.a && sprungBestaetigt(lk, sp.b)) n = sp;
+      }
       n.herkunft = n.geaendert ? 'korrigiert' : 'gelesen';
     } else n = null;   /* v0.33: erst nach dem Inhalt entscheiden, siehe unten */
 
