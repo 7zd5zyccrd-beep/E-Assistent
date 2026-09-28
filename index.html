@@ -10,6 +10,12 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.118 28.09.2026 SAM (Beta): Speicher auf dem iPhone. Ist die Beschreibung
+                    gelesen, wird ihre Erkennung freigegeben (Neu lesen laedt
+                    sie wieder). Geraeteerkennung auf Werkstatt-Stand v0.9:
+                    die Hintergrundprozesse starten erst beim Lesen und enden
+                    danach; reicht der Speicher nicht, steht "1 Prozess
+                    (Speicher knapp)" statt der Fehlermeldung.
   v1.117 28.09.2026 SAM (Beta): die Karten "Als Eintrag aufnehmen" unter der
                     Pruefliste sind wieder entfernt (Jean). Geraeteerkennung
                     auf Werkstatt-Stand v0.8: an Kachelraendern abgeschnittene
@@ -2705,7 +2711,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.117';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.118';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 28.09.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6755,6 +6761,7 @@ $('#samNeuLesen').onclick = async () => {
   if(!fid) return;
   const P = PROJ, blob = await samFotoBlob(fid);
   if(!blob){ toast('Das Foto liegt nicht auf diesem Gerät'); return; }
+  SAM_LESER.frei = false;
   samLesen(P, fid, blob, P.samTid || null, true);
   /* v1.111: das Verteilerfoto gleich mit, danach wird neu verknüpft */
   const gid = P.sam && P.sam.verteiler;
@@ -6782,11 +6789,12 @@ $('#samFile').onchange = async e => {
   PROJ.sam[art] = eintrag.fid;
   saveProj();
   renderSam();
-  if(art === 'beschreibung') samLesen(PROJ, eintrag.fid, datei, tidP);
+  if(art === 'beschreibung'){ SAM_LESER.frei = false; samLesen(PROJ, eintrag.fid, datei, tidP); }
   if(art === 'verteiler') samGeraeteLesen(PROJ, eintrag.fid, datei, tidP);
 };
 function renderSam(){
   if(!PROJ) return;
+  if(!(PROJ.sam || {}).beschreibung) SAM_LESER.frei = false;   // neues Blatt: wieder vorladen
   samVorbereiten();
   const sam = PROJ.sam || {};
   const dran = SAM_ARTEN.find(a => !sam[a]);
@@ -7138,7 +7146,7 @@ async function samAnfrage(art, bild, stand, L){
 /* Beim Öffnen der Ansicht schon laden – bis das erste Foto im Kasten ist,
    steht das Modell meist bereit. Fehler zeigt erst das Lesen. */
 function samVorbereiten(){
-  if(SAM_LESER.vorbereitet) return;
+  if(SAM_LESER.vorbereitet || SAM_LESER.frei) return;
   SAM_LESER.vorbereitet = true;
   samAnfrage('vorbereiten').catch(() => { SAM_LESER.vorbereitet = false; });
 }
@@ -7220,8 +7228,19 @@ async function samLesen(P, fid, datei, tidP, nochmal){
   trainingLesungMerken(tidP, lesung);
   if(tidP) P.samTid = await tidP;
   if(nochmal) toast(d.ok ? `Neu gelesen mit SAM ${(d.version || '').split(' ')[0]}` : 'SAM konnte das Foto nicht lesen');
+  samLeserFreigeben(SAM_LESER);
   samAnsicht();
   samListeAuffrischen(P);
+}
+/* v1.118 (Jean, iPhone: "Out of memory" beim Start der Geräteerkennung):
+   ist die Beschreibung gelesen, wird ihre Erkennung freigegeben – das
+   unsichtbare Fenster verschwindet samt Modell und Rechenspeicher. Neu lesen
+   lädt sie wieder. */
+function samLeserFreigeben(L){
+  if(!L.frame || L.wartend.size) return;
+  if(L.huelle) L.huelle.remove();
+  L.frame = null; L.huelle = null; L.geladen = null;
+  L.vorbereitet = false; L.frei = true;
 }
 
 /* --- Verteilerfoto (v1.111) ------------------------------------------------------
@@ -7246,7 +7265,8 @@ async function samGeraeteLesen(P, fid, datei, tidP, nochmal){
   samVerknuepfen(P);
   if(P === PROJ) saveProj(); else { saveProjects(); fbProjHoch(P); }
   trainingNachtrag(tidP, 'geraete', {version: d.version || '', zeit: Date.now(), ok: !!d.ok, fehler: d.fehler || '',
-    reihen: d.reihen || [], h: d.h || 0, te: d.te || 0, dauer: d.dauer || 0, nachlese: d.nachlese || ''});
+    reihen: d.reihen || [], h: d.h || 0, te: d.te || 0, dauer: d.dauer || 0, nachlese: d.nachlese || '',
+    rechner: d.rechner || '', rechnerFehler: d.rechnerFehler || ''});
   if(tidP) P.samGeraeteTid = await tidP;
   if(nochmal) toast(d.ok ? `Verteiler neu gelesen (${(d.version || '').split(' ')[0]})` : 'SAM konnte den Verteiler nicht lesen');
   samAnsicht();

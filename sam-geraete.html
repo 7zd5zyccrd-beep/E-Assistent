@@ -1,7 +1,15 @@
 <!DOCTYPE html>
 <!--
   SAM · Geräte auf dem Verteilerfoto
-  v0.8 · 28.09.2026
+  v0.9 · 28.09.2026
+
+  v0.9: Speicher. Auf Jeans iPhone meldete iOS beim Start der Hinter-
+  grundprozesse "Out of memory" - neben der Erkennung der Beschreibung war
+  für zwei weitere Erkennungen kein Platz. Die Prozesse starten jetzt erst
+  beim Lesen und werden danach beendet; "vorbereiten" lädt nur Bibliothek,
+  Modell und Rechenkern in den Zwischenspeicher, ohne Rechenspeicher zu
+  belegen. Reicht der Speicher nicht, liest die Seite allein und meldet
+  "1 Prozess (Speicher knapp)".
 
   v0.8: an Kachelrändern abgeschnittene Wörter verlieren gegen vollständige
   (ein Randwort, das in einem überlappenden längeren Wort enthalten ist).
@@ -69,12 +77,12 @@
 </script>
 </head>
 <body>
-<h1>SAM · Geräte <span class="ver">v0.8 · 28.09.2026</span></h1>
+<h1>SAM · Geräte <span class="ver">v0.9 · 28.09.2026</span></h1>
 <p><button id="start">Erkennung laden</button> <input type="file" id="datei" accept="image/*" disabled></p>
 <pre id="aus"></pre>
 
 <script type="module">
-const VERSION = 'v0.8 · 28.09.2026';
+const VERSION = 'v0.9 · 28.09.2026';
 const WEGE = [
   'https://esm.sh/ppu-paddle-ocr/web?external=onnxruntime-web',
   'https://esm.sh/ppu-paddle-ocr/web',
@@ -125,8 +133,9 @@ function schwelleNachruesten(){
    Jeder Hintergrundprozess lädt die Bibliothek selbst (ohne Importmap, daher
    die Wege ohne "external"), rüstet die Kartenschwelle nach und liest
    Kacheln, die als ImageBitmap kommen. Zurück gehen fertige Wörter. */
+const HELFER_WEGE = ['https://esm.sh/ppu-paddle-ocr/web?deps=onnxruntime-web@1.23.0', 'https://cdn.jsdelivr.net/npm/ppu-paddle-ocr/+esm'];
 const HELFER_CODE = `
-const WEGE = ['https://esm.sh/ppu-paddle-ocr/web?deps=onnxruntime-web@1.23.0', 'https://cdn.jsdelivr.net/npm/ppu-paddle-ocr/+esm'];
+const WEGE = ${JSON.stringify(HELFER_WEGE)};
 let dienst = null, KARTEN_SCHWELLE = 0.3;
 ${woerterAusText()}
 async function starte(){
@@ -162,10 +171,30 @@ self.onmessage = async e => {
   }catch(err){ self.postMessage({id: d.id, ok: false, fehler: String(err && err.message || err)}); }
 };`;
 function woerterAusText(){ return woerterAus.toString(); }
-let helfer = null, helferStand = 'allein';
+let helfer = null, helferStand = 'allein', helferFehler = '';
+/* v0.9: nur Zwischenspeicher füllen - Bibliothek (ohne sie zu starten),
+   Modelle und Rechenkern. Kein Rechenspeicher, keine Prozesse. */
+let vorgeladen = null;
+function vorladen(){
+  if(vorgeladen) return vorgeladen;
+  const M = 'https://huggingface.co/snowfluke/ppu-paddle-ocr-models/resolve/main';
+  const O = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/';
+  const holen = u => fetch(u, {referrerPolicy: 'no-referrer'}).then(r => r.arrayBuffer()).catch(() => null);
+  vorgeladen = Promise.all([
+    import(HELFER_WEGE[0]).catch(() => null),
+    holen(M + '/detection/ort/PP-OCRv6_tiny_det.ort'), holen(M + '/recognition/ort/PP-OCRv6_tiny_rec.ort'),
+    holen(M + '/recognition/ppocrv6_tiny_dict.txt'),
+    holen(O + 'ort-wasm-simd-threaded.jsep.mjs'), holen(O + 'ort-wasm-simd-threaded.jsep.wasm')
+  ]).then(() => true);
+  return vorgeladen;
+}
+function helferBeenden(){
+  if(helfer) helfer.forEach(h => h.w.terminate());
+  helfer = null;
+}
 async function helferStarten(){
   if(helfer !== null) return helfer;
-  helfer = [];
+  helfer = []; helferFehler = '';
   /* auf Telefon und Tablet höchstens 2 - jeder Prozess hält ein eigenes
      Modell im Speicher, und iOS beendet eine Seite, die zu viel braucht */
   const mobil = /iPhone|iPad|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent));
@@ -184,14 +213,15 @@ async function helferStarten(){
     }
     const antworten = await Promise.all(alle.map(h => h.frage({art: 'start', schwelle: KARTEN_SCHWELLE})));
     if(antworten.every(a => a.ok)){ helfer = alle; helferStand = n + ' Prozesse, ' + (antworten[0].rechner || '?'); schwelleStand = 'Schwelle ' + KARTEN_SCHWELLE + ' (je Prozess)'; }
-    else { alle.forEach(h => h.w.terminate()); helferStand = 'allein (' + (antworten.find(a => !a.ok).fehler || '') + ')'; }
-  }catch(e){ helferStand = 'allein (' + e.message + ')'; }
+    else { alle.forEach(h => h.w.terminate()); helferFehler = antworten.find(a => !a.ok).fehler || '?'; }
+  }catch(e){ helferFehler = e.message; }
   return helfer;
 }
 function rechnerText(){
   if(helfer && helfer.length) return helferStand;
   const eps = dienst && dienst.options && dienst.options.session && dienst.options.session.executionProviders;
-  return '1 Prozess, ' + ((eps || []).map(x => typeof x === 'string' ? x : x.name).join('+') || '?') + (helferStand !== 'allein' ? ' · ' + helferStand : '');
+  return '1 Prozess, ' + ((eps || []).map(x => typeof x === 'string' ? x : x.name).join('+') || '?') +
+         (helferFehler ? (/memory|speicher/i.test(helferFehler) ? ' (Speicher knapp)' : ' (Prozesse nicht gestartet)') : '');
 }
 
 /* ==================== Lesen ==================== */
@@ -492,6 +522,10 @@ function geraeteFinden(woerter){
 }
 
 async function lies(blob, fortschritt){
+  try{ return await liesInnen(blob, fortschritt); }
+  finally{ helferBeenden(); }                       // v0.9: Rechenspeicher freigeben
+}
+async function liesInnen(blob, fortschritt){
   await starte();
   const melde = fortschritt || (() => {});
   const t0 = performance.now();
@@ -527,7 +561,7 @@ async function lies(blob, fortschritt){
     nachlese = 'Bereich ' + Math.round(x1 - x0) + ' × ' + Math.round(y1 - y0) + ' um ' + f.toFixed(1) + ' vergrößert, ' + w2.length + ' Wörter';
   }
   melde(1);
-  return {version: VERSION, rechner: rechnerText(), nachlese, h: Math.round(g.h || 0), te: Math.round(g.te || 0), dauer: (performance.now() - t0) / 1000, breite: c.width, hoehe: c.height,
+  return {version: VERSION, rechner: rechnerText(), rechnerFehler: helferFehler, nachlese, h: Math.round(g.h || 0), te: Math.round(g.te || 0), dauer: (performance.now() - t0) / 1000, breite: c.width, hoehe: c.height,
           woerter, reihen: g.reihen.map(r => ({y: Math.round(r.y), te: Math.round(r.te),
             geraete: r.geraete.map(x => ({art: x.art, aufdruck: x.aufdruck || '', marke: x.marke, x0: Math.round(x.x0), x1: Math.round(x.x1), y0: Math.round(x.y0), y1: Math.round(x.y1),
               anker: (x.anker || []).map(a => [a.w.text, Math.round(a.w.x0), Math.round(a.w.y0), Math.round(a.w.x1), Math.round(a.w.y1)]),
@@ -563,14 +597,15 @@ if(new URLSearchParams(location.search).has('einbettung') && window.parent !== w
     const antwort = x => window.parent.postMessage(Object.assign({sam:'antwort', id:d.id, version:VERSION}, x), location.origin);
     laeuft = laeuft.then(async () => {
       try{
-        if(!dienst){ antwort({stand:'Geräteerkennung wird geladen'}); await starte(); }
-        if(d.sam === 'vorbereiten'){ antwort({bereit:true}); return; }
+        if(d.sam === 'vorbereiten'){ await vorladen(); antwort({bereit:true}); return; }
+        antwort({stand:'Geräteerkennung wird geladen'});
+        await vorladen();
         antwort({stand:'Verteiler wird gelesen'});
         let zuletzt = -1;
         const r = await lies(d.bild, a => { const p = Math.round(a * 100); if(p !== zuletzt){ zuletzt = p; antwort({stand: 'Verteiler wird gelesen', anteil: a}); } });
         const reihen = r.reihen.map(x => ({geraete: x.geraete.map(g => ({art: g.art, aufdruck: g.aufdruck, marke: g.marke,
           x0: g.x0, x1: g.x1, y0: g.y0, y1: g.y1, texte: g.anker.map(a => a[0])}))}));
-        antwort({fertig:true, ok: reihen.some(x => x.geraete.length), reihen, h: r.h, te: r.te, rechner: r.rechner,
+        antwort({fertig:true, ok: reihen.some(x => x.geraete.length), reihen, h: r.h, te: r.te, rechner: r.rechner, rechnerFehler: r.rechnerFehler,
                  breite: r.breite, hoehe: r.hoehe, dauer: r.dauer, nachlese: r.nachlese});
       }catch(err){ antwort({fertig:true, ok:false, fehler: (err && err.message) ? err.message : String(err)}); }
     });
