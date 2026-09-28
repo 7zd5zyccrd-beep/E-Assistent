@@ -1,7 +1,15 @@
 <!DOCTYPE html>
 <!--
   SAM · Geräte auf dem Verteilerfoto
-  v0.7 · 28.09.2026
+  v0.8 · 28.09.2026
+
+  v0.8: an Kachelrändern abgeschnittene Wörter verlieren gegen vollständige
+  (ein Randwort, das in einem überlappenden längeren Wort enthalten ist).
+  Jeans Verteiler: zwei gleiche ABB S 261 B 16, rechts fehlte B 16. Lag ein
+  Aufdruck auf einer Kachelgrenze, las die eine Kachel "16", die Nachbar-
+  kachel "B16" - und beim Zusammenführen gewann das sicherer gelesene, oft
+  das abgeschnittene. Je nach Lage im Bild traf es das linke, das rechte
+  oder beide Geräte, aus einem Gerät wurden auch zwei.
 
   v0.7: der Aufdruck wird auch in den Wörtern gesucht, die kein Gerät
   kennzeichnen, aber auf ihm stehen (Jean, eigener Verteiler: ABB F 372 mit
@@ -61,12 +69,12 @@
 </script>
 </head>
 <body>
-<h1>SAM · Geräte <span class="ver">v0.7 · 28.09.2026</span></h1>
+<h1>SAM · Geräte <span class="ver">v0.8 · 28.09.2026</span></h1>
 <p><button id="start">Erkennung laden</button> <input type="file" id="datei" accept="image/*" disabled></p>
 <pre id="aus"></pre>
 
 <script type="module">
-const VERSION = 'v0.7 · 28.09.2026';
+const VERSION = 'v0.8 · 28.09.2026';
 const WEGE = [
   'https://esm.sh/ppu-paddle-ocr/web?external=onnxruntime-web',
   'https://esm.sh/ppu-paddle-ocr/web',
@@ -215,6 +223,11 @@ async function kachelnLesen(bild, fortschritt){
   const bw = Math.min(K, bild.width), bh = Math.min(K, bild.height);
   let fertig = 0;
   const melde = () => { fertig++; if(fortschritt) fortschritt(fertig / kacheln.length); };
+  /* v0.8: berührt ein Wort den Rand einer Kachel, der nicht zugleich Bildrand
+     ist, ist es womöglich abgeschnitten */
+  const rand = (w, k) => { const d = Math.max(3, 0.25 * (w.y1 - w.y0));
+    return (k.x > 0 && w.x0 - k.x <= d) || (k.x + bw < bild.width && k.x + bw - w.x1 <= d) ||
+           (k.y > 0 && w.y0 - k.y <= d) || (k.y + bh < bild.height && k.y + bh - w.y1 <= d); };
   if(helfer && helfer.length){
     /* v0.6: jeder Prozess holt sich die nächste freie Kachel; die Wörter
        kommen danach in der alten Reihenfolge zusammen, damit das Ergebnis
@@ -227,7 +240,7 @@ async function kachelnLesen(bild, fortschritt){
         const b = await createImageBitmap(bild, k.x, k.y, bw, bh);
         const a = await h.frage({art: 'lesen', bild: b, x: k.x, y: k.y}, [b]);
         if(!a.ok) throw new Error(a.fehler);
-        je[i] = a.woerter.map(w => Object.assign(w, {kachel: k.x + ',' + k.y}));
+        je[i] = a.woerter.map(w => Object.assign(w, {kachel: k.x + ',' + k.y, rand: rand(w, k)}));
         melde();
       }
     }));
@@ -239,7 +252,7 @@ async function kachelnLesen(bild, fortschritt){
       c.width = bw; c.height = bh;
       c.getContext('2d').drawImage(bild, k.x, k.y, c.width, c.height, 0, 0, c.width, c.height);
       const erg = await dienst.recognize(c, {noCache: true});
-      alle.push(...woerterAus(erg, k.x, k.y).map(w => Object.assign(w, {kachel: k.x + ',' + k.y})));
+      alle.push(...woerterAus(erg, k.x, k.y).map(w => Object.assign(w, {kachel: k.x + ',' + k.y, rand: rand(w, k)})));
       melde();
     }
   }
@@ -254,10 +267,21 @@ function zusammenfuehren(alle){
      Aufdruck. */
   const hoehen = alle.map(w => w.y1 - w.y0).sort((a, b) => a - b);
   const hm = hoehen[Math.floor(hoehen.length / 2)] || 20;
-  const gut = alle.filter(w => w.y1 - w.y0 < 3 * hm);
-  gut.sort((a, b) => (b.conf - a.conf) || (b.text.length - a.text.length));
+  let gut = alle.filter(w => w.y1 - w.y0 < 3 * hm);
   const raus = [];
   const flaeche = w => (w.x1 - w.x0) * (w.y1 - w.y0);
+  /* v0.8: ein Wort am Kachelrand, das in einem überlappenden, längeren Wort
+     aus einer anderen Kachel ganz enthalten ist, ist dessen abgeschnittenes
+     Stück ("16" in "B16") und fällt weg - gleich wie sicher es gelesen
+     wurde. Nur der Rand allein ist kein Grund: ein vollständiges "S261" am
+     Rand verlor sonst gegen Beifang (IMG_6698.v2). */
+  const ohne = t => t.replace(/\s+/g, '');
+  const deckt = (v, w) => { const ix = Math.min(v.x1, w.x1) - Math.max(v.x0, w.x0), iy = Math.min(v.y1, w.y1) - Math.max(v.y0, w.y0);
+                            return ix > 0 && iy > 0 && ix * iy > 0.5 * Math.min(flaeche(v), flaeche(w)); };
+  const stueck = gut.filter(a => a.rand && gut.some(b => b !== a && !b.rand && b.kachel !== a.kachel &&
+    ohne(b.text).length > ohne(a.text).length && ohne(b.text).includes(ohne(a.text)) && deckt(a, b)));
+  gut = gut.filter(a => !stueck.includes(a));
+  gut.sort((a, b) => (b.conf - a.conf) || (b.text.length - a.text.length));
   for(const w of gut){
     const doppelt = raus.some(v => {
       const ix = Math.min(v.x1, w.x1) - Math.max(v.x0, w.x0), iy = Math.min(v.y1, w.y1) - Math.max(v.y0, w.y0);
@@ -460,6 +484,9 @@ function geraeteFinden(woerter){
   alle.forEach(g => {
     const t = g.anker.map(x => x.w.text);
     g.aufdruck = aufdruck(g.art, t) || aufdruck(g.art, t.concat(g.beiText));
+    /* aus den Nachbarwörtern beim FI nur FI-übliche Nennströme - ein "16A"
+       vom LS daneben ist kein FI-Nennstrom (IMG_8029.v2) */
+    if(g.art === 'FI' && g.aufdruck && !aufdruck(g.art, t) && !/^(25|40|63|80|100|125)A/.test(g.aufdruck)) g.aufdruck = '';
   });
   return {h, te, reihen: reihen.map(r => ({y: r.ym, te, geraete: r.geraete}))};
 }
