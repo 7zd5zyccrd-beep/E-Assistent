@@ -1,7 +1,14 @@
 <!DOCTYPE html>
 <!--
   SAM · Geräte auf dem Verteilerfoto
-  v0.9 · 28.09.2026
+  v1.0 · 30.09.2026
+
+  v1.0: ein Gerät trägt eine Marke. Jeans Verteiler, zwei ABB S 261 B 16
+  nebeneinander: die Marke steht links, die Angaben rechts; "6000" des linken
+  lag weniger als 0,45 TE neben "ABB" des rechten, und beide wurden zu einem
+  Gerät verkettet (nur in manchen Lagen im Bild). Eine Gruppe mit zwei
+  deutlich getrennten Marken (Mitten mehr als 0,6 TE auseinander) wird
+  geteilt; jedes Wort kommt zur Marke, die links von ihm beginnt.
 
   v0.9: Speicher. Auf Jeans iPhone meldete iOS beim Start der Hinter-
   grundprozesse "Out of memory" - neben der Erkennung der Beschreibung war
@@ -77,12 +84,12 @@
 </script>
 </head>
 <body>
-<h1>SAM · Geräte <span class="ver">v0.9 · 28.09.2026</span></h1>
+<h1>SAM · Geräte <span class="ver">v1.0 · 30.09.2026</span></h1>
 <p><button id="start">Erkennung laden</button> <input type="file" id="datei" accept="image/*" disabled></p>
 <pre id="aus"></pre>
 
 <script type="module">
-const VERSION = 'v0.9 · 28.09.2026';
+const VERSION = 'v1.0 · 30.09.2026';
 const WEGE = [
   'https://esm.sh/ppu-paddle-ocr/web?external=onnxruntime-web',
   'https://esm.sh/ppu-paddle-ocr/web',
@@ -436,7 +443,23 @@ function geraeteFinden(woerter){
     });
     if(best) best.push(a); else gruppen.set('L' + gruppen.size, [a]);
   });
-  let geraete = [...gruppen.values()].map(g => {
+  /* v1.0: Gruppen mit zwei Marken teilen (siehe Kopf) */
+  const teile = [];
+  gruppen.forEach(g => {
+    const marken = [];
+    g.filter(a => a.marke).sort((a, b) => mx(a) - mx(b)).forEach(m => {
+      if(!marken.length || mx(m) - mx(marken[marken.length - 1]) > 0.6 * te) marken.push(m);
+    });
+    if(marken.length < 2){ teile.push(g); return; }
+    const stuecke = marken.map(() => []);
+    g.forEach(a => {
+      let i = 0;
+      marken.forEach((m, j) => { if(m.w.x0 <= a.w.x0 + 0.25 * te) i = j; });
+      stuecke[i].push(a);
+    });
+    stuecke.forEach(t => { if(t.length) teile.push(t); });
+  });
+  let geraete = teile.map(g => {
     const x0 = Math.min(...g.map(a => a.w.x0)), x1 = Math.max(...g.map(a => a.w.x1));
     const y0 = Math.min(...g.map(a => a.w.y0)), y1 = Math.max(...g.map(a => a.w.y1));
     return {x0, x1, y0, y1, xm: g.reduce((s, a) => s + mx(a), 0) / g.length, ym: (y0 + y1) / 2,
