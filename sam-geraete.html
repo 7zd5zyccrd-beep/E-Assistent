@@ -1,7 +1,17 @@
 <!DOCTYPE html>
 <!--
   SAM · Geräte auf dem Verteilerfoto
-  v1.0 · 30.09.2026
+  v1.1 · 01.10.2026
+
+  v1.1: Aufdruck der LS (Jean: LS erkannt, aber ohne B 16 - auch in der
+  ersten Reihe). In den Lernsätzen fehlte er bei 41 von 302 LS:
+  "816"/"316" statt B16 (B als 8 oder 3 gelesen), "B" und "16" als zwei
+  Wörter. Neu: 8/3 vor einem üblichen Nennstrom gilt als B; ein einzelnes
+  B/C/K und eine einzelne Stromzahl auf demselben Gerät ergeben zusammen den
+  Aufdruck (unsicher - die App markiert ihn); und baugleiche Geräte im
+  selben Verteiler (gleiche Typnummer, z.B. S261) stützen sich: tragen
+  mindestens zwei sicher denselben Aufdruck und kein anderer, bekommt ein
+  baugleiches Gerät ohne sicheren Aufdruck diesen Wert.
 
   v1.0: ein Gerät trägt eine Marke. Jeans Verteiler, zwei ABB S 261 B 16
   nebeneinander: die Marke steht links, die Angaben rechts; "6000" des linken
@@ -84,12 +94,12 @@
 </script>
 </head>
 <body>
-<h1>SAM · Geräte <span class="ver">v1.0 · 30.09.2026</span></h1>
+<h1>SAM · Geräte <span class="ver">v1.1 · 01.10.2026</span></h1>
 <p><button id="start">Erkennung laden</button> <input type="file" id="datei" accept="image/*" disabled></p>
 <pre id="aus"></pre>
 
 <script type="module">
-const VERSION = 'v1.0 · 30.09.2026';
+const VERSION = 'v1.1 · 01.10.2026';
 const WEGE = [
   'https://esm.sh/ppu-paddle-ocr/web?external=onnxruntime-web',
   'https://esm.sh/ppu-paddle-ocr/web',
@@ -392,6 +402,20 @@ function aufdruck(art, texte){
   return '';
 }
 
+/* v1.1: Nachlese für LS, wenn der Aufdruck nicht zusammenhängend dasteht */
+function lsNachlese(texte){
+  const w = texte.map(x => x.trim());
+  for(const x of w){
+    const m = new RegExp('^[83]\\s?(' + STROM + ')$').exec(x);
+    if(m) return {wert: 'B' + m[1], sicher: true};
+  }
+  const ch = w.find(x => /^[BCK]$/.test(x));
+  const nu = w.map(x => new RegExp('^(' + STROM + ')\\s?A?$').exec(x)).find(Boolean);
+  if(ch && nu) return {wert: ch + nu[1], sicher: false};
+  return {wert: '', sicher: false};
+}
+const typNummer = texte => { for(const x of texte){ const m = /^(S\s?2\d{2}|MBN\s?\d+|NLS\d*)$/i.exec(x.trim()); if(m) return m[1].replace(/\s/g, '').toUpperCase(); } return ''; };
+
 /* v0.2: Geräte zuerst, Reihen danach. Die Aufdrucke eines Geräts stehen
    übereinander (oben "S 261 B16", unten "6000", beim legrand die Marke
    unten) - als Reihen gezählt, zerfiel eine Hutschiene in zwei (IMG_7038).
@@ -537,9 +561,22 @@ function geraeteFinden(woerter){
   alle.forEach(g => {
     const t = g.anker.map(x => x.w.text);
     g.aufdruck = aufdruck(g.art, t) || aufdruck(g.art, t.concat(g.beiText));
+    g.aufdruckSicher = true;
+    g.typ = typNummer(t.concat(g.beiText));
+    if(g.art === 'LS' && !g.aufdruck){ const n = lsNachlese(t.concat(g.beiText)); g.aufdruck = n.wert; g.aufdruckSicher = n.sicher; }
     /* aus den Nachbarwörtern beim FI nur FI-übliche Nennströme - ein "16A"
        vom LS daneben ist kein FI-Nennstrom (IMG_8029.v2) */
     if(g.art === 'FI' && g.aufdruck && !aufdruck(g.art, t) && !/^(25|40|63|80|100|125)A/.test(g.aufdruck)) g.aufdruck = '';
+  });
+  /* v1.1: baugleiche Geräte stützen sich (siehe Kopf) */
+  const sichere = new Map();
+  alle.forEach(g => { if(g.art === 'LS' && g.typ && g.aufdruck && g.aufdruckSicher){ const k = g.typ + '|' + g.aufdruck; sichere.set(k, (sichere.get(k) || 0) + 1); } });
+  alle.forEach(g => {
+    if(g.art !== 'LS' || !g.typ || (g.aufdruck && g.aufdruckSicher)) return;
+    const werte = [...sichere].filter(([k]) => k.startsWith(g.typ + '|'));
+    if(werte.length !== 1 || werte[0][1] < 2) return;
+    const wert = werte[0][0].split('|')[1];
+    if(!g.aufdruck || g.aufdruck === wert){ g.aufdruck = wert; g.aufdruckSicher = true; g.vonBaugleichen = true; }
   });
   return {h, te, reihen: reihen.map(r => ({y: r.ym, te, geraete: r.geraete}))};
 }
@@ -586,7 +623,7 @@ async function liesInnen(blob, fortschritt){
   melde(1);
   return {version: VERSION, rechner: rechnerText(), rechnerFehler: helferFehler, nachlese, h: Math.round(g.h || 0), te: Math.round(g.te || 0), dauer: (performance.now() - t0) / 1000, breite: c.width, hoehe: c.height,
           woerter, reihen: g.reihen.map(r => ({y: Math.round(r.y), te: Math.round(r.te),
-            geraete: r.geraete.map(x => ({art: x.art, aufdruck: x.aufdruck || '', marke: x.marke, x0: Math.round(x.x0), x1: Math.round(x.x1), y0: Math.round(x.y0), y1: Math.round(x.y1),
+            geraete: r.geraete.map(x => ({art: x.art, aufdruck: x.aufdruck || '', aufdruckSicher: x.aufdruckSicher !== false, vonBaugleichen: !!x.vonBaugleichen, marke: x.marke, x0: Math.round(x.x0), x1: Math.round(x.x1), y0: Math.round(x.y0), y1: Math.round(x.y1),
               anker: (x.anker || []).map(a => [a.w.text, Math.round(a.w.x0), Math.round(a.w.y0), Math.round(a.w.x1), Math.round(a.w.y1)]),
               hinweise: x.hinweise.map(h => h.text)}))}))};
 }
@@ -626,7 +663,7 @@ if(new URLSearchParams(location.search).has('einbettung') && window.parent !== w
         antwort({stand:'Verteiler wird gelesen'});
         let zuletzt = -1;
         const r = await lies(d.bild, a => { const p = Math.round(a * 100); if(p !== zuletzt){ zuletzt = p; antwort({stand: 'Verteiler wird gelesen', anteil: a}); } });
-        const reihen = r.reihen.map(x => ({geraete: x.geraete.map(g => ({art: g.art, aufdruck: g.aufdruck, marke: g.marke,
+        const reihen = r.reihen.map(x => ({geraete: x.geraete.map(g => ({art: g.art, aufdruck: g.aufdruck, aufdruckSicher: g.aufdruckSicher, marke: g.marke,
           x0: g.x0, x1: g.x1, y0: g.y0, y1: g.y1, texte: g.anker.map(a => a[0])}))}));
         antwort({fertig:true, ok: reihen.some(x => x.geraete.length), reihen, h: r.h, te: r.te, rechner: r.rechner, rechnerFehler: r.rechnerFehler,
                  breite: r.breite, hoehe: r.hoehe, dauer: r.dauer, nachlese: r.nachlese});
