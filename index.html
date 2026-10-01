@@ -10,6 +10,12 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.121 01.10.2026 SAM (Beta): Probelauf. Im Trainingsordner ein Foto waehlen
+                    und "Durchspielen": die App holt das zweite Foto derselben
+                    Pruefung dazu und liest beide mit dem aktuellen SAM-Stand -
+                    mit Pruefliste, Abgleich, Geraeten je Reihe und dem
+                    Vergleich zur damaligen Lesung. Gespeichert, uebernommen
+                    oder in den Trainingsordner geschrieben wird dabei nichts.
   v1.120 01.10.2026 SAM (Beta): Geraeteerkennung auf Werkstatt-Stand v1.1 -
                     der Aufdruck der LS kommt jetzt auch aus "816"/"316"
                     (B als 8 oder 3 gelesen), aus getrennt gelesenem "B" und
@@ -2235,7 +2241,24 @@ function nameGross(s){
       <p class="muted small" id="trainKopf" style="margin:0 0 12px"></p>
       <div id="trainListe"></div>
       <div class="actionbar"><div class="inner">
+        <button class="btn ghost" id="trainProbe" disabled>Durchspielen</button>
         <button class="btn primary" id="trainTeilen" disabled>Auswählen zum Teilen</button>
+      </div></div>
+    </section>
+
+    <!-- ========== SAM (BETA): PROBELAUF MIT GESPEICHERTEN AUFNAHMEN ========== -->
+    <section class="view" id="view-samprobe">
+      <p class="muted small" style="margin:0 0 14px">Probelauf mit dem aktuellen SAM-Stand. Es wird nichts gespeichert,
+        nichts übernommen und nichts in den Trainingsordner geschrieben.</p>
+      <div class="card sam-schritt"><div class="sam-bild" id="probeV_beschreibung">1</div>
+        <div class="sam-text"><strong>Beschreibung</strong><div class="sam-lesung" id="probeB"></div></div></div>
+      <div class="card sam-schritt"><div class="sam-bild" id="probeV_verteiler">2</div>
+        <div class="sam-text"><strong>Verteiler</strong><div class="sam-lesung" id="probeG"></div></div></div>
+      <p class="muted small" id="probeKopf"></p>
+      <div id="probeListe"></div>
+      <div id="probeGeraete"></div>
+      <div class="actionbar"><div class="inner">
+        <button class="btn primary" id="probeNochmal" type="button">Noch einmal durchspielen</button>
       </div></div>
     </section>
 
@@ -2722,7 +2745,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.120';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.121';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 01.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -3358,7 +3381,7 @@ const TITLES = {
   home:'E-Assistent', new:'Neues Projekt', board:'Verteiler', circuit:'Stromkreis',
   feed:'Zuleitung', material:'Material', finish:'Abschluss',
   mode:'Auswahl', resume:'Fortsetzen', archive:'Ablage', settings:'Einstellungen',
-  sheets:'Blätter', checks:'Angaben', sam:'SAM · Beta', samliste:'SAM · Prüfen', training:'Trainingsordner',
+  sheets:'Blätter', checks:'Angaben', sam:'SAM · Beta', samliste:'SAM · Prüfen', training:'Trainingsordner', samprobe:'SAM · Probelauf',
   lager:'Materialbestand', lagerart:'Artikel', lagerbest:'Bestellliste', lagerein:'Lieferung'
 };
 const PROJECT_VIEWS = ['board','circuit','feed','material','finish','sheets','checks','sam','samliste'];
@@ -3454,6 +3477,7 @@ function go(name, push = true){
   if(name === 'sam')      renderSam();
   if(name === 'samliste') renderSamListe();
   if(name === 'training') trainingOeffnen();
+  if(name === 'samprobe') renderProbe();
   if(name === 'material'){ materialInit(); renderMaterial(); }
   if(name === 'finish')   renderFinish();
   if(name === 'mode')     renderModeMenu();
@@ -7019,6 +7043,7 @@ async function trainWaehlen(t){
     const u = snap.val();
     if(!u) throw new Error('fehlt');
     const blob = dataUrlBlob(u);
+    w.blob = blob; w.t = t;
     const name = trainName(t);
     w.dateien.push(new File([blob], name + '.jpg', {type: blob.type || 'image/jpeg'}));
     if(t.lesung || t.uebernommen){
@@ -7036,6 +7061,89 @@ function trainTeilenKnopf(){
   k.disabled = !bereit.length || laedt;
   k.textContent = laedt ? 'Fotos werden geladen …'
     : bereit.length ? `${bereit.length} ${bereit.length === 1 ? 'Foto' : 'Fotos'} teilen` : 'Auswählen zum Teilen';
+  const pr = $('#trainProbe');
+  pr.disabled = laedt || !bereit.some(w => w.t && (w.t.art === 'beschreibung' || w.t.art === 'verteiler'));
+}
+
+/* --- Probelauf (v1.121, Jean: "gespeicherte Aufnahmen durchspielen") -----------
+   Gewählt wird im Trainingsordner. Ist nur ein Foto gewählt, holt die App
+   das zweite Foto derselben Prüfung dazu (gleiches Projekt, andere Art, zeitlich
+   am nächsten). Gelesen wird mit demselben Ablauf wie in der Prüfung – in
+   einem Projekt, das nur im Speicher lebt (probe), also ohne Speichern,
+   ohne Abgleich und ohne Eintrag in den Trainingsordner. */
+let PROBE = null;
+async function trainBildHolen(t){
+  const w = trainWahl.get(t.tid);
+  if(w && w.blob) return w.blob;
+  const snap = await FB.fn.get(FB.fn.ref(FB.db, 'training/bild/' + t.tid));
+  const u = snap.val();
+  return u ? dataUrlBlob(u) : null;
+}
+function trainPartner(t){
+  if(!t.pid) return null;
+  const andere = t.art === 'beschreibung' ? 'verteiler' : 'beschreibung';
+  return TRAIN_LISTE.filter(x => x.pid === t.pid && x.art === andere)
+    .sort((a, b) => Math.abs((a.zeit || 0) - t.zeit) - Math.abs((b.zeit || 0) - t.zeit))[0] || null;
+}
+$('#trainProbe').onclick = async () => {
+  const gew = [...trainWahl.values()].filter(w => w.status === 'bereit' && w.t);
+  let b = gew.find(w => w.t.art === 'beschreibung'), v = gew.find(w => w.t.art === 'verteiler');
+  const k = $('#trainProbe');
+  k.disabled = true; k.textContent = 'Wird vorbereitet …';
+  try {
+    if(b && !v){ const t = trainPartner(b.t); if(t){ const blob = await trainBildHolen(t); if(blob) v = {t, blob}; } }
+    if(v && !b){ const t = trainPartner(v.t); if(t){ const blob = await trainBildHolen(t); if(blob) b = {t, blob}; } }
+  } catch(e){}
+  k.textContent = 'Durchspielen';
+  if(!b && !v) return;
+  probeStarten({beschreibung: b ? {t: b.t, blob: b.blob} : null, verteiler: v ? {t: v.t, blob: v.blob} : null});
+};
+function probeStarten(quellen){
+  const P = {id: 'probe-' + Date.now(), probe: true, sam: {}, items: [], photos: []};
+  PROBE = {P, quellen, bilder: {}};
+  ['beschreibung', 'verteiler'].forEach(art => {
+    const f = $('#probeV_' + art); f.innerHTML = art === 'beschreibung' ? '1' : '2'; f.dataset.fid = '';
+    if(quellen[art]) P.sam[art] = 'probe-' + art;
+  });
+  if(current !== 'samprobe') go('samprobe'); else renderProbe();
+  if(quellen.beschreibung){ SAM_LESER.frei = false; samLesen(P, P.sam.beschreibung, quellen.beschreibung.blob, null); }
+  if(quellen.verteiler) samGeraeteLesen(P, P.sam.verteiler, quellen.verteiler.blob, null);
+}
+$('#probeNochmal').onclick = () => { if(PROBE) probeStarten(PROBE.quellen); };
+function renderProbe(){
+  if(!PROBE) return;
+  const {P, quellen} = PROBE;
+  ['beschreibung', 'verteiler'].forEach(art => {
+    const feld = $('#probeV_' + art), q = quellen[art];
+    if(!q || feld.querySelector('img')) return;
+    const img = document.createElement('img'); img.alt = '';
+    img.src = URL.createObjectURL(q.blob);
+    img.onload = () => URL.revokeObjectURL(img.src);
+    feld.innerHTML = ''; feld.appendChild(img);
+  });
+  samLaufAuf(P, 'probeV_');
+  const l = P.samLesung, g = P.samGeraete;
+  const alt = q => q && q.t ? q.t : {};
+  const lb = alt(quellen.beschreibung).lesung, gb = alt(quellen.verteiler).geraete;
+  $('#probeB').textContent = !quellen.beschreibung ? 'kein Foto zu dieser Prüfung'
+    : !l || l.laeuft ? '' : !l.ok ? 'SAM konnte das Blatt nicht lesen' + (l.fehler ? ` (${l.fehler})` : '')
+    : `SAM ${(l.version || '').split(' ')[0]}: ${l.reihen.length} Einträge` + (samZweifelZahl(l.reihen) ? `, ${samZweifelZahl(l.reihen)} zum Prüfen` : '')
+      + (lb ? ` · damals ${(lb.version || '').split(' ')[0]}: ${(lb.reihen || []).length}` : '');
+  $('#probeG').textContent = !quellen.verteiler ? 'kein Foto zu dieser Prüfung'
+    : !g || g.laeuft ? '' : !g.ok ? 'SAM hat keine Geräte gefunden' + (g.fehler ? ` (${g.fehler})` : '')
+    : `SAM ${(g.version || '').split(' ')[0]}: ${g.reihen.flat().length} Geräte in ${g.reihen.length} Reihen (${g.dauer} s`
+      + (g.rechner ? ' · ' + g.rechner.replace(/\b(cpu|wasm)\b/gi, 'Prozessor') : '') + ')'
+      + (gb ? ` · damals ${(gb.version || '').split(' ')[0]}: ${(gb.reihen || []).reduce((n, r) => n + (r.geraete || []).length, 0)} Geräte` : '');
+  $('#probeKopf').textContent = l && l.ok && !l.laeuft ? samAbgleichText(l, P).trim() : '';
+  const rs = l && l.ok && !l.laeuft ? l.reihen : [];
+  const f = (txt, zw) => txt ? `<span class="${zw ? 'zw' : ''}">${esc(txt)}</span>` : '';
+  $('#probeListe').innerHTML = rs.map(z => `<div class="list-item sam-zeile ${samZweifelt(z) ? 'state-yellow' : ''}">
+      <span class="no">${f(z.nr || '–', z.zweifel.nr)}</span>
+      <span class="body"><span class="t">${f(z.bez || '—', z.zweifel.bez)}</span><span class="s">${f(z.ort, z.zweifel.ort)}</span>
+        ${z.hinweis ? `<span class="s hw">${esc(z.hinweis)}</span>` : ''}</span>
+      <span class="geraet">${f(samGeraetText(z), z.zweifel.sich || z.zweifel.geraet || samFiOhneNenn(z))}${samVtText(z, l)}</span></div>`).join('');
+  $('#probeGeraete').innerHTML = g && g.ok && !g.laeuft ? `<p class="eyebrow" style="margin:18px 0 6px">Geräte je Reihe</p>` +
+    g.reihen.map((r, i) => `<p class="small" style="margin:0 0 6px"><strong>Reihe ${i + 1}:</strong> ${esc(r.map(x => x.art + (x.aufdruck ? ' ' + x.aufdruck + (x.unsicher ? '?' : '') : '')).join(' · '))}</p>`).join('') : '';
 }
 $('#trainTeilen').onclick = async () => {
   const dateien = [].concat(...[...trainWahl.values()].filter(w => w.status === 'bereit').map(w => w.dateien));
@@ -7183,13 +7291,17 @@ function samVorladen(){
 }
 samVorladen();
 
-const samAnsicht = () => { if(current === 'sam') renderSam(); };
+const samAnsicht = () => { if(current === 'sam') renderSam(); if(current === 'samprobe') renderProbe(); };
 /* v1.115: Ring und Linie über dem Foto, das SAM gerade liest oder das wartet */
 function samLaufZeigen(){
+  if(current === 'samprobe' && PROBE){ samLaufAuf(PROBE.P, 'probeV_'); return; }
   if(current !== 'sam' || !PROJ) return;
-  const sam = PROJ.sam || {};
-  [['beschreibung', PROJ.samLesung], ['verteiler', PROJ.samGeraete]].forEach(([art, x]) => {
-    const feld = $('#samV_' + art);
+  samLaufAuf(PROJ, 'samV_');
+}
+function samLaufAuf(P, vorsilbe){
+  const sam = P.sam || {};
+  [['beschreibung', P.samLesung], ['verteiler', P.samGeraete]].forEach(([art, x]) => {
+    const feld = $('#' + vorsilbe + art);
     if(!feld) return;
     let o = feld.querySelector('.sam-lauf');
     const aktiv = x && x.laeuft && x.fid === sam[art];
@@ -7233,7 +7345,7 @@ async function samLesen(P, fid, datei, tidP, nochmal){
                  version: d.version || '', zeit: Date.now(), reihen,
                  uebernommen: vorher ? vorher.uebernommen : undefined};
   samVerknuepfen(P);
-  if(P === PROJ) saveProj(); else { saveProjects(); fbProjHoch(P); }
+  if(P.probe){} else if(P === PROJ) saveProj(); else { saveProjects(); fbProjHoch(P); }   // v1.121: Probelauf speichert nichts
   const lesung = {version: d.version || '', zeit: Date.now(), ok: !!d.ok, fehler: d.fehler || '', reihen: d.reihen || []};
   trainingNachtrag(tidP, 'lesung', Object.assign({bericht: d.bericht || ''}, lesung));
   trainingLesungMerken(tidP, lesung);
@@ -7274,7 +7386,7 @@ async function samGeraeteLesen(P, fid, datei, tidP, nochmal){
   P.samGeraete = {fid, laeuft:false, ok: !!d.ok && reihen.length > 0, fehler: d.fehler || '',
                   version: d.version || '', zeit: Date.now(), dauer: Math.round(d.dauer || 0), rechner: d.rechner || '', reihen};
   samVerknuepfen(P);
-  if(P === PROJ) saveProj(); else { saveProjects(); fbProjHoch(P); }
+  if(P.probe){} else if(P === PROJ) saveProj(); else { saveProjects(); fbProjHoch(P); }   // v1.121: Probelauf speichert nichts
   trainingNachtrag(tidP, 'geraete', {version: d.version || '', zeit: Date.now(), ok: !!d.ok, fehler: d.fehler || '',
     reihen: d.reihen || [], h: d.h || 0, te: d.te || 0, dauer: d.dauer || 0, nachlese: d.nachlese || '',
     rechner: d.rechner || '', rechnerFehler: d.rechnerFehler || ''});
@@ -7573,9 +7685,10 @@ function samVtText(z, l){
   const ok = v.passt && !v.abweichend && v.art !== '—';
   return `<span class="vt">${ok ? (z.sichVt ? (v.unsicher ? 'vom Verteiler, unsicher' : 'vom Verteiler') : 'Verteiler ✓') : 'Verteiler: ' + esc(was)}</span>`;
 }
-function samAbgleichText(l){
-  const g = PROJ.samGeraete;
-  if(!g || !PROJ.sam || g.fid !== PROJ.sam.verteiler) return '';
+function samAbgleichText(l, P){
+  P = P || PROJ;
+  const g = P.samGeraete;
+  if(!g || !P.sam || g.fid !== P.sam.verteiler) return '';
   if(g.laeuft) return ' Der Verteiler wird noch gelesen, die Liste ergänzt sich danach.';
   if(!g.ok) return ' Auf dem Verteilerfoto wurden keine Geräte gefunden.';
   const ab = l.abgleich;
