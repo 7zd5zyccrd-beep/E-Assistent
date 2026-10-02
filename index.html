@@ -10,6 +10,13 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.129 02.10.2026 Blattvorschau mit eigenem Zoom (wie in der Nachweise-App).
+                    Beim Oeffnen passt das Blatt in die Breite, zwei Finger
+                    vergroessern nur die Blaetter (bis dreifach), der Punkt
+                    zwischen den Fingern bleibt stehen; Kopf- und Fussleiste
+                    bleiben, wie sie sind. Safaris Kneifen ist jetzt ueberall
+                    aus. Der Knopf "100 %" heisst "Einpassen" und erscheint,
+                    sobald vergroessert ist. Kein Doppeltipp.
   v1.128 02.10.2026 App-Geruest wie in der Nachweise-App: die Seite scrollt
                     nicht mehr als Ganzes. Kopf- und Fussleiste stehen fest,
                     dazwischen scrollt nur der Inhalt, mit dem Nachfedern von
@@ -2599,7 +2606,7 @@ function nameGross(s){
       <div class="actionbar"><div class="inner">
         <div class="btn-row">
           <button class="btn ghost" id="btnSheetBack">Zurück</button>
-          <button class="btn ghost" id="btnSheetZoom">100 %</button>
+          <button class="btn ghost" id="btnSheetZoom">Einpassen</button>
         </div>
       </div></div>
     </section>
@@ -2869,7 +2876,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.128';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.129';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 02.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -3624,7 +3631,7 @@ function go(name, push = true){
   if(name === 'mode')     renderModeMenu();
   if(name === 'resume')   renderResume();
   if(name === 'checks')   renderChecks();
-  if(name === 'sheets')   renderSheets();
+  if(name === 'sheets'){ sheetFit = true; renderSheets(); }   // v1.129: beim Öffnen eingepasst
   if(name === 'archive')  renderArchive();
   if(name === 'settings') renderSettings();
   if(name === 'lager')     renderLager();
@@ -9005,7 +9012,14 @@ function blaetterBauen(nur){
 /* --- Ausdruck: alle Blätter untereinander, Seitenumbruch dazwischen --- */
 
 /* --- Vorschau am Bildschirm: ein Kärtchen je Blatt in A4-Verhältnis --- */
+/* v1.129 (wie in der Nachweise-App): die Blattvorschau zoomt selbst. Safaris
+   Kneifen ist auch hier aus – es vergrößerte die ganze Seite samt Kopf- und
+   Fußleiste. Beim Öffnen passt das Blatt in die Breite, zwei Finger
+   vergrößern nur die Blätter (bis BLATT_MAX), kleiner als eingepasst geht es
+   nicht. "Einpassen" holt die Breite zurück. Kein Doppeltipp. */
 let sheetFit = true;                                  // true = auf Breite einpassen
+let sheetZ = 1, sheetFitZ = 1;
+const BLATT_MAX = 3;
 function renderSheets(){
   const bl = blaetterBauen();
   $('#sheetPaper').innerHTML = bl
@@ -9015,8 +9029,8 @@ function renderSheets(){
 }
 function applySheetZoom(){
   const box = $('#sheets'); if(!box) return;
-  const fitZ = Math.min(1, (box.clientWidth - 16) / 1024);   // Maßstab beim Einpassen
-  const z = sheetFit ? fitZ : 1;
+  sheetFitZ = Math.min(1, (box.clientWidth - 16) / 1024);   // Maßstab beim Einpassen
+  const z = sheetZ = sheetFit ? sheetFitZ : Math.min(BLATT_MAX, Math.max(sheetFitZ, sheetZ));
   const breit = Math.ceil(1024 * z);
   box.style.setProperty('--sheet-zoom', z.toFixed(4));
   $$('#sheetPaper .pagewrap').forEach(w => {
@@ -9028,13 +9042,46 @@ function applySheetZoom(){
      Rahmens. Ein zentriertes Kind, das breiter ist als sein Rahmen, lässt sich
      am linken Rand nicht mehr erreichen. */
   $('#sheetPaper').style.width = Math.max(box.clientWidth, breit) + 'px';
-  /* Passt das Blatt ohnehin in Originalgröße, sind beide Maßstäbe gleich –
-     der Umschalter hätte dann keine Wirkung und verschwindet. */
-  const zoomKnopf = $('#btnSheetZoom');
-  zoomKnopf.hidden = fitZ >= 1;
-  zoomKnopf.textContent = sheetFit ? '100 %' : 'Seite';
+  $('#btnSheetZoom').hidden = Math.abs(z - sheetFitZ) < .001;
 }
-$('#btnSheetZoom').onclick  = () => { sheetFit = !sheetFit; applySheetZoom(); };
+$('#btnSheetZoom').onclick  = () => {
+  /* Das Blatt in der Mitte des Bildes bleibt nach dem Einpassen im Blick. */
+  const mitte = bild().getBoundingClientRect().top + bild().clientHeight / 2;
+  const w = [...$$('#sheetPaper .pagewrap')].find(x => x.getBoundingClientRect().bottom > mitte);
+  const anteil = w ? (mitte - w.getBoundingClientRect().top) / w.getBoundingClientRect().height : 0;
+  sheetFit = true; applySheetZoom(); $('#sheets').scrollLeft = 0;
+  if(w) bildNach(imBild(w) + anteil * w.getBoundingClientRect().height - bild().clientHeight / 2);
+};
+/* Zwei Finger: gemerkt wird beim Aufsetzen die Stelle im Blatt unter der
+   Mitte der Finger, in Originalgröße – jeder Schritt rechnet von ihr aus,
+   sonst liefe der Punkt beim Zoomen davon. */
+(function sheetZoomBinden(){
+  const box = $('#sheets');
+  const abstand = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  const mitte = t => [(t[0].clientX + t[1].clientX) / 2, (t[0].clientY + t[1].clientY) / 2];
+  let d0 = 0, anker = null;
+  box.addEventListener('touchstart', e => {
+    if(e.touches.length !== 2){ anker = null; return; }
+    const [mx, my] = mitte(e.touches);
+    const unter = document.elementFromPoint(mx, my);
+    const w = (unter && unter.closest && unter.closest('#sheetPaper .pagewrap')) || $('#sheetPaper .pagewrap');
+    if(!w) return;
+    const q = w.getBoundingClientRect();
+    d0 = abstand(e.touches) || 1;
+    anker = {w, z0:sheetZ, x:(mx - q.left) / sheetZ, y:(my - q.top) / sheetZ};
+  }, {passive:true});
+  box.addEventListener('touchmove', e => {
+    if(e.touches.length !== 2 || !anker) return;
+    e.preventDefault();
+    sheetZ = Math.min(BLATT_MAX, Math.max(sheetFitZ, anker.z0 * abstand(e.touches) / d0));
+    sheetFit = Math.abs(sheetZ - sheetFitZ) < .001;
+    applySheetZoom();
+    const [mx, my] = mitte(e.touches), q = anker.w.getBoundingClientRect();
+    box.scrollLeft += q.left + anker.x * sheetZ - mx;   // waagrecht rollt der Rahmen,
+    bildNach(bildY() + q.top + anker.y * sheetZ - my);  // senkrecht der Inhalt (<main>)
+  }, {passive:false});
+  box.addEventListener('touchend', e => { if(e.touches.length < 2) anker = null; }, {passive:true});
+})();
 $('#btnSheetBack').onclick  = () => { const p = stack.pop(); go(p || 'finish', false); };
 const zurueckStapel = () => { const p = stack.pop(); if(p) go(p, false); };
 window.addEventListener('resize', () => { if(current === 'sheets') applySheetZoom(); });
@@ -10872,12 +10919,10 @@ function lagerLiefern(o, mengen, schliessen){
 /* Zoom in den Ansichten abschalten (v1.98): der Doppeltipp ist seit v1.55 weg,
    hier fällt der Zweifingerzoom der Seite. iOS kündigt ihn über die
    WebKit-eigenen gesture-Ereignisse an; wer sie unterdrückt, hält die Ansicht
-   auf Originalgröße. Der Viewport-Eintrag bleibt bewusst unangetastet – mit
-   user-scalable=no wäre auch die Blattvorschau gefangen, und die soll mit zwei
-   Fingern zoombar bleiben. Der Bildbetrachter hat seinen eigenen Zoom über
-   Touch-Ereignisse und ist davon ohnehin nicht betroffen. */
+   auf Originalgröße. Seit v1.129 auch in der Blattvorschau – sie zoomt mit
+   eigenen Mitteln (sheetZoomBinden), wie der Bildbetrachter. */
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(art =>
-  document.addEventListener(art, e => { if(current !== 'sheets') e.preventDefault(); },
+  document.addEventListener(art, e => { if(e.cancelable) e.preventDefault(); },   // v1.129: auch in der Blattvorschau
                             {passive: false}));
 lagerLaden();
 ablageLaden().catch(() => { archBereit = true; if(archLoeser) archLoeser(ARCH); });
