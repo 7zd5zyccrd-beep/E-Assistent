@@ -10,6 +10,12 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.131 02.10.2026 Fehlerbehebung (iPhone), Abgleich mit der Nachweise-App:
+                    die Angabe theme-color ist heraus (die Nachweise-App hat
+                    keine), der Bereich hinter der Statusleiste ist schwarz
+                    wie die Kopfleiste statt hell, und die Knoepfe der
+                    Fussleiste stehen mit 18 statt 26 Punkt Abstand ueber dem
+                    Rand wie dort.
   v1.130 02.10.2026 Fehlerbehebung (iPhone): die Knoepfe der Fussleiste standen
                     zu weit oben, und an der Oberkante lag ein grauer Schleier.
                     Die Statusleiste ist jetzt undurchsichtig schwarz wie in
@@ -966,7 +972,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#1A1F16">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <!-- Statusleiste undurchsichtig schwarz (v1.130, wie Nachweise-App v1.87): läuft
      der Inhalt darunter (black-translucent), legt iOS 27 eine helle Blende an
@@ -1025,6 +1030,11 @@
   --col:600px;          /* Breite der Inhaltsspalte, wächst in den Größenzonen unten */
 }
 html{color-scheme:light dark}
+/* v1.131: was außerhalb der App liegt – der Streifen der Statusleiste unter
+   iOS 27 –, zeigt das Schwarz der Kopfleiste statt des hellen Seitengrunds;
+   die App selbst trägt ihren Grund am body. Wie in der Nachweise-App gibt es
+   kein theme-color mehr (dort v1.86 erfolglos versucht und zurückgenommen). */
+html{background:var(--bar)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none !important}   /* muss die Layout-Regeln unten überstimmen */
 /* touch-action:manipulation nimmt iOS den Zoom per Doppeltipp – schnelles
@@ -1471,7 +1481,7 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
    sie folgt damit auch der Höhe bei offener Tastatur. */
 .app:not(.split) .actionbar{
   position:absolute;left:0;right:0;bottom:0;margin:0;
-  padding-bottom:calc(26px + env(safe-area-inset-bottom));
+  padding-bottom:calc(18px + env(safe-area-inset-bottom));   /* v1.131: wie Nachweise-App */
 }
 
 /* ---------- Unterschrift ---------- */
@@ -2888,7 +2898,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.130';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.131';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 02.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -9195,6 +9205,7 @@ function blattDatei(nur, titel){
      Ganzes auf die nächste Seite. */
   :root{ --pdf-breite:1130px }
   html,body{ height:auto; overflow:visible }   /* v1.128: Gerüst der App gilt hier nicht */
+  html{ background:#fff }                       /* v1.131: dunkler Rand der App nicht ins Blatt */
   *{ -webkit-print-color-adjust:exact; print-color-adjust:exact }
   body{ margin:0 auto; background:#fff; width:var(--pdf-breite); padding:24px 0 }
   .blatt{ background:#fff; width:1024px; margin:0 auto }
