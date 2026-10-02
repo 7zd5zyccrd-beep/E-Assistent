@@ -10,6 +10,14 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.132 02.10.2026 Fehlerbehebung (iPhone): der graue Schleier an der
+                    Oberkante. Die Kopfleiste hatte mit dem festen Geruest
+                    (v1.128) ihre Eigenschaft "klebend" verloren; Safari
+                    faerbt den Streifen der Statusleiste aber nach dem
+                    Element, das oben klebt, und nahm ohne es den hellen
+                    Seitengrund. Sie klebt jetzt wieder, wie in der
+                    Nachweise-App. Der schwarze Seitengrund aus v1.131 ist
+                    wieder heraus.
   v1.131 02.10.2026 Fehlerbehebung (iPhone), Abgleich mit der Nachweise-App:
                     die Angabe theme-color ist heraus (die Nachweise-App hat
                     keine), der Bereich hinter der Statusleiste ist schwarz
@@ -1030,11 +1038,8 @@
   --col:600px;          /* Breite der Inhaltsspalte, wächst in den Größenzonen unten */
 }
 html{color-scheme:light dark}
-/* v1.131: was außerhalb der App liegt – der Streifen der Statusleiste unter
-   iOS 27 –, zeigt das Schwarz der Kopfleiste statt des hellen Seitengrunds;
-   die App selbst trägt ihren Grund am body. Wie in der Nachweise-App gibt es
-   kein theme-color mehr (dort v1.86 erfolglos versucht und zurückgenommen). */
-html{background:var(--bar)}
+/* Wie in der Nachweise-App kein theme-color (dort v1.86 erfolglos versucht
+   und zurückgenommen, hier seit v1.131 heraus). */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none !important}   /* muss die Layout-Regeln unten überstimmen */
 /* touch-action:manipulation nimmt iOS den Zoom per Doppeltipp – schnelles
@@ -1068,7 +1073,11 @@ header{
   background:var(--bar);color:#fff;
   padding:calc(10px + env(safe-area-inset-top)) var(--pad) 10px;
   display:flex;align-items:center;gap:10px;
-  position:relative;z-index:40;flex:0 0 auto;
+  /* v1.132: sticky wie in der Nachweise-App, obwohl im festen Gerüst nichts
+     mehr klebt. Safari färbt den Streifen der Statusleiste nach dem Element,
+     das oben fest oder klebend steht – mit position:relative (v1.128) nahm es
+     den hellen Seitengrund, das war der graue Schleier. */
+  position:sticky;top:0;z-index:40;flex:0 0 auto;
 }
 header .back{                                  /* greift die offenen Kreise des Logos auf */
   width:34px;height:34px;flex:0 0 34px;
@@ -2898,7 +2907,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.131';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.132';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 02.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -9205,7 +9214,6 @@ function blattDatei(nur, titel){
      Ganzes auf die nächste Seite. */
   :root{ --pdf-breite:1130px }
   html,body{ height:auto; overflow:visible }   /* v1.128: Gerüst der App gilt hier nicht */
-  html{ background:#fff }                       /* v1.131: dunkler Rand der App nicht ins Blatt */
   *{ -webkit-print-color-adjust:exact; print-color-adjust:exact }
   body{ margin:0 auto; background:#fff; width:var(--pdf-breite); padding:24px 0 }
   .blatt{ background:#fff; width:1024px; margin:0 auto }
