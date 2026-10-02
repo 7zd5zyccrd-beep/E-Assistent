@@ -1,7 +1,25 @@
 <!DOCTYPE html>
 <!--
   SAM · Geräte auf dem Verteilerfoto
-  v1.1 · 01.10.2026
+  v1.2 · 01.10.2026
+
+  v1.2: Durchsicht aller Lernsätze, Bild für Bild (Art 410 -> 510, mit
+  Aufdruck 370 -> 488 von 645). Die Regeln stehen mit Bildnamen am Ort im
+  Code; die wichtigsten:
+  - gezielte Nachlese für Geräte ohne Art oder Aufdruck, für unsichere LS
+    und für Lücken über 1 TE in einer Reihe (eigene Kästen, nur Wörter aus
+    der Lücke);
+  - Überspannungsableiter über große rote Flächen und die um 90° gedrehte
+    Lesung ("DEHNguard", "DG MOD 275");
+  - Marke und Typnummer gehören zusammen: ABB-Logo links neben LS und
+    Stromstoßschalter, Marke unten links beim legrand-FI, Marke am rechten
+    Rand beim vierpoligen FI;
+  - Verleser von Marken und Typnummern (A8D, ARB, AB8, 8261, S25i, EP6I, 2S1,
+    £280-16-10/12 ...), hager-Typnummern tragen den Wert (MBN 116 = B16);
+  - Baugleiche stützen sich auch beim FI (F 202) und über die Marke, wenn
+    der Nennstrom am Gerät steht;
+  - Türblatt und Legende: gleiche Zeile mehrfach untereinander und
+    "13-15 Hauptschalter" sind keine Geräte.
 
   v1.1: Aufdruck der LS (Jean: LS erkannt, aber ohne B 16 - auch in der
   ersten Reihe). In den Lernsätzen fehlte er bei 41 von 302 LS:
@@ -94,12 +112,12 @@
 </script>
 </head>
 <body>
-<h1>SAM · Geräte <span class="ver">v1.1 · 01.10.2026</span></h1>
+<h1>SAM · Geräte <span class="ver">v1.2 · 01.10.2026</span></h1>
 <p><button id="start">Erkennung laden</button> <input type="file" id="datei" accept="image/*" disabled></p>
 <pre id="aus"></pre>
 
 <script type="module">
-const VERSION = 'v1.1 · 01.10.2026';
+const VERSION = 'v1.2 · 01.10.2026';
 const WEGE = [
   'https://esm.sh/ppu-paddle-ocr/web?external=onnxruntime-web',
   'https://esm.sh/ppu-paddle-ocr/web',
@@ -346,6 +364,11 @@ function marke(t){
   const s = t.replace(/[^A-Za-z&]/g, '');
   /* v0.3: aus Abstand fotografiert kommt ABB als "ABS", "ASS", "AEB", "ASB" */
   if(/^A.?B.?[BEHDS8]$/i.test(s) || /^A[BSE][BS]$/.test(s) || s === 'ABB') return 'ABB';
+  /* v1.2: aus Abstand (IMG_5256.v2) auch "AB9", "ABN", "ABR", "AER", "AHB", "ABI" - drei Zeichen,
+     A vorn, B/E/H/S an zweiter Stelle; nur in Großbuchstaben */
+  /* v1.2: auch "A8D", "ARB", "A83", "AB8" (IMG_6670.v2, IMG_6674.v1, IMG_7081.v2) - kein U an zweiter
+     Stelle, sonst wäre "AUS" eine Marke */
+  if(/^A[BEHSR8][BEHDSRNIP938]$/.test(t.replace(/[^A-Za-z0-9]/g, '')) || /^A[BEHS][BEHDSRNIP]$/.test(s)) return 'ABB';
   if(/^[lc-]?e?grand$/i.test(s) || /legrand/i.test(s)) return 'legrand';
   if(/^hager$/i.test(s)) return 'hager';
   if(/^AEG$/i.test(s)) return 'AEG';
@@ -361,20 +384,33 @@ function marke(t){
 /* Hinweise auf die Art eines Geräts aus einem einzelnen Wort */
 function artHinweis(t){
   const s = t.replace(/\s+/g, '');
+  /* v1.2: Typnummern ohne Satzzeichen prüfen - "F20-4 A" (IMG_5256.v2) */
+  const nur = s.replace(/[^A-Za-z0-9]/g, '');
+  if(/^[FP]20[24][AB]?$|^F37[24]$|^[CB]?[DB]A[24](25|40|63)[DO0]?$/i.test(nur)) return 'FI';
+  if(/^[A-Z0-9]{0,2}N[13](06|10|13|16|20|25|32|40)$/i.test(nur)) return 'LS';
+  /* v1.2: AEG-Typ EP61, oft als "EP6I", "EPNI" gelesen (IMG_6538.v2, IMG_6539.v1) */
+  if(/^EP[6GN][1IL]$/i.test(nur)) return 'LS';
   if(/DEHN|guard|DGMOD|Surge|Protective|SPD/i.test(s)) return 'Überspannungsableiter';
   if(/E463|3KB|63A.?400|AC22|Hauptschalter/i.test(s)) return 'Hauptschalter';
-  if(/^E25[15]$|^E2[5]\d$|S12-?1\d0|EPN5|^E251|TR19|Stromsto/i.test(s)) return 'Stromstoßschalter';
+  /* v1.2: ABB-Bezeichnung "E290-16-10/12", auch "£280-16-10/12", "E200-16-10/12"
+     (IMG_7120.v1/v2);
+     "2S1" - die 5 als S (IMG_6698.v2); "E25", "EPN", "16AX" (IMG_6784.v1) */
+  if(/^E25[15]$|^E2[5]\d$|S12-?1\d0|EPN5|^E251|TR19|Stromsto|^25[15]$|^E?2S[15]$|^E25$|^EPN\d*$|^16\s?AX$|^E29[01]|^[E£]2\d{2}S?-1\d-[12]\d\/\d{2}/i.test(s)) return 'Stromstoßschalter';
   if(/PKT12|GT3158|TS\d{1,2}\/\d|Trafo|222070|12V.?1[,.]?\dA|SEC/i.test(s)) return 'Trafo';
   if(/NPFI\/?LS|FI\/?LS|DS201|B\d{1,2}\/0[,.]03/i.test(s)) return 'FI/LS';
-  if(/mA|IΔn|I.n=?0[,.]03|0[,.]03A?|F20[24]|F37[24]|NPFI|RCCB|CDA\d|DFS|25\/0[,.]?03|30m/i.test(s)) return 'FI';
-  if(/^[BCK]\d{1,2}$|^S2\d{2}M?$|^S261|^S201|MBN\d|^NLS/i.test(s)) return 'LS';
+  /* v1.2: "mA" nur nach einer Zahl oder allein, und mit großem A - sonst war
+     "Waschmaschine", "Spülmaschine", "Thälmannstraße" ein FI (IMG_6552.v1) */
+  if(/\dmA|^mA$|\d\s?m[AÂ]$/.test(s) || /IΔn|I.n=?0[,.]03|0[,.]03A?|[FP]20[24]|F37[24]|NPFI|RCCB|CDA\d|DFS|25\/0[,.]?03|^30m/i.test(s)) return 'FI';
+  /* v1.2: "B.16" - ein Punkt zwischen Kennlinie und Nennstrom (IMG_6552.v2);
+     "2O1" - die 0 als O gelesen (IMG_6670.v2); "8261" - das S als 8 (IMG_6674.v1); "S25i" (IMG_6676.v1) */
+  if(/^[BC][.:]?\d{1,2}$|^K(6|10|13|16|20|25|32)$|^E1[06]$|^S2\d{2}M?$|^S2[0O]1$|^[85]2[06]1$|^S2[056][iIl]$|^S261|^S201|MBN\d|^NLS|^2[06O]1$/i.test(s)) return 'LS';
   return '';
 }
 
 /* Allgemeine Gerätetexte: stehen auf fast jedem Gerät genau einmal und
    helfen, Geräte ohne gelesene Marke zu finden ("6000", "230/400", "IP40",
    "Test"). Allein machen sie keine Art. */
-const GERAETETEXT = /^\[?[6e]0{3}\]?$|^\[?10000\]?$|230\s*[\/1]\s*400|^IP\s?[24]0|^Test$|^TEST$|^T$|^O[- ]?OFF$|^I[- ]?ON$|400V/i;
+const GERAETETEXT = /^\[?[6e]0{3}\]?$|^\[?10000\]?$|230\s*[\/1l|]{1,2}\s*400|^[~-]?23\d?[\/1l|]?400$|^IP\s?[24]0|^Test$|^TEST$|^T$|^O[- ]?OFF$|^I[- ]?ON$|400V/i;
 
 /* v0.4: Aufdruck eines Geräts in der Schreibweise der Musterlösungen.
    Gesucht wird in allen Wörtern der Gruppe; Nennströme nur aus der Reihe
@@ -385,18 +421,27 @@ const STROM = '(?:6|10|13|16|20|25|32|40|50|63|80|100|125)';
 function aufdruck(art, texte){
   /* v0.7: nach "In" ist eine Zahl gemeint - S/O/l dort als 5/0/1 lesen ("In 2SA") */
   const t = texte.join(' ').replace(/\s+/g, ' ')
-    .replace(/\b(I[nN]\s?=?\s?)([0-9SOlI]{1,3})(\s?A)/g, (m, a, z, b) => a + z.replace(/S/g, '5').replace(/O/g, '0').replace(/[lI]/g, '1') + b);
-  const ls = () => { const m = new RegExp('(?:^|[^A-Za-z])([BCK])\\s?(' + STROM + ')(?:\\s?A)?(?!\\d)').exec(t); return m ? m[1] + m[2] : ''; };
+    .replace(/\b(I[nN]\s?=?\s?)([0-9SOlI]{1,3})(\s?A)/g, (m, a, z, b) => a + z.replace(/S/g, '5').replace(/O/g, '0').replace(/[lI]/g, '1') + b)
+    /* v1.2: "In 254" - das A als 4 gelesen (IMG_5511) */
+    .replace(/\b(I[nN]\s?=?\s?)(16|25|40|63|80)4\b/g, '$1$2A');
+  const ls = () => { const m = new RegExp('(?:^|[^A-Za-z])([BCK])[.:]?\\s?(' + STROM + ')(?:\\s?A)?(?!\\d)').exec(t); return m ? m[1] + m[2] : ''; };
   const ma = () => /0[,.]3\s?A?(?!\d)|300\s?mA/i.test(t) ? '300mA' : /0[,.]01\s?A?(?!\d)|10\s?mA/i.test(t) ? '10mA'
                  : /0[,.]03|30\s?m/i.test(t) ? '30mA' : '';
   const nenn = () => {
     const b = new RegExp('(?:^|\\D)(' + STROM + ')\\s?\\/\\s?0[,.]\\d').exec(t);
     if(b) return b[1];
-    const m = new RegExp('(?:^|[^\\d,.])(' + STROM + ')\\s?A(?![a-z])').exec(t);
+    /* v1.2: nicht die Vorsicherung vor dem Schaltvermögen ("100A 10000" auf dem
+       F 202, IMG_7081.v2) */
+    const m = new RegExp('(?:^|[^\\d,.])(' + STROM + ')\\s?A(?![a-z])(?![\\s\\-\\[]*1?[06]000)').exec(t);
     return m ? m[1] : '';
   };
-  if(art === 'LS') return ls();
-  if(art === 'FI'){ const n = nenn(); return n ? n + 'A/' + (ma() || '30mA') : ''; }
+  /* v1.2: hager-Typnummern tragen die Werte: MBN 116 = einpolig B16, MBN 316 =
+     dreipolig B16, CDA 440D = vierpoliger FI 40 A (IMG_6536, auch verlesen als
+     "ON316", "BA 440O") */
+  const hagerLS = () => { const m = /(?:M[B8]N|[A-Z0-9]{0,2}N)\s?[123](06|10|13|16|20|25|32|40)\b/.exec(t); return m ? 'B' + (+m[1]) : ''; };
+  const hagerFI = () => { const m = /\b[CB]?[DB]A\s?[24](25|40|63)[DO0]?\b/.exec(t); return m ? m[1] : ''; };
+  if(art === 'LS') return ls() || hagerLS();
+  if(art === 'FI'){ const n = nenn() || hagerFI(); return n ? n + 'A/' + (ma() || '30mA') : ''; }
   if(art === 'FI/LS'){ const l = ls(); return l ? l + '/' + (ma() || '30mA') : ''; }
   if(art === 'Hauptschalter'){ const n = nenn(); return n ? n + 'A' : ''; }
   return '';
@@ -409,12 +454,25 @@ function lsNachlese(texte){
     const m = new RegExp('^[83]\\s?(' + STROM + ')$').exec(x);
     if(m) return {wert: 'B' + m[1], sicher: true};
   }
-  const ch = w.find(x => /^[BCK]$/.test(x));
+  /* v1.2: "B15" - die 6 als 5 gelesen (IMG_5256.v2), B15 gibt es nicht; unsicher */
+  for(const x of w){ if(/^[B8]\s?15$/.test(x)) return {wert: 'B16', sicher: false}; }
+  /* v1.2: "616" - das B als 6 gelesen (IMG_6670.v2), unsicher */
+  for(const x of w){
+    const m = new RegExp('^6(' + STROM + ')$').exec(x);
+    if(m) return {wert: 'B' + m[1], sicher: false};
+  }
+  /* v1.2: "e10" - das B als e gelesen (IMG_5185), unsicher */
+  for(const x of w){
+    const m = new RegExp('^[eE]\\s?(' + STROM + ')$').exec(x);
+    if(m) return {wert: 'B' + m[1], sicher: false};
+  }
+  /* v1.2: auch "8" allein als B ("8" und "16", IMG_6676.v1) - unsicher wie alle hier */
+  const ch = (w.find(x => /^[BCK]$/.test(x)) || (w.includes('8') ? 'B' : ''));
   const nu = w.map(x => new RegExp('^(' + STROM + ')\\s?A?$').exec(x)).find(Boolean);
   if(ch && nu) return {wert: ch + nu[1], sicher: false};
   return {wert: '', sicher: false};
 }
-const typNummer = texte => { for(const x of texte){ const m = /^(S\s?2\d{2}|MBN\s?\d+|NLS\d*)$/i.exec(x.trim()); if(m) return m[1].replace(/\s/g, '').toUpperCase(); } return ''; };
+const typNummer = texte => { for(const x of texte){ const m = /^(S\s?2\d{2}|MBN\s?\d+|NLS\d*|EP\s?[6GN][1IL])$/i.exec(x.trim()); if(m) return m[1].replace(/\s/g, '').toUpperCase().replace(/^EP..$/, 'EP61'); } return ''; };
 
 /* v0.2: Geräte zuerst, Reihen danach. Die Aufdrucke eines Geräts stehen
    übereinander (oben "S 261 B16", unten "6000", beim legrand die Marke
@@ -423,24 +481,57 @@ const typNummer = texte => { for(const x of texte){ const m = /^(S\s?2\d{2}|MBN\
    weniger als 0,45 TE unterscheiden und sie senkrecht höchstens 14
    Worthöhen auseinander liegen. Die TE schätzt der häufige waagerechte
    Abstand benachbarter Marken auf gleicher Höhe. */
-function geraeteFinden(woerter){
+/* v1.2: kurze Bruchstücke, die auf derselben Zeile unmittelbar nebeneinander
+   stehen, zusätzlich als ein Wort ("S"+"261", "E"+"16" - IMG_6014). Die
+   Bruchstücke bleiben erhalten. */
+function bruchstueckeVerbinden(woerter){
+  const kurz = woerter.filter(w => w.text.replace(/\s/g, '').length <= 4);
+  const neu = [];
+  kurz.forEach(a => {
+    const ha = a.y1 - a.y0;
+    const b = kurz.filter(b => b !== a && b.x0 >= a.x0 + 0.3 * (a.x1 - a.x0) && b.x0 - a.x1 < 0.6 * ha && b.x0 - a.x1 > -0.4 * ha &&
+                               Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) > 0.4 * Math.min(ha, b.y1 - b.y0))
+                  .sort((p, q) => p.x0 - q.x0)[0];
+    if(!b) return;
+    const text = (a.text + b.text).replace(/\s/g, '');
+    if(text.length > 6) return;
+    neu.push({text, conf: Math.min(a.conf, b.conf), x0: a.x0, y0: Math.min(a.y0, b.y0), x1: b.x1, y1: Math.max(a.y1, b.y1), verbunden: true, kachel: a.kachel});
+  });
+  return woerter.concat(neu);
+}
+function geraeteFinden(woerterRoh){
+  const woerter = bruchstueckeVerbinden(woerterRoh);
+  /* v1.2: eine Zeile der Legende an der Tür ("13-15 Hauptschalter",
+     "21 Geschirrspüler") ist kein Aufdruck - Stromkreisnummer, Leerzeichen,
+     ein deutsches Wort (IMG_7038.v1) */
+  const legende = t => /^\d{1,2}(\s?-\s?\d{1,2})?\s+[A-ZÄÖÜ][a-zäöüß]{3,}/.test(t.trim());
   const anker = woerter.map(w => ({w, marke: marke(w.text), art: artHinweis(w.text), allg: GERAETETEXT.test(w.text.trim())}))
-                       .filter(a => a.marke || a.art || a.allg);
+                       .filter(a => (a.marke || a.art || a.allg) && !legende(a.w.text));
   if(!anker.length) return {reihen: []};
   const hs = anker.map(a => a.w.y1 - a.w.y0).sort((a, b) => a - b);
   const h = hs[Math.floor(hs.length / 2)] || 20;
   const mx = a => (a.w.x0 + a.w.x1) / 2, my = a => (a.w.y0 + a.w.y1) / 2;
   /* TE: nächster Nachbar auf gleicher Höhe unter den Marken (und LS-Kennungen) */
-  const glatt = anker.filter(a => a.marke || a.art === 'LS');
-  const nn = [];
+  /* v1.2: ohne AEG-Typ EP61 - er steht auf demselben LS in der Zeile neben "B16",
+     die TE wurde halb so groß (IMG_6538.v2: 88 statt 182) */
+  const glatt = anker.filter(a => (a.marke || a.art === 'LS') && !/^EP\s?[6GN][1IL]$/i.test(a.w.text.trim()));
+  const nn = [], nnM = [], nnL = [];
   glatt.forEach(a => {
     let best = Infinity;
-    glatt.forEach(b => { if(b !== a && Math.abs(my(a) - my(b)) < 1.5 * h){ const d = Math.abs(mx(a) - mx(b)); if(d > 2 * h && d < best) best = d; } });
+    /* v1.2: nur gleichartige Nachbarn (Marke zu Marke, LS-Kennung zu LS-Kennung) -
+       "ABB" und "S 201" auf demselben Gerät lagen sonst als Nachbarn eine
+       halbe TE auseinander, und die TE wurde zu klein (IMG_5256.v2: 47 statt 75) */
+    glatt.forEach(b => { if(b !== a && !!b.marke === !!a.marke && Math.abs(my(a) - my(b)) < 1.5 * h){ const d = Math.abs(mx(a) - mx(b)); if(d > 2 * h && d < best) best = d; } });
     /* eine TE ist 17,5 mm, die Aufdrucke 2–4 mm hoch: plausibel 3–12 Worthöhen */
-    if(isFinite(best) && best < 12 * h) nn.push(best);
+    if(isFinite(best) && best < 12 * h){ nn.push(best); (a.marke ? nnM : nnL).push(best); }
   });
   nn.sort((a, b) => a - b);
-  const te = nn.length >= 3 ? nn[Math.floor(nn.length / 2)] : 6.5 * h;
+  /* v1.2: Median je Sorte (Marken, LS-Kennungen), davon der kleinere - fehlt
+     die Marke auf jedem zweiten Gerät, misst deren Abstand 2 TE (IMG_7795.v1),
+     die LS-Kennungen stehen dann meist noch auf jedem Gerät */
+  const med = l => { l = l.slice().sort((a, b) => a - b); return l[Math.floor(l.length / 2)]; };
+  const jeSorte = [nnM, nnL].filter(l => l.length >= 3).map(med);
+  const te = jeSorte.length ? Math.min(...jeSorte) : nn.length >= 3 ? nn[Math.floor(nn.length / 2)] : 6.5 * h;
   /* Verbinden (Union-Find) */
   const vater = anker.map((a, i) => i);
   const wurzel = i => vater[i] === i ? i : (vater[i] = wurzel(vater[i]));
@@ -448,7 +539,9 @@ function geraeteFinden(woerter){
      verbinden nicht - über ihre Breite ketteten sie eine ganze Reihe zu
      einem Gerät (IMG_8029). Sie kommen danach zu dem Gerät, dessen Mitte
      unter ihnen liegt. */
-  const lang = a => a.w.x1 - a.w.x0 > 0.8 * te;
+  /* v1.2: eine Marke bis 1,3 TE ist nicht lang - "AEG-" mit Strich war 1,04 TE
+     breit und trennte B16 und EP61 desselben LS (IMG_6730.v1) */
+  const lang = a => a.w.x1 - a.w.x0 > (a.marke ? 1.3 : 0.8) * te;
   for(let i = 0; i < anker.length; i++) for(let j = i + 1; j < anker.length; j++){
     const a = anker[i], b = anker[j];
     if(lang(a) || lang(b)) continue;
@@ -462,6 +555,9 @@ function geraeteFinden(woerter){
     gruppen.forEach(g => {
       const gx = g.reduce((s, b) => s + mx(b), 0) / g.length, gy = g.reduce((s, b) => s + my(b), 0) / g.length;
       if(gx < a.w.x0 || gx > a.w.x1) return;
+      /* v1.2: der Ableiter aus der roten Fläche nimmt keinen LS/FI auf - die
+         Fläche reichte in den AEG-LS daneben (IMG_6730.v1) */
+      if(a.w.kachel === 'rot' && g.some(b => /^(LS|FI|FI\/LS)$/.test(b.art))) return;
       const d = Math.abs(gy - my(a)) + Math.abs(gx - mx(a)) * 0.2;
       if(d < bd && Math.abs(gy - my(a)) < 14 * h){ bd = d; best = g; }
     });
@@ -470,8 +566,13 @@ function geraeteFinden(woerter){
   /* v1.0: Gruppen mit zwei Marken teilen (siehe Kopf) */
   const teile = [];
   gruppen.forEach(g => {
+    /* v1.2: Kennwörter sind Marken und Typnummern (S 261, F 372, E 251, MBN 116 …):
+       ein S 261 B 16 neben einem F 372 hing sonst über sein "6000" am FI
+       (IMG_5185). Ein neues Gerät beginnt, wenn das Kennwort mehr als 0,6 TE
+       hinter dem ersten Kennwort des vorigen liegt. */
+    const KENN = /^(S\s?2\d{2}M?|F\s?[23]\d{2}|E\s?2\d{2}S?|MBN\s?\d{3}|CDA\s?\d{3}|NLS\S*|DFS\s?\d)$/i;
     const marken = [];
-    g.filter(a => a.marke).sort((a, b) => mx(a) - mx(b)).forEach(m => {
+    g.filter(a => a.marke || KENN.test(a.w.text.trim())).sort((a, b) => mx(a) - mx(b)).forEach(m => {
       if(!marken.length || mx(m) - mx(marken[marken.length - 1]) > 0.6 * te) marken.push(m);
     });
     if(marken.length < 2){ teile.push(g); return; }
@@ -494,7 +595,25 @@ function geraeteFinden(woerter){
      (Nummernstreifen, Aufkleber) - ein Gerät braucht mindestens zwei Anker
      oder eine Marke oder einen Art-Hinweis */
   geraete = geraete.filter(g => g.marke || g.hinweise.length || g.anker.length >= 2);
+  /* v1.2: dieselbe Zeile mehrmals untereinander ohne Marke ist eine Tabellenspalte
+     des Blatts an der Tür ("25 A/0,03 A" viermal, "Trafo 230/12v" zweimal,
+     IMG_7120.v1) - ein Gerät trägt seinen Aufdruck nur einmal */
+  const norm = t => t.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  geraete = geraete.filter(g => {
+    if(g.marke || g.anker.length < 2 || new Set(g.anker.map(a => norm(a.w.text))).size > 1) return true;
+    /* mindestens zwei Zeilen übereinander - Mitten mehr als 0,6 Zeilenhöhen
+       auseinander; dieselbe Zeile doppelt gelesen liegt fast deckungsgleich */
+    const cy = g.anker.map(a => (a.w.y0 + a.w.y1) / 2), hz = g.anker[0].w.y1 - g.anker[0].w.y0;
+    return !(Math.max(...cy) - Math.min(...cy) > 0.6 * hz);
+  });
+  /* v1.2: eine lange Bestellnummer allein ("2CSF202101R1250" unten auf dem FI,
+     IMG_6552.v1) ist kein eigenes Gerät */
+  geraete = geraete.filter(g => !(g.anker.length === 1 && /^[0-9A-Z]{10,}$/.test(g.anker[0].w.text.replace(/\s/g, '')) && /\d{4}/.test(g.anker[0].w.text)));
   geraete.forEach(g => {
+    /* v1.2: ein bloßes "251" neben "S251"/"S261" ist ein Bruchstück der
+       LS-Typnummer, kein Stromstoßschalter (IMG_6698.v2) */
+    if(g.hinweise.some(x => /^S\s?2\d{2}$/i.test(x.text.trim())))
+      g.hinweise = g.hinweise.filter(x => !(x.art === 'Stromstoßschalter' && /^2[5S][15]$/.test(x.text.trim())));
     const arten = g.hinweise.map(x => x.art);
     const zahl = k => arten.filter(a => a === k).length;
     g.art = zahl('FI/LS') ? 'FI/LS'
@@ -509,16 +628,89 @@ function geraeteFinden(woerter){
     if(g.art === '—' && g.marke === 'Grothe') g.art = 'Trafo';
     g.aufdruck = aufdruck(g.art, g.anker.map(a => a.w.text));
   });
+  /* v1.2: legrand-FI (2 TE): "IΔn 30mA" oben rechts, "25A", "10000" und die
+     Marke unten links - gut 1 TE und 7 Worthöhen auseinander, das FI zerfiel in
+     "FI" und "—(legrand)" in verschiedenen Reihen (IMG_7038). Ein FI ohne Marke
+     nimmt die nächste Gruppe ohne Art, aber mit Marke darunter (siehe unten). */
+  geraete.filter(g => g.art === 'FI' && !g.marke).forEach(g => {
+    let best = null, bd = Infinity;
+    geraete.forEach(c => {
+      /* nur eine Gruppe mit Marke - ohne Marke war es der Rest eines LS (IMG_6552.v2) */
+      if(c === g || c.art !== '—' || !c.marke || c.weg) return;
+      const dx = Math.abs(c.xm - g.xm), dy = c.ym - g.ym;
+      /* die Marke steht unten links: links bis 1,5 TE, rechts nur bis 0,5 TE,
+         und rechts gilt der Abstand dreifach */
+      const links = c.xm <= g.xm;
+      if(dx > (links ? 1.5 : 0.5) * te || dy <= 0 || dy > 12 * h) return;
+      const d = dy + (links ? dx : 3 * dx);
+      if(d < bd){ bd = d; best = c; }
+    });
+    if(!best) return;
+    g.anker = g.anker.concat(best.anker); g.marke = best.marke;
+    g.x0 = Math.min(g.x0, best.x0); g.x1 = Math.max(g.x1, best.x1); g.y0 = Math.min(g.y0, best.y0); g.y1 = Math.max(g.y1, best.y1);
+    g.ym = (g.y0 + g.y1) / 2; g.xm = g.anker.reduce((s, a) => s + mx(a), 0) / g.anker.length;
+    g.aufdruck = aufdruck('FI', g.anker.map(a => a.w.text));
+    best.weg = true;
+  });
+  geraete = geraete.filter(g => !g.weg);
   /* Reihen: Geräte, deren senkrechte Spannen sich überdecken */
   geraete.sort((a, b) => a.ym - b.ym);
   const reihen = [];
   geraete.forEach(g => {
-    const r = reihen.find(r => Math.min(r.y1, g.y1) - Math.max(r.y0, g.y0) > -2 * h && Math.abs(r.ym - g.ym) < 10 * h);
+    /* v1.2: beim FI Lücke bis 6 Worthöhen - der Text eines großen FI steht tiefer
+       als der der LS daneben (IMG_6676.v1: 2,9; IMG_7893: 5); für alle Geräte verschob das die
+       gezielte Nachlese (IMG_5185) */
+    const r = reihen.find(r => Math.min(r.y1, g.y1) - Math.max(r.y0, g.y0) > (g.art === 'FI' ? -6 : -2) * h && Math.abs(r.ym - g.ym) < 10 * h);
     if(r){ r.geraete.push(g); r.y0 = Math.min(r.y0, g.y0); r.y1 = Math.max(r.y1, g.y1); r.ym = (r.y0 + r.y1) / 2; }
     else reihen.push({geraete: [g], y0: g.y0, y1: g.y1, ym: g.ym});
   });
   reihen.sort((a, b) => a.ym - b.ym);
+  /* v1.2: eine Reihe mit nur einem Gerät gehört zur Nachbarreihe, wenn sie
+     weniger als 4 Worthöhen entfernt ist und keinem Gerät dort waagerecht in
+     die Quere kommt (legrand-LS mit Marke unten neben Ableitern, IMG_8029.v1) */
+  for(let i = 0; i < reihen.length; i++){
+    const r = reihen[i];
+    if(r.geraete.length !== 1) continue;
+    const g = r.geraete[0];
+    const n = [reihen[i - 1], reihen[i + 1]].filter(Boolean)
+      .filter(q => Math.max(q.y0, g.y0) - Math.min(q.y1, g.y1) < 4 * h && !q.geraete.some(x => Math.min(x.x1, g.x1) - Math.max(x.x0, g.x0) > 0.3 * te))
+      .sort((p, q) => Math.abs(p.ym - g.ym) - Math.abs(q.ym - g.ym))[0];
+    if(!n) continue;
+    n.geraete.push(g); n.y0 = Math.min(n.y0, g.y0); n.y1 = Math.max(n.y1, g.y1); n.ym = (n.y0 + n.y1) / 2;
+    reihen.splice(i, 1); i--;
+  }
   reihen.forEach(r => r.geraete.sort((a, b) => a.xm - b.xm));
+  /* v1.2: ein FI-Stück, das waagerecht in einem FI/LS liegt, gehört zu ihm
+     ("0.03A" auf dem alten schupa-FI/LS, IMG_8029) */
+  reihen.forEach(r => {
+    for(let i = 0; i < r.geraete.length; i++){
+      const a = r.geraete[i];
+      if(a.art !== 'FI') continue;
+      const b = r.geraete.find(x => x.art === 'FI/LS' && x.x0 <= a.xm && a.xm <= x.x1);
+      if(!b) continue;
+      b.anker = b.anker.concat(a.anker); b.marke = b.marke || a.marke;
+      b.y0 = Math.min(a.y0, b.y0); b.y1 = Math.max(a.y1, b.y1); b.ym = (b.y0 + b.y1) / 2;
+      r.geraete.splice(i, 1); i--;
+    }
+  });
+  /* v1.2: Überspannungsableiter mit Steckmodulen - jedes Modul trägt Marke
+     oder "Surge", jedes wurde ein Gerät (IMG_5256.v2). Rechts anschließende
+     Gruppen, die nur Marke/Surge/DEHN tragen, gehören dazu, bis 4 TE. */
+  const nurModul = x => x.anker.every(k => k.marke || /surge|dehn|guard|DGMOD|protect/i.test(k.w.text));
+  reihen.forEach(r => {
+    for(let i = 0; i < r.geraete.length; i++){
+      const a = r.geraete[i];
+      if(a.art !== 'Überspannungsableiter') continue;
+      while(i + 1 < r.geraete.length){
+        const b = r.geraete[i + 1];
+        if(!(b.art === '—' || b.art === 'Überspannungsableiter') || !nurModul(b) || b.x0 - a.x1 > 0.6 * te || b.x1 - a.x0 > 4.3 * te) break;
+        a.anker = a.anker.concat(b.anker); a.x1 = Math.max(a.x1, b.x1); a.y0 = Math.min(a.y0, b.y0); a.y1 = Math.max(a.y1, b.y1);
+        a.xm = a.anker.reduce((s, x) => s + mx(x), 0) / a.anker.length;
+        a.hinweise = a.hinweise.concat(b.hinweise);
+        r.geraete.splice(i + 1, 1);
+      }
+    }
+  });
   const istAnker = new Set(anker.map(a => a.w));
   /* v0.5: zwei Hälften eines FI zusammenlegen. Nebeneinander, die Texte
      berühren sich fast (Lücke unter 1 TE, Mitten unter 1,6 TE - zwei echte
@@ -530,8 +722,20 @@ function geraeteFinden(woerter){
     for(let i = 0; i + 1 < r.geraete.length;){
       const a = r.geraete[i], b = r.geraete[i + 1];
       const fa = a.art === 'FI', fb = b.art === 'FI';
-      const eins = (fa || fb) && (fa || nurTaste(a)) && (fb || nurTaste(b)) && !(a.marke && b.marke) &&
-                   b.xm - a.xm < 1.6 * te && b.x0 - a.x1 < te;
+      /* v1.2: auch eine Hälfte, die nur die Marke trägt, wenn der FI selbst
+         keine hat und sie dicht daneben liegt (ABB F 372: Text links, Marke
+         über dem blauen Hebel rechts, IMG_5185) */
+      const nurMarke = (x, y) => x.anker.every(k => k.marke) && !y.marke;
+      /* nur rechts vom FI - links war es das Logo des LS daneben (IMG_5185) */
+      /* v1.2: beim vierpoligen FI (CDA 440, F 204, F 374, "4P") steht die Marke am
+         rechten Rand, gut 1,5 TE neben dem Text (hager, IMG_6698.v2) */
+      const vier = fa && a.anker.some(k => /^CDA\s?4|^F\s?[23]?[07]4|\b4\s?P\b|4\s?pol/i.test(k.w.text));
+      /* beim vierpoligen auch eine rechte Hälfte ohne Marke und Art ("Un~230/400 V",
+         "IP40" beim F 374, IMG_6775) */
+      const rest = vier && b.art === '—' && !b.marke;
+      const eins = (fa || fb) && (fa || nurTaste(a)) &&
+                   (fb || nurTaste(b) || rest || (nurMarke(b, a) && b.x0 - a.x1 < (vier ? 2 : 0.6) * te)) && !(a.marke && b.marke) &&
+                   b.xm - a.xm < (vier && nurMarke(b, a) ? 3.6 : 1.6) * te && b.x0 - a.x1 < (vier ? 2 : 1) * te;
       if(!eins){ i++; continue; }
       const anker = a.anker.concat(b.anker);
       const g = {x0: Math.min(a.x0, b.x0), x1: Math.max(a.x1, b.x1), y0: Math.min(a.y0, b.y0), y1: Math.max(a.y1, b.y1),
@@ -540,6 +744,35 @@ function geraeteFinden(woerter){
       g.ym = (g.y0 + g.y1) / 2;
       g.aufdruck = aufdruck('FI', anker.map(x => x.w.text));
       r.geraete.splice(i, 2, g);
+    }
+  });
+  /* v1.2: ein Klingeltrafo ist 2-3 TE breit, seine Aufdrucke ("SEC:", "222070")
+     wurden zwei Trafos (IMG_7120.v1) - benachbarte Trafos unter 1,8 TE sind einer */
+  reihen.forEach(r => {
+    for(let i = 0; i + 1 < r.geraete.length;){
+      const a = r.geraete[i], b = r.geraete[i + 1];
+      if(a.art !== 'Trafo' || b.art !== 'Trafo' || b.xm - a.xm > 1.8 * te){ i++; continue; }
+      a.anker = a.anker.concat(b.anker); a.marke = a.marke || b.marke; a.hinweise = a.hinweise.concat(b.hinweise);
+      a.x0 = Math.min(a.x0, b.x0); a.x1 = Math.max(a.x1, b.x1); a.y0 = Math.min(a.y0, b.y0); a.y1 = Math.max(a.y1, b.y1);
+      a.ym = (a.y0 + a.y1) / 2; a.xm = a.anker.reduce((s, x) => s + mx(x), 0) / a.anker.length;
+      r.geraete.splice(i + 1, 1);
+    }
+  });
+  /* v1.2: ABB-Logo oben links, "S 261 B16" mittig - aus Abstand liegen beide
+     knapp über 0,45 TE auseinander, das Logo wurde ein Gerät "—" (IMG_6674.v1).
+     Eine Gruppe nur mit Marke gehört zum LS ohne Marke rechts daneben - ebenso
+     beim Stromstoßschalter E 251 (IMG_6698.v2). Nicht beim FI: links von ihm
+     ist es das Logo des Nachbarn (IMG_5185). */
+  reihen.forEach(r => {
+    for(let i = 0; i + 1 < r.geraete.length; i++){
+      const a = r.geraete[i], b = r.geraete[i + 1];
+      if(a.art !== '—' || !a.anker.every(k => k.marke) || !/^(LS|Stromstoßschalter)$/.test(b.art) || b.marke) continue;
+      /* bis 0,8 TE - bei schräger Aufnahme ist die TE einer Reihe größer als die
+         geschätzte (IMG_7081.v1: 88 statt rund 115) */
+      if(b.xm - a.xm > 0.8 * te || b.x0 - a.x1 > 0.3 * te) continue;
+      b.anker = a.anker.concat(b.anker); b.marke = a.marke;
+      b.x0 = Math.min(a.x0, b.x0); b.y0 = Math.min(a.y0, b.y0); b.y1 = Math.max(a.y1, b.y1); b.ym = (b.y0 + b.y1) / 2;
+      r.geraete.splice(i, 1);
     }
   });
   /* v0.7: übrige Wörter dem Gerät zuordnen, über dem sie stehen - waagerecht
@@ -560,30 +793,116 @@ function geraeteFinden(woerter){
   });
   alle.forEach(g => {
     const t = g.anker.map(x => x.w.text);
+    /* v1.2: Gerät mit Marke, aber ohne Art - ein sicherer LS-Aufdruck aus den
+       Wörtern daneben macht es zum LS ("ABB" und "8"+"10" = B10, IMG_6670.v1) */
+    if(g.art === '—' && g.marke && (aufdruck('LS', t.concat(g.beiText)) || lsNachlese(t.concat(g.beiText)).sicher)) g.art = 'LS';
     g.aufdruck = aufdruck(g.art, t) || aufdruck(g.art, t.concat(g.beiText));
     g.aufdruckSicher = true;
     g.typ = typNummer(t.concat(g.beiText));
     if(g.art === 'LS' && !g.aufdruck){ const n = lsNachlese(t.concat(g.beiText)); g.aufdruck = n.wert; g.aufdruckSicher = n.sicher; }
+    /* v1.2: hager-Typnummer gegen gelesenen Aufdruck ("M8N 116" und "B10",
+       IMG_6536.v2) - die Typnummer gilt, aber unsicher */
+    if(g.art === 'LS' && g.aufdruck){
+      const m = /(?:M[B8]N|[A-Z0-9]{0,2}N)\s?[123](06|10|13|16|20|25|32|40)\b/.exec(t.concat(g.beiText).join(' '));
+      if(m && 'B' + (+m[1]) !== g.aufdruck){ g.aufdruck = 'B' + (+m[1]); g.aufdruckSicher = false; }
+    }
     /* aus den Nachbarwörtern beim FI nur FI-übliche Nennströme - ein "16A"
        vom LS daneben ist kein FI-Nennstrom (IMG_8029.v2) */
     if(g.art === 'FI' && g.aufdruck && !aufdruck(g.art, t) && !/^(25|40|63|80|100|125)A/.test(g.aufdruck)) g.aufdruck = '';
   });
   /* v1.1: baugleiche Geräte stützen sich (siehe Kopf) */
-  const sichere = new Map();
-  alle.forEach(g => { if(g.art === 'LS' && g.typ && g.aufdruck && g.aufdruckSicher){ const k = g.typ + '|' + g.aufdruck; sichere.set(k, (sichere.get(k) || 0) + 1); } });
+  const sichere = new Map(), sichereMarke = new Map();
+  const zaehlen = (m, k) => m.set(k, (m.get(k) || 0) + 1);
+  alle.forEach(g => { if(g.art === 'LS' && g.aufdruck && g.aufdruckSicher){ if(g.typ) zaehlen(sichere, g.typ + '|' + g.aufdruck); if(g.marke) zaehlen(sichereMarke, g.marke + '|' + g.aufdruck); } });
   alle.forEach(g => {
-    if(g.art !== 'LS' || !g.typ || (g.aufdruck && g.aufdruckSicher)) return;
-    const werte = [...sichere].filter(([k]) => k.startsWith(g.typ + '|'));
+    if(g.art !== 'LS' || (g.aufdruck && g.aufdruckSicher)) return;
+    let werte = g.typ ? [...sichere].filter(([k]) => k.startsWith(g.typ + '|')) : [];
+    /* v1.2: ohne Typnummer über die Marke - aber nur, wenn das Gerät selbst den
+       Nennstrom trägt ("AEG" und "16", die Nachbarn sicher B16; IMG_6539.v1) */
+    if(!werte.length && g.marke){
+      const zahlen = g.anker.map(a => a.w.text).concat(g.beiText).map(x => x.trim());
+      werte = [...sichereMarke].filter(([k]) => k.startsWith(g.marke + '|'));
+      if(werte.length === 1 && !zahlen.includes(werte[0][0].split('|')[1].slice(1))) werte = [];
+    }
     if(werte.length !== 1 || werte[0][1] < 2) return;
     const wert = werte[0][0].split('|')[1];
-    if(!g.aufdruck || g.aufdruck === wert){ g.aufdruck = wert; g.aufdruckSicher = true; g.vonBaugleichen = true; }
+    /* v1.2: ein unsicherer Aufdruck mit gleichem Nennstrom nimmt die Kennlinie
+       der Baugleichen an - "C" aus Streuzeichen neben "16" (IMG_6538.v2) */
+    if(!g.aufdruck || g.aufdruck === wert || g.aufdruck.slice(1) === wert.slice(1)){ g.aufdruck = wert; g.aufdruckSicher = true; g.vonBaugleichen = true; }
+  });
+  /* v1.2: auch FI - ein F202 A ohne lesbaren Nennstrom neben einem F202 A mit
+     sicherem "25A" (IMG_6670.v1). Bei nur einem Vorbild bleibt der Wert unsicher. */
+  const fiTyp = g => { for(const x of g.anker.map(a => a.w.text).concat(g.beiText)){ const m = /^F\s?([23]\d{2})/i.exec(x.trim()); if(m) return 'F' + m[1]; } return ''; };
+  const fiSicher = new Map();
+  alle.forEach(g => { if(g.art === 'FI' && g.aufdruck && fiTyp(g)){ const k = fiTyp(g) + '|' + g.aufdruck; fiSicher.set(k, (fiSicher.get(k) || 0) + 1); } });
+  alle.forEach(g => {
+    if(g.art !== 'FI' || g.aufdruck || !fiTyp(g)) return;
+    const werte = [...fiSicher].filter(([k]) => k.startsWith(fiTyp(g) + '|'));
+    if(werte.length !== 1) return;
+    g.aufdruck = werte[0][0].split('|')[1]; g.aufdruckSicher = werte[0][1] >= 2; g.vonBaugleichen = true;
   });
   return {h, te, reihen: reihen.map(r => ({y: r.ym, te, geraete: r.geraete}))};
 }
 
+async function rotFlaechenLesen(c, g){
+  const s = 4, w = Math.floor(c.width / s), hgt = Math.floor(c.height / s);
+  const k = document.createElement('canvas'); k.width = w; k.height = hgt;
+  const kx = k.getContext('2d', {willReadFrequently: true}); kx.drawImage(c, 0, 0, w, hgt);
+  const px = kx.getImageData(0, 0, w, hgt).data;
+  const maske = new Uint8Array(w * hgt);
+  for(let i = 0; i < w * hgt; i++){ const R = px[4*i], G = px[4*i+1], B = px[4*i+2]; if((R > 70 && R > 1.7 * G && R > 1.5 * B) || (R > 35 && R > 2.5 * G && R > 2.5 * B)) maske[i] = 1; }
+  const te = (g.te || 6 * (g.h || 30)) / s, hh = (g.h || 30) / s;
+  const gesehen = new Uint8Array(w * hgt), flaechen = [];
+  for(let i = 0; i < w * hgt; i++){
+    if(!maske[i] || gesehen[i]) continue;
+    const st = [i]; gesehen[i] = 1; let n = 0, x0 = w, x1 = 0, y0 = hgt, y1 = 0;
+    while(st.length){
+      const j = st.pop(), x = j % w, y = (j - x) / w; n++;
+      if(x < x0) x0 = x; if(x > x1) x1 = x; if(y < y0) y0 = y; if(y > y1) y1 = y;
+      for(const d of [-1, 1, -w, w]){ const q = j + d; if(q >= 0 && q < w * hgt && !gesehen[q] && maske[q] && !(d === 1 && x === w - 1) && !(d === -1 && x === 0)){ gesehen[q] = 1; st.push(q); } }
+    }
+    /* mindestens 1,5 TE breit und 3 Worthöhen hoch, und überwiegend gefüllt */
+    /* auch schmale Teile (rote Seitenwände der Module) - die Größe zählt erst am Kasten */
+    /* v1.2: aber kein dünnes rotes Kabel quer durchs Bild - unter 8 % seines
+       Kastens gefüllt; es zog den Kasten der Module unter ein Fünftel (IMG_8029.v2) */
+    if(n > 0.15 * te * hh && n >= 0.08 * (x1 - x0 + 1) * (y1 - y0 + 1)) flaechen.push({x0: x0 * s, x1: (x1 + 1) * s, y0: y0 * s, y1: (y1 + 1) * s, n});
+  }
+  /* übereinander- und nebeneinanderliegende Teile (roter Sockel, Fuß, Modulwände)
+     zu einem Kasten, dann erst nach Größe sieben */
+  for(let i = 0; i < flaechen.length; i++) for(let j = i + 1; j < flaechen.length; j++){
+    const a = flaechen[i], b = flaechen[j];
+    const ueber = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+    const luecke = Math.max(a.y0, b.y0) - Math.min(a.y1, b.y1);
+    const lueckeX = Math.max(a.x0, b.x0) - Math.min(a.x1, b.x1);
+    if((ueber > -0.3 * te * s && luecke < 1.0 * te * s) || (lueckeX < 0.3 * te * s && luecke < 0)){
+      a.x0 = Math.min(a.x0, b.x0); a.x1 = Math.max(a.x1, b.x1); a.y0 = Math.min(a.y0, b.y0); a.y1 = Math.max(a.y1, b.y1); a.n += b.n;
+      flaechen.splice(j, 1); j = i;
+    }
+  }
+  /* am fertigen Kasten: mindestens ein Fünftel rot */
+  for(let i = flaechen.length - 1; i >= 0; i--){ const f = flaechen[i]; if(f.n * s * s < 0.2 * (f.x1 - f.x0) * (f.y1 - f.y0)) flaechen.splice(i, 1); }
+  for(let i = flaechen.length - 1; i >= 0; i--){ const f = flaechen[i]; if(f.x1 - f.x0 < 1.5 * te * s || f.y1 - f.y0 < 1.2 * te * s) flaechen.splice(i, 1); }
+  flaechen.sort((a, b) => (b.x1 - b.x0) * (b.y1 - b.y0) - (a.x1 - a.x0) * (a.y1 - a.y0));
+  const raus = [];
+  for(const f of flaechen.slice(0, 4)){
+    const bw = f.x1 - f.x0, bh = f.y1 - f.y0;
+    for(const dreh of [-1, 1]){
+      const r = document.createElement('canvas'); r.width = bh; r.height = bw;
+      const rx = r.getContext('2d'); rx.translate(bh / 2, bw / 2); rx.rotate(dreh * Math.PI / 2);
+      rx.drawImage(c, f.x0, f.y0, bw, bh, -bw / 2, -bh / 2, bw, bh);
+      const ws = await kachelnLesen(r);
+      const text = ws.map(x => x.text).join(' ');
+      if(/DEHN|guard|DG\s?MOD|MOD\s?275|DGM/i.test(text)){
+        raus.push({text: 'DEHNguard', conf: 0.9, x0: f.x0, x1: f.x1, y0: f.y0 + 0.5 * bh - (g.h || 30), y1: f.y0 + 0.5 * bh + (g.h || 30), rand: false, kachel: 'rot'});
+        break;
+      }
+    }
+  }
+  return raus;
+}
 async function lies(blob, fortschritt){
   try{ return await liesInnen(blob, fortschritt); }
-  finally{ helferBeenden(); }                       // v0.9: Rechenspeicher freigeben
+  finally{ if(!window.__helferBehalten) helferBeenden(); }   // v0.9: Rechenspeicher freigeben (Prüfstand behält sie)
 }
 async function liesInnen(blob, fortschritt){
   await starte();
@@ -606,8 +925,8 @@ async function liesInnen(blob, fortschritt){
      werden zusammengeführt, der sicherere gewinnt. */
   let nachlese = 'nicht nötig';
   const ank = g.reihen.flatMap(r => r.geraete);
-  if(ank.length && g.h && g.h < 30){
-    const f = Math.min(2.5, 36 / g.h);
+  if(ank.length && g.h && g.h < (window.__nachleseH || 30)){
+    const f = Math.min(window.__nachleseMax || 2.5, (window.__nachleseZiel || 36) / g.h);
     const rand = 2 * (g.te || 6 * g.h);
     const x0 = Math.max(0, Math.min(...ank.map(a => a.x0)) - rand), x1 = Math.min(c.width, Math.max(...ank.map(a => a.x1)) + rand);
     const y0 = Math.max(0, Math.min(...ank.map(a => a.y0)) - rand), y1 = Math.min(c.height, Math.max(...ank.map(a => a.y1)) + rand);
@@ -619,6 +938,73 @@ async function liesInnen(blob, fortschritt){
     woerter = zusammenfuehren(woerter.concat(w2));
     g = geraeteFinden(woerter);
     nachlese = 'Bereich ' + Math.round(x1 - x0) + ' × ' + Math.round(y1 - y0) + ' um ' + f.toFixed(1) + ' vergrößert, ' + w2.length + ' Wörter';
+  }
+  /* v1.2: gezielte Nachlese. Geräte, die gefunden wurden, aber ohne Art oder
+     (LS, FI, FI/LS) ohne Aufdruck blieben, werden mit ihrer Umgebung (1 TE zu
+     jeder Seite) vergrößert noch einmal gelesen - kleine Aufdrucke neben
+     großen (IMG_5185: S 261 B 16 neben dem F 372) bekamen beim ganzen Bild
+     keine eigene Vergrößerung, weil die mittlere Schrifthöhe groß war. */
+  /* v1.2: auch LS mit unsicherem Aufdruck ("8" und "16") - unsicher heißt nachlesen */
+  const offen = g.reihen.flatMap(r => r.geraete).filter(x => x.art === '—' || (/^(LS|FI|FI\/LS)$/.test(x.art) && !x.aufdruck) || (x.art === 'LS' && x.aufdruckSicher === false));
+  /* v1.2: auch Lücken in einer Reihe - zwischen zwei Geräten mehr als 1 TE
+     ohne Fund (bis 6 TE); dort steht oft ein Gerät, dessen Aufdruck beim
+     ganzen Bild nicht gelesen wurde (IMG_6698.v1) */
+  const teL = g.te || 6 * g.h, hhL = g.h || 30, luecken = [];
+  g.reihen.forEach(r => {
+    const y0 = Math.min(...r.geraete.map(x => x.y0)), y1 = Math.max(...r.geraete.map(x => x.y1));
+    const gs = r.geraete.slice().sort((a, b) => a.x0 - b.x0);
+    for(let i = 0; i + 1 < gs.length; i++){
+      const a = gs[i], b = gs[i + 1], l = b.x0 - a.x1;
+      if(l > teL && l < 6 * teL) luecken.push({x0: a.x1 - 0.2 * teL, x1: b.x0 + 0.2 * teL, y0, y1});
+    }
+  });
+  if((offen.length || luecken.length) && !window.__ohneGezielt){
+    const te = teL, hh = hhL;
+    let kaesten = offen.map(x => ({x0: Math.max(0, x.x0 - te), x1: Math.min(c.width, x.x1 + te),
+                                   y0: Math.max(0, x.y0 - 4 * hh), y1: Math.min(c.height, x.y1 + 8 * hh)}));
+    /* überlappende Kästen zusammenlegen */
+    for(let i = 0; i < kaesten.length; i++) for(let j = i + 1; j < kaesten.length; j++){
+      const a = kaesten[i], b = kaesten[j];
+      if(a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1){
+        a.x0 = Math.min(a.x0, b.x0); a.x1 = Math.max(a.x1, b.x1); a.y0 = Math.min(a.y0, b.y0); a.y1 = Math.max(a.y1, b.y1);
+        kaesten.splice(j, 1); j = i;
+      }
+    }
+    /* Lücken für sich, nicht mit den Kästen der Geräte zusammengelegt - ein
+       anderer Ausschnitt las das Gerät daneben schlechter (IMG_6676.v1) */
+    kaesten = kaesten.concat(luecken.map(x => ({x0: Math.max(0, x.x0 - te), x1: Math.min(c.width, x.x1 + te),
+                                                 y0: Math.max(0, x.y0 - 4 * hh), y1: Math.min(c.height, x.y1 + 8 * hh)})));
+    /* so weit vergrößern, dass die Schrift etwa 40 Punkte hoch wird, mindestens 2-fach, höchstens 4-fach */
+    const f3 = window.__gezieltF || Math.max(2, Math.min(4, (window.__gezieltZiel || 40) / hh));
+    let neu = [];
+    for(const k of kaesten){
+      const g3 = document.createElement('canvas');
+      g3.width = Math.round((k.x1 - k.x0) * f3); g3.height = Math.round((k.y1 - k.y0) * f3);
+      const k3 = g3.getContext('2d'); k3.imageSmoothingQuality = 'high';
+      k3.drawImage(c, k.x0, k.y0, k.x1 - k.x0, k.y1 - k.y0, 0, 0, g3.width, g3.height);
+      neu = neu.concat((await kachelnLesen(g3)).map(w => Object.assign(w, {x0: k.x0 + w.x0 / f3, x1: k.x0 + w.x1 / f3, y0: k.y0 + w.y0 / f3, y1: k.y0 + w.y1 / f3, kachel: 'n' + w.kachel})));
+    }
+    /* aus den Lücken nur Wörter in der Lücke selbst - die Nachbarn neu gelesen
+       ersetzten gute Wörter durch schlechtere (IMG_6676.v1) */
+    const offenK = offen.map(x => ({x0: x.x0 - te, x1: x.x1 + te, y0: x.y0 - 4 * hh, y1: x.y1 + 8 * hh}));
+    const drin = (w, k) => { const cx = (w.x0 + w.x1) / 2, cy = (w.y0 + w.y1) / 2; return cx >= k.x0 && cx <= k.x1 && cy >= k.y0 && cy <= k.y1; };
+    neu = neu.filter(w => offenK.some(k => drin(w, k)) || luecken.some(l => drin(w, {x0: l.x0 + 0.2 * te, x1: l.x1 - 0.2 * te, y0: l.y0 - 4 * hh, y1: l.y1 + 8 * hh})));
+    woerter = zusammenfuehren(woerter.concat(neu));
+    g = geraeteFinden(woerter);
+    nachlese += ' · gezielt: ' + kaesten.length + ' Bereiche, ' + neu.length + ' Wörter';
+  }
+  /* v1.2: Überspannungsableiter mit senkrechter Beschriftung (DEHNguard: rote
+     Module, "DG MOD 275" hochkant) - die Texterkennung liest nur waagerechte
+     Zeilen, von 16 Ableitern in den Lernsätzen fand sie einen. Zwei Beweise:
+     große rote Flächen im Bild, und die um 90° gedrehte Fläche trägt DEHN/guard/
+     MOD. Erst dann wird an der Stelle ein Wort "DEHNguard" eingesetzt. */
+  if(!window.__ohneRot && !g.reihen.flatMap(r => r.geraete).some(x => x.art === 'Überspannungsableiter')){
+    const rot = await rotFlaechenLesen(c, g);
+    if(rot.length){
+      woerter = woerter.concat(rot);
+      g = geraeteFinden(woerter);
+      nachlese += ' · rot: ' + rot.length + ' Ableiter';
+    }
   }
   melde(1);
   return {version: VERSION, rechner: rechnerText(), rechnerFehler: helferFehler, nachlese, h: Math.round(g.h || 0), te: Math.round(g.te || 0), dauer: (performance.now() - t0) / 1000, breite: c.width, hoehe: c.height,
