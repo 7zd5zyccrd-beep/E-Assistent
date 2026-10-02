@@ -10,6 +10,15 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.135 02.10.2026 SAM (Beta): erkennt ein Blatt, das Geraete statt Plaetze
+                    zaehlt - ein FI, E-Herd, Hauptschalter oder Ableiter mit
+                    nur einer Nummer, der naechste Eintrag zaehlt um eins
+                    weiter, und nirgends ein Bereich wie "7-8". Die Pruefliste
+                    sagt es oben, beim Uebernehmen wird "Abweichende
+                    Nummerierung" eingeschaltet, und die Breite kommt aus der
+                    Geraeteart (E-Herd 3, Ableiter und Hauptschalter aus den
+                    Einstellungen, FI 4 TE und markiert). Zwei FI-Zeilen
+                    nacheinander werden dann nicht zu einem FI zusammengefasst.
   v1.134 02.10.2026 SAM (Beta): Beschreibung und Verteiler werden nach
                     Abwaegung zugeordnet statt nur nach der Geraeteart. Der
                     Aufdruck zaehlt mit (gleich auf Blatt und Geraet staerkt,
@@ -2928,7 +2937,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.134';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.135';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 02.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -7876,8 +7885,38 @@ function samZeilen(reihen){
   /* Nach Nummer ordnen, wenn alle eine tragen – bei zwei Spalten auf dem Blatt
      (Münch) kommt ein nachgetragener Kreis sonst mitten in die Liste. */
   if(rs.every(z => samNummer(z.nr))) rs.sort((a, b) => samNummer(a.nr).start - samNummer(b.nr).start);
-  samFiPlaetze(rs);
+  /* v1.135: zählt das Blatt Geräte statt Plätze, sind zwei FI-Zeilen auf 18
+     und 19 zwei FI – dann nichts zusammenfassen, sondern die Breite bei der
+     Übernahme aus der Geräteart nehmen */
+  if(samGeraeteZaehlung(rs)){
+    rs.forEach(z => {
+      const n = samNummer(z.nr);
+      if(z.geraet === 'rcd' && n && n.te === 1){
+        z.zweifel.nr = true;
+        z.hinweis = 'Blatt zählt Geräte – Breite 4 TE angenommen, bitte prüfen';
+      }
+    });
+  } else samFiPlaetze(rs);
   return rs;
+}
+/* v1.135 (Jean: Schalter "Abweichende Nummerierung" von SAM aus setzen): zählt
+   das Blatt Geräte statt Plätze? Ja, wenn ein Gerät, das mehrere Plätze
+   braucht (FI, E-Herd, Hauptschalter, Überspannungsableiter), nur eine
+   Nummer trägt und der nächste Eintrag um eins weiterzählt – und das Blatt
+   nirgends einen Bereich wie "7–8" schreibt; ein einziger Bereich zeigt,
+   dass es Plätze zählt. Zwei gleiche FI-Zeilen nacheinander (18, 19) sind
+   dagegen das Muster eines FI über zwei Plätze (samFiPlaetze). */
+function samGeraeteZaehlung(rs){
+  const n = rs.map(z => samNummer(z.nr));
+  if(n.some(x => x && x.te > 1)) return false;
+  const mehrTe = z => z.geraet === 'rcd' || /^e herd/.test(samNorm(z.bez)) ||
+    ['Hauptschalter', 'Überspannungsableiter'].includes(samBlattArt(z));
+  return rs.some((z, i) => {
+    if(!n[i] || !mehrTe(z)) return false;
+    const j = n.findIndex((x, k) => k > i && x);
+    if(j < 0 || n[j].start !== n[i].start + 1) return false;
+    return !(rs[j].geraet === z.geraet && samNorm(rs[j].bez) === samNorm(z.bez));
+  });
 }
 /* v1.113 (Jean, eigener Verteiler: zweipoliger FI auf 18 und 19, auf dem
    Blatt zwei Zeilen "Fehlerstromschutzschalter"): ein FI belegt immer
@@ -7969,7 +8008,7 @@ function samKreis(z, frei){
   if(z.geraet === 'other'){
     c.device = 'other'; c.special = z.special || samSonder(z.bez);
     const e = specialList().find(x => x.name === c.special);
-    if(e && e.te && !nr) c.te = e.te;
+    if(e && e.te && (!nr || (frei && nr.te === 1))) c.te = e.te;   // v1.135: Geräte-Zählung
     c.breaker = breakerOf(c);
     return c;
   }
@@ -8025,7 +8064,9 @@ function renderSamListe(){
   $('#samListeKopf').textContent = `${rs.length} Einträge erkannt` + (l.version ? ` (SAM ${l.version.split(' ')[0]})` : '') +
     (schon ? `, ${schon} schon übernommen` : '') +
     (zw ? `, ${zw} bernsteinfarben markiert – bitte ansehen.` : '.') + (schon < rs.length ? ' Antippen zum Ändern.' : '') +
-    samAbgleichText(l);
+    samAbgleichText(l) +
+    (!abwNr() && schon < rs.length && samGeraeteZaehlung(rs.filter(z => !z.uebernommen))
+      ? ' Das Blatt zählt Geräte statt Plätze – beim Übernehmen wird „Abweichende Nummerierung“ eingeschaltet.' : '');
   const f = (txt, zweifelt) => txt ? `<span class="${zweifelt ? 'zw' : ''}">${esc(txt)}</span>` : '';
   $('#samListe').innerHTML = rs.map((z, i) => {
     if(z.uebernommen) return `<div class="list-item sam-zeile" style="opacity:.6">
@@ -8109,7 +8150,7 @@ $('#samUebernehmen').onclick = () => {
     /* Trägt auch nur eine Nummer keine Zahl ("Q1"), ist die Nummerierung des
        Verteilers eine eigene – dann gilt der Schalter "Abweichende
        Nummerierung", und alle Nummern stehen, wie sie auf dem Blatt stehen. */
-    const umstellen = !abwNr() && rs.some(z => !samNummer(z.nr));
+    const umstellen = !abwNr() && (rs.some(z => !samNummer(z.nr)) || samGeraeteZaehlung(rs));   // v1.135
     if(umstellen) abwNrUmschalten(true);
     const frei = abwNr();
     const kreise = rs.map(z => samKreis(z, frei));
