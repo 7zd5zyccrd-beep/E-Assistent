@@ -10,6 +10,18 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.128 02.10.2026 App-Geruest wie in der Nachweise-App: die Seite scrollt
+                    nicht mehr als Ganzes. Kopf- und Fussleiste stehen fest,
+                    dazwischen scrollt nur der Inhalt, mit dem Nachfedern von
+                    iOS - die Kopfleiste bewegt sich dabei nicht mehr, die
+                    Fussleiste kann nicht mehr wandern. Die Hoehe folgt dem
+                    sichtbaren Bereich: geht die Tastatur auf, wird nur der
+                    Inhalt kuerzer, das Feld bleibt im Bild. Die Fussleiste
+                    verschwindet beim Tippen wie bisher. Das Flickwerk aus
+                    v1.107-v1.124 (angehaengte Luft, mitgefuehrte Kopfzeile)
+                    ist heraus. Ausgegebene Protokolle heben die Regel auf.
+                    iOS haelt beim Umbau keine Lage mehr fest (sprang in der
+                    Nachweise-App beim Tippen ans Ende).
   v1.127 02.10.2026 Kabelart sinnvoll eingeschraenkt, "Andere ..." oeffnet
                     jederzeit die ganze Liste. Kreise: nur bis 4 mm2 und ohne
                     Alu; die Aderzahl folgt dem Geraet - ein LS ueber 1 TE
@@ -1000,6 +1012,17 @@ html{color-scheme:light dark}
    Tippen nacheinander vergrößerte sonst die Seite. Wischen und Zwei-Finger-
    Zoom bleiben; das Unterschriftenfeld behält seine eigene Regel (none). */
 html,body{margin:0;padding:0;touch-action:manipulation}
+/* App-Gerüst (v1.128, wie in der Nachweise-App): die Seite selbst scrollt
+   nicht. Kopfleiste oben und Fußleiste unten stehen fest, dazwischen scrollt
+   <main> – dort federt iOS original nach, die Kopfleiste bewegt sich nicht
+   mehr. Die Höhe folgt dem sichtbaren Bereich (--app-h), damit die Tastatur
+   nichts verschiebt. Ausgegebene Blätter heben die Regel wieder auf
+   (blattDatei). */
+html,body{height:100%;overflow:hidden}
+/* iOS 27 hält beim Umbau die Lage über einen Anker – zusammen mit der
+   Tastatur sprang die Seite der Nachweise-App dabei ans Ende. Die App hält
+   ihre Lage selbst (Materialliste, Angaben). */
+*{overflow-anchor:none}
 body{
   background:var(--enclosure);
   color:var(--ink);
@@ -1007,16 +1030,16 @@ body{
   font-size:16px;
   line-height:1.45;
   -webkit-text-size-adjust:100%;
-  padding-bottom:env(safe-area-inset-bottom);
 }
-.app{max-width:var(--col);margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+.app{max-width:var(--col);margin:0 auto;position:relative;height:100vh;height:var(--app-h, 100dvh);
+  display:flex;flex-direction:column;overflow:hidden}
 
 /* ---------- Kopfzeile: wie ein Geräteschild ---------- */
 header{
   background:var(--bar);color:#fff;
   padding:calc(10px + env(safe-area-inset-top)) var(--pad) 10px;
   display:flex;align-items:center;gap:10px;
-  position:sticky;top:0;z-index:40;
+  position:relative;z-index:40;flex:0 0 auto;
 }
 header .back{                                  /* greift die offenen Kreise des Logos auf */
   width:34px;height:34px;flex:0 0 34px;
@@ -1057,7 +1080,9 @@ header .tag{
    Bildschirmhöhe stehen. "1 0 auto": so hoch wie der Inhalt, mindestens der
    Bildschirm, nie kleiner. Die Blattvorschau bleibt unberührt – ihr
    Scrollbereich hat min-height:0 und nimmt keine Höhe aus dem Inhalt. */
-main{flex:1 0 auto;display:flex;flex-direction:column;padding:var(--pad);padding-bottom:0}
+main{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:contain;display:flex;flex-direction:column;
+  padding:var(--pad);padding-bottom:env(safe-area-inset-bottom)}
 .view{display:none}
 .view.active{display:flex;flex-direction:column;flex:1 0 auto}
 /* Ansichten ohne Fußleiste brauchen unten etwas eigene Luft */
@@ -1423,8 +1448,10 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
    Bildschirmrand; die Ansicht hält unten so viel Platz frei, wie die Leiste
    hoch ist (leistenPlatz). Im Zweispalten-Layout bleibt es beim Kleben, dort
    trägt jede Spalte ihre eigene Leiste. */
+/* v1.128: im festen Gerüst steht sie unten in der App statt am Bildschirm –
+   sie folgt damit auch der Höhe bei offener Tastatur. */
 .app:not(.split) .actionbar{
-  position:fixed;left:0;right:0;bottom:0;margin:0;
+  position:absolute;left:0;right:0;bottom:0;margin:0;
   padding-bottom:calc(26px + env(safe-area-inset-bottom));
 }
 
@@ -2842,7 +2869,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.127';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.128';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 02.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -3309,9 +3336,8 @@ document.addEventListener('visibilitychange', () => {
    kam obendrauf und schoss über das Ziel. Übrig bleiben zwei Handgriffe, die
    der Browser nicht leistet: die Fußleiste wird beim Tippen aus dem Bild
    geschoben, und wenn sie danach zurückkommt und das zuletzt gefüllte Feld
-   verdeckt, wird sie freigeräumt. Steht das Feld nahe am Seitenende, ist die
-   Seite oft schon ganz unten – dann lässt sich nichts mehr schieben. Deshalb
-   wird bei Bedarf unten Luft angehängt und danach wieder entfernt. */
+   verdeckt, wird sie freigeräumt. (Die bei Bedarf angehängte Luft aus v1.123
+   ist seit dem festen Gerüst in v1.128 überflüssig.) */
 /* v1.124: Platz für die fest stehende Fußleiste – die Ansicht bekommt unten
    genau ihre Höhe als Innenabstand, damit der letzte Eintrag nicht darunter
    verschwindet. Die Höhe wechselt (ein oder zwei Knöpfe, ausgeblendete), darum
@@ -3320,7 +3346,7 @@ function leistenPlatz(){
   document.querySelectorAll('.actionbar').forEach(b => {
     const v = b.parentElement;
     if(!v) return;
-    const fest = getComputedStyle(b).position === 'fixed';
+    const fest = getComputedStyle(b).position === 'absolute';   // v1.128: absolute im Gerüst
     /* offsetParent ist bei position:fixed immer null – sichtbar heißt hier: hat einen Kasten */
     v.style.paddingBottom = fest && b.getClientRects().length ? Math.ceil(b.getBoundingClientRect().height) + 'px' : '';
   });
@@ -3330,47 +3356,28 @@ if(window.ResizeObserver){
   document.querySelectorAll('.actionbar').forEach(b => ro.observe(b));
 }
 window.addEventListener('resize', leistenPlatz);
-let tastaturLuft = 0;
-/* v1.123 (Jean, iPhone: in Verteiler und Prüfliste scrollten die Knöpfe wieder
-   mit nach oben): die Luft hing als Innenabstand am body, also unterhalb der
-   Ansicht. Die Seite wurde länger als die Ansicht, und die klebende Fußleiste
-   blieb am Ende ihrer Ansicht stehen und wanderte mit nach oben – nach dem
-   Aufräumen konnte leisteFreiHalten() die Luft neu anlegen, und sie blieb dann
-   stehen, auch über den Wechsel der Ansicht. Jetzt steckt sie als leerer Block
-   in der aktiven Ansicht vor deren Fußleiste – die Ansicht wächst mit, die
-   Leiste klebt weiter unten –, und go() räumt sie weg. */
-function luftSetzen(px){
-  tastaturLuft = Math.max(0, Math.round(px));
-  let luft = document.getElementById('tippLuft');
-  if(!tastaturLuft){ if(luft) luft.remove(); return; }
-  const view = document.querySelector('.view.active');
-  if(!view) return;
-  if(!luft){ luft = document.createElement('div'); luft.id = 'tippLuft'; luft.setAttribute('aria-hidden', 'true'); }
-  luft.style.height = tastaturLuft + 'px'; luft.style.flex = '0 0 auto';
-  const leiste = view.querySelector(':scope > .actionbar');
-  if(luft.parentNode !== view || luft.nextSibling !== leiste) view.insertBefore(luft, leiste);
-}
+/* Bildlauf im App-Gerüst (v1.128): gescrollt wird <main>, nicht die Seite. */
+const bild = () => document.querySelector('main');
+const bildY = () => bild().scrollTop;
+const bildNach = y => { bild().scrollTop = Math.max(0, Math.round(y)); };
+/* Lage eines Elements im Bildlaufbereich (statt im Dokument). */
+const imBild = el => el.getBoundingClientRect().top - bild().getBoundingClientRect().top + bild().scrollTop;
 let letztesFeld = null;
-/* Kommt die Fußleiste zurück, legt sie sich über das zuletzt gefüllte Feld.
-   Dann wird das Bild um genau das Maß der Überdeckung nach oben geschoben –
-   und wenn die Seite dafür nicht mehr reicht, unten Platz angehängt. */
+/* Kommt die Fußleiste nach dem Tippen zurück und legt sich über das zuletzt
+   gefüllte Feld, wird der Inhalt um genau das Maß nach oben geschoben. Platz
+   dafür ist immer da: die Ansicht hält unten die Höhe der Leiste frei
+   (leistenPlatz). Die angehängte "Luft" aus v1.123 braucht es nicht mehr. */
 function leisteFreiHalten(){
   const el = letztesFeld;
   if(!el || !el.isConnected) return;
-  let unten = window.innerHeight;
+  let unten = bild().getBoundingClientRect().bottom;
   document.querySelectorAll('.actionbar').forEach(b => {
-    if(!b.getClientRects().length) return;           // v1.124: offsetParent ist bei fixed immer null
+    if(!b.getClientRects().length) return;
     const r = b.getBoundingClientRect();
     if(r.height && r.top < unten) unten = r.top;
   });
   const fehlt = el.getBoundingClientRect().bottom + 12 - unten;
-  if(fehlt <= 0) return;                             // steht frei, nichts zu tun
-  const rest = document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
-  if(rest < fehlt){
-    luftSetzen(fehlt - rest + 24);
-    void document.body.offsetHeight;                 // Umbruch erzwingen
-  }
-  window.scrollBy(0, fehlt);
+  if(fehlt > 0) bildNach(bildY() + fehlt);
 }
 /* Solange getippt wird, verschwindet die Fußleiste: Tastatur und Leiste
    zusammen ließen je nach Kreis zu wenig Platz für Feld und Vorschlagskachel.
@@ -3406,7 +3413,6 @@ function nachTippenAufraeumen(){
   clearTimeout(aufraeumTimer); aufraeumTimer = null;
   tippt = false;
   leisteVerstecken(false);                         // Leiste zurück, Aufbau unverändert
-  luftSetzen(0);                                   // Tipp-Luft weg
   void document.body.offsetHeight;                 // Umbruch erzwingen
   leisteFreiHalten();                              // verdeckt sie das Feld, schiebt es hoch
 }
@@ -3424,29 +3430,31 @@ document.addEventListener('focusout', () => setTimeout(() => {
    tut. Ist kein Feld mehr fokussiert, ist die Tastatur zu: dann wird
    aufgeräumt. */
 if(window.visualViewport) window.visualViewport.addEventListener('resize', () => {
-  kopfMitfuehren();
   const a = document.activeElement;
   if(a instanceof HTMLElement && a.matches('input, select, textarea')) return;
   if(tippt) nachTippenAufraeumen();
 });
-/* Die Kopfzeile klebt am oberen Rand des Layout-Fensters. iOS holt ein Feld aber
-   nicht dadurch ins Bild, dass es die Seite scrollt, sondern indem es das
-   sichtbare Fenster nach unten schiebt – die Kopfzeile wandert dabei nach oben
-   hinaus. Sie wird deshalb um genau dieses Maß mitgeführt. Das ist kein
-   Scrollen, also auch kein Wettlauf mit dem Browser und kein Zittern. */
-function kopfMitfuehren(){
-  const vv = window.visualViewport, kopf = document.querySelector('header');
-  if(!vv || !kopf) return;
-  /* Nur bei offener Tastatur: beim Überziehen am Rand (Gummiband) meldet
-     visualViewport denselben Versatz, obwohl gar keine Tastatur im Spiel ist –
-     ohne diese Bedingung wanderte die Kopfzeile dabei mitten ins Bild. Weiter
-     als um die Höhe der Tastatur kann iOS das Fenster nicht schieben; was
-     darüber hinausgeht, ist ebenfalls Gummiband und wird gekappt. */
-  const tastatur = window.innerHeight - vv.height;
-  const y = tastatur > 120 ? Math.min(Math.round(vv.offsetTop), Math.round(tastatur)) : 0;
-  kopf.style.transform = y > 0 ? `translateY(${y}px)` : '';
-}
-if(window.visualViewport) window.visualViewport.addEventListener('scroll', kopfMitfuehren);
+/* Höhe des Gerüsts = sichtbarer Bereich (v1.128, wie in der Nachweise-App).
+   Geht die Tastatur auf, wird <main> kürzer, statt dass iOS die ganze Seite
+   samt Kopfleiste hochschiebt; das Feld mit dem Cursor bleibt im Bild. Damit
+   entfällt das Mitführen der Kopfzeile (kopfMitfuehren, bis v1.127). */
+(function hoeheBinden(){
+  const vv = window.visualViewport;
+  const setzen = () => {
+    const h = vv ? vv.height : window.innerHeight;
+    document.documentElement.style.setProperty('--app-h', Math.round(h) + 'px');
+    if(window.scrollY) window.scrollTo(0, 0);
+    const f = document.activeElement;
+    if(f && f !== document.body && bild().contains(f) && /INPUT|TEXTAREA|SELECT/.test(f.tagName)){
+      const r = f.getBoundingClientRect(), b = bild().getBoundingClientRect();
+      if(r.bottom > b.bottom - 8) bildNach(bildY() + r.bottom - b.bottom + 24);
+      else if(r.top < b.top + 8) bildNach(bildY() - (b.top - r.top) - 24);
+    }
+  };
+  if(vv){ vv.addEventListener('resize', setzen); vv.addEventListener('scroll', () => { if(window.scrollY) window.scrollTo(0, 0); }); }
+  window.addEventListener('resize', setzen);
+  setzen();
+})();
 
 /* ---------- Abkürzungen ----------
    Die Kopfzeile des Stromkreises zeigt seit v1.25 wieder schlicht „Stromkreis“;
@@ -3586,7 +3594,6 @@ function go(name, push = true){
   if(name !== 'circuit' && name !== 'feed') fbNachtragAnwenden();
   praesenzSetzen(PROJ && !archOffen && PROJECT_VIEWS.includes(name) ? PROJ.id : null);
   resumeTickerSetzen(name === 'resume');
-  luftSetzen(0);                                   // v1.123: Tipp-Luft gehört zur alten Ansicht
   $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
   leistenPlatz();                                  // v1.124: Platz unter der festen Leiste
   modusZeigen(name);
@@ -3605,7 +3612,7 @@ function go(name, push = true){
   if(archOffen && PROJECT_VIEWS.includes(name)){
     tag.hidden = false; tag.textContent = 'Ablage';
   } else tag.hidden = true;
-  window.scrollTo(0,0);
+  bildNach(0);                                     // v1.128: Bildlauf in <main>
   if(name === 'home')     renderHome();
   if(name === 'board')    renderBoard();
   if(name === 'sam')      renderSam();
@@ -5955,8 +5962,7 @@ function renderMaterial(){
     renderMaterial();
     const neu = document.querySelector(`#materialBody [data-m="${CSS.escape(n)}"][data-d="${d}"]`);
     if(neu){
-      const imDokument = neu.getBoundingClientRect().top + window.scrollY;
-      window.scrollTo(0, Math.max(0, imDokument - hoehe));
+      bildNach(imBild(neu) - (hoehe - bild().getBoundingClientRect().top));   // v1.128
     }
   });
   verteilerBinden();
@@ -8454,7 +8460,7 @@ function chkOn(k, val){
 const chkOffen = () => chkItems().filter(it => chkStatus(it) === 'red').length;
 
 function renderChecks(){
-  const scroll = window.scrollY;
+  const scroll = bildY();
   let h = '';
   CHECKS.forEach(g => {
     const items = g.items.filter(it => !it.when || it.when(PROJ));
@@ -8499,7 +8505,7 @@ function renderChecks(){
     ? `<button class="btn" disabled>Noch ${offen} offen</button>`
     : `<button class="btn primary" data-chkgo="1">Angaben bestätigen</button>`) +
     `<p class="muted small">Die Angaben werden so in das Protokoll übernommen, wie sie hier stehen.</p>`;
-  window.scrollTo(0, scroll);
+  bildNach(scroll);
 }
 
 /* Tippen auf eine Auswahl */
@@ -9122,6 +9128,7 @@ function blattDatei(nur, titel){
      Hintergrundbilder wie der BDS-Schriftzug weg und die Tabelle wandert als
      Ganzes auf die nächste Seite. */
   :root{ --pdf-breite:1130px }
+  html,body{ height:auto; overflow:visible }   /* v1.128: Gerüst der App gilt hier nicht */
   *{ -webkit-print-color-adjust:exact; print-color-adjust:exact }
   body{ margin:0 auto; background:#fff; width:var(--pdf-breite); padding:24px 0 }
   .blatt{ background:#fff; width:1024px; margin:0 auto }
