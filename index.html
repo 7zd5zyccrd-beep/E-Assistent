@@ -10,6 +10,17 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.125 02.10.2026 SAM (Beta): schneller und uebersichtlicher. Die Erkennung
+                    laedt nicht mehr nach dem Start der App, sondern erst, wenn
+                    "Neues Projekt" fuer eine Wiederholungspruefung aufgeht -
+                    beide Erkennungen gleich, waehrend Adresse und Wohnung
+                    eingetragen werden. Nach "Foto benutzen" fuer die
+                    Verteilerbeschreibung fuellt eine dunkle Flaeche den
+                    Bildschirm: "Jetzt fotografieren - Verteiler". Ein Tipp
+                    darauf oeffnet die Kamera gleich wieder ("Spaeter" fuehrt
+                    zur SAM-Seite). In die Kamera selbst kann die App kein
+                    Wort schreiben, und von sich aus oeffnen darf sie sie
+                    unter iOS nicht.
   v1.124 02.10.2026 Fehlerbehebung (iPhone): die Fussleiste wanderte in
                     Verteiler und Pruefliste weiter mit nach oben. Sie haengt
                     jetzt fest am unteren Bildschirmrand (ausser im Zwei-
@@ -1492,6 +1503,33 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
 }
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+/* ---------- SAM: nächstes Foto (v1.125) ----------
+   Dunkel wie der Bildbetrachter, damit der Wechsel aus der Kamera ruhig
+   bleibt. Die ganze Fläche ist der Knopf – getroffen wird immer. */
+#samNaechst{
+  position:fixed; inset:0; z-index:4500; background:#0D100B; color:#fff;
+  display:flex; flex-direction:column;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+#samNaechst[hidden]{ display:none; }
+.sn-flaeche{
+  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+  background:none; border:0; color:inherit; cursor:pointer; padding:24px; font-family:var(--f-body);
+}
+.sn-erledigt{ color:var(--brand); font-size:15px; margin-bottom:18px; }
+.sn-jetzt{ font-family:var(--f-label); font-size:15px; letter-spacing:.12em; text-transform:uppercase; opacity:.75; }
+.sn-art{ font-family:var(--f-label); font-weight:700; font-size:clamp(40px,14vw,52px); line-height:1; letter-spacing:.04em; text-transform:uppercase; }
+.sn-hinweis{ font-size:15px; opacity:.75; }
+.sn-kamera{
+  width:96px; height:96px; border-radius:50%; margin:22px 0 6px;
+  display:flex; align-items:center; justify-content:center; background:var(--brand); color:#0D100B;
+}
+.sn-tipp{ font-size:15px; }
+.sn-spaeter{
+  background:none; border:0; color:#fff; opacity:.75; cursor:pointer; align-self:center;
+  font-family:var(--f-body); font-size:15px; padding:10px 24px; min-height:var(--tap); margin-bottom:8px;
+}
+
 /* ---------- Quittierungspflichtiges Popup ---------- */
 #modal{
   /* Muss über dem Bildbetrachter liegen (4500), sonst erscheint die Rückfrage
@@ -2620,6 +2658,22 @@ function nameGross(s){
   </main>
 </div>
 
+<!-- v1.125: Zwischenseite nach dem Foto der Beschreibung – ein Tipp öffnet die
+     Kamera für den Verteiler (iOS öffnet sie nur aus einer Berührung heraus) -->
+<div id="samNaechst" hidden>
+  <button class="sn-flaeche" id="snFoto" type="button">
+    <span class="sn-erledigt">&#10003; Verteilerbeschreibung aufgenommen</span>
+    <span class="sn-jetzt">Jetzt fotografieren</span>
+    <span class="sn-art">Verteiler</span>
+    <span class="sn-hinweis">Alle Geräte mit ihren Aufdrucken.</span>
+    <span class="sn-kamera"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor"
+      stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5a2 2 0 0 1 2-2h2.2l1.6-2.2h6.4l1.6 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <circle cx="12" cy="13" r="3.8"/></svg></span>
+    <span class="sn-tipp">Antippen öffnet die Kamera</span>
+  </button>
+  <button class="sn-spaeter" id="snSpaeter" type="button">Später</button>
+</div>
+
 <div id="fotoView" hidden>
   <div class="fv-kopf">
     <span class="fv-zaehler" id="fvZaehler"></span>
@@ -2774,7 +2828,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.124';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.125';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 02.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -3509,6 +3563,7 @@ function go(name, push = true){
     $('#sheetPaper').innerHTML = '';
   }
   current = name;
+  if(name !== 'sam') samNaechstZeigen(false);      // v1.125
   /* Ein zum Ansehen geöffneter Ablage-Eintrag wird beim Verlassen der
      Projektansichten wieder zugemacht. */
   if(archOffen && !PROJECT_VIEWS.includes(name)){ archOffen = null; PROJ = null; }
@@ -3688,6 +3743,7 @@ function startProject(mode){
   const vn = $('#view-new');
   delete vn.dataset.lat; delete vn.dataset.lng;
   go('new');
+  if(mode === 'wdh') samVorladen();                // v1.125: SAM erst jetzt laden
 }
 function projektAendern(){
   if(!PROJ) return;
@@ -6868,16 +6924,26 @@ $('#samNeuLesen').onclick = async () => {
   const gblob = gid && await samFotoBlob(gid);
   if(gblob) samGeraeteLesen(P, gid, gblob, P.samGeraeteTid || null, true);
 };
+/* v1.125 (Jean: nach "Foto benutzen" gleich den Verteiler): die Kamera
+   selbst kann die App weder beschriften noch von sich aus wieder öffnen –
+   iOS erlaubt das nur aus einer Berührung heraus. Deshalb füllt nach dem
+   Foto der Beschreibung eine Fläche den Bildschirm, die sagt, was jetzt dran
+   ist; ein Tipp darauf öffnet die Kamera. */
+function samNaechstZeigen(an){ $('#samNaechst').hidden = !an; }
+$('#snFoto').onclick = () => { samNaechstZeigen(false); samFoto('verteiler'); };
+$('#snSpaeter').onclick = () => samNaechstZeigen(false);
 $('#samFile').onchange = async e => {
   const datei = e.target.files && e.target.files[0];
   e.target.value = '';
   const art = samArt; samArt = null;
   if(!datei || !PROJ || !art) return;
+  const weiter = art === 'beschreibung' && !(PROJ.sam || {}).verteiler && current === 'sam';
+  if(weiter) samNaechstZeigen(true);
   /* Zuerst in den Trainingsordner: der ist das Einzige, was bei einem vollen
      Projektspeicher nicht verloren gehen soll. */
   const tidP = trainingAblegen(datei, art);
   const eintrag = await fotoAblegen(datei);
-  if(!eintrag) return;
+  if(!eintrag){ samNaechstZeigen(false); return; }
   PROJ.sam = PROJ.sam || {};
   /* Neu aufgenommen ersetzt das bisherige Projektfoto dieses Schritts; im
      Trainingsordner bleiben beide – gerade das misslungene Bild ist lehrreich. */
@@ -7342,19 +7408,18 @@ function samVorbereiten(){
    verbunden ist und die ersten Abgleiche angestoßen hat – ohne Verbindung
    nach spätestens 20 s. Erst die Beschreibung, dann die Geräte, nacheinander
    über dieselbe Kette wie das Lesen. */
-let samVorladenGeplant = false;
+/* v1.125 (Jean: "erst mit Start einer neuen Wiederholungsprüfung"): nicht
+   mehr nach dem App-Start, sondern sobald "Neues Projekt" für eine
+   Wiederholungsprüfung aufgeht – beide Erkennungen gleich, während Adresse und
+   Wohnung eingetragen werden. Die Beschreibung kann nach einer früheren
+   Prüfung freigegeben sein (v1.118); sie lädt dann wieder. */
 function samVorladen(){
-  if(!CFG.sam || samVorladenGeplant) return;
+  if(!CFG.sam) return;
   if(navigator.connection && navigator.connection.saveData) return;
-  samVorladenGeplant = true;
-  const los = () => {
-    samVorbereiten();
-    if(!SAM_GER.geladen) samKette(() => samAnfrage('vorbereiten', null, null, SAM_GER)).catch(() => {});
-  };
-  const ruhig = () => setTimeout(() => ('requestIdleCallback' in window) ? requestIdleCallback(los, {timeout: 8000}) : los(), 1500);
-  Promise.race([Promise.resolve(FB.bereit).catch(() => {}), new Promise(res => setTimeout(res, 20000))]).then(ruhig);
+  SAM_LESER.frei = false;
+  samVorbereiten();
+  if(!SAM_GER.geladen) samKette(() => samAnfrage('vorbereiten', null, null, SAM_GER)).catch(() => {});
 }
-samVorladen();
 
 const samAnsicht = () => { if(current === 'sam') renderSam(); if(current === 'samprobe') renderProbe(); };
 /* v1.115: Ring und Linie über dem Foto, das SAM gerade liest oder das wartet */
@@ -9410,7 +9475,6 @@ $('#btnSaveSettings').onclick = () => {
   CFG.invHinweis = $('#setInvHinweis').checked;
   CFG.invMonate  = invMonate($('#setInvMonate').value);
   CFG.sam        = $('#setSam').checked;          // persönlich, geht nicht hinauf
-  samVorladen();
   const sel = $('#setDevice').value;
   if(sel && CFG.devices.includes(sel)) CFG.devices = [sel, ...CFG.devices.filter(d => d !== sel)];
   saveCfg();
