@@ -10,6 +10,13 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.130 02.10.2026 Fehlerbehebung (iPhone): die Knoepfe der Fussleiste standen
+                    zu weit oben, und an der Oberkante lag ein grauer Schleier.
+                    Die Statusleiste ist jetzt undurchsichtig schwarz wie in
+                    der Nachweise-App; der Inhalt laeuft nicht mehr darunter.
+                    Ohne Tastatur fuellt die App die ganze Seite, die
+                    gemeldete Hoehe des sichtbaren Bereichs gilt nur bei
+                    offener Tastatur.
   v1.129 02.10.2026 Blattvorschau mit eigenem Zoom (wie in der Nachweise-App).
                     Beim Oeffnen passt das Blatt in die Breite, zwei Finger
                     vergroessern nur die Blaetter (bis dreifach), der Punkt
@@ -961,7 +968,12 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#1A1F16">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- Statusleiste undurchsichtig schwarz (v1.130, wie Nachweise-App v1.87): läuft
+     der Inhalt darunter (black-translucent), legt iOS 27 eine helle Blende an
+     die Oberkante, und die gemeldete Fensterhöhe stimmte nicht mit der
+     Bildschirmhöhe überein. Mit "black" beginnt die App unter der Leiste;
+     env(safe-area-inset-top) ist dann 0, der Abstand oben fällt von selbst weg. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>BDS E-Assistent</title>
 <meta name="apple-mobile-web-app-title" content="E-Assistent">
 <meta name="application-name" content="BDS E-Assistent">
@@ -1038,7 +1050,7 @@ body{
   line-height:1.45;
   -webkit-text-size-adjust:100%;
 }
-.app{max-width:var(--col);margin:0 auto;position:relative;height:100vh;height:var(--app-h, 100dvh);
+.app{max-width:var(--col);margin:0 auto;position:relative;height:100%;height:var(--app-h, 100%);
   display:flex;flex-direction:column;overflow:hidden}
 
 /* ---------- Kopfzeile: wie ein Geräteschild ---------- */
@@ -2876,7 +2888,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.129';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.130';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 02.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -3448,8 +3460,15 @@ if(window.visualViewport) window.visualViewport.addEventListener('resize', () =>
 (function hoeheBinden(){
   const vv = window.visualViewport;
   const setzen = () => {
+    /* v1.130 (Jean, iPhone: Fußleiste zu weit oben): ohne Tastatur füllt das
+       Gerüst einfach die Seite (100 %). Die gemeldete Höhe des sichtbaren
+       Bereichs lag in der App vom Home-Bildschirm mit durchsichtiger
+       Statusleiste um deren Höhe zu niedrig. Nur wenn sie deutlich kleiner ist
+       als das Fenster – die Tastatur ist offen –, gilt sie. */
     const h = vv ? vv.height : window.innerHeight;
-    document.documentElement.style.setProperty('--app-h', Math.round(h) + 'px');
+    const tastatur = window.innerHeight - h > 120;
+    if(tastatur) document.documentElement.style.setProperty('--app-h', Math.round(h) + 'px');
+    else document.documentElement.style.removeProperty('--app-h');
     if(window.scrollY) window.scrollTo(0, 0);
     const f = document.activeElement;
     if(f && f !== document.body && bild().contains(f) && /INPUT|TEXTAREA|SELECT/.test(f.tagName)){
