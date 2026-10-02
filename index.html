@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.123 02.10.2026 Fehlerbehebung (iPhone): in Verteiler und Pruefliste
+                    scrollten die Knoepfe wieder mit nach oben. Die nach dem
+                    Tippen angehaengte Luft lag unter der Ansicht am Seitenende
+                    und blieb stehen; jetzt liegt sie in der Ansicht vor der
+                    Fussleiste und wird beim Ansichtswechsel entfernt.
   v1.122 02.10.2026 SAM (Beta): Geraeteerkennung auf Werkstatt-Stand v1.2 -
                     Durchsicht aller Lernsaetze Bild fuer Bild (Art richtig
                     410 -> 510, mit Aufdruck 370 -> 488 von 645): gezielte
@@ -2753,7 +2758,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.122';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.123';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 02.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -3224,9 +3229,24 @@ document.addEventListener('visibilitychange', () => {
    Seite oft schon ganz unten – dann lässt sich nichts mehr schieben. Deshalb
    wird bei Bedarf unten Luft angehängt und danach wieder entfernt. */
 let tastaturLuft = 0;
+/* v1.123 (Jean, iPhone: in Verteiler und Prüfliste scrollten die Knöpfe wieder
+   mit nach oben): die Luft hing als Innenabstand am body, also unterhalb der
+   Ansicht. Die Seite wurde länger als die Ansicht, und die klebende Fußleiste
+   blieb am Ende ihrer Ansicht stehen und wanderte mit nach oben – nach dem
+   Aufräumen konnte leisteFreiHalten() die Luft neu anlegen, und sie blieb dann
+   stehen, auch über den Wechsel der Ansicht. Jetzt steckt sie als leerer Block
+   in der aktiven Ansicht vor deren Fußleiste – die Ansicht wächst mit, die
+   Leiste klebt weiter unten –, und go() räumt sie weg. */
 function luftSetzen(px){
   tastaturLuft = Math.max(0, Math.round(px));
-  document.body.style.paddingBottom = tastaturLuft ? `${tastaturLuft}px` : '';
+  let luft = document.getElementById('tippLuft');
+  if(!tastaturLuft){ if(luft) luft.remove(); return; }
+  const view = document.querySelector('.view.active');
+  if(!view) return;
+  if(!luft){ luft = document.createElement('div'); luft.id = 'tippLuft'; luft.setAttribute('aria-hidden', 'true'); }
+  luft.style.height = tastaturLuft + 'px'; luft.style.flex = '0 0 auto';
+  const leiste = view.querySelector(':scope > .actionbar');
+  if(luft.parentNode !== view || luft.nextSibling !== leiste) view.insertBefore(luft, leiste);
 }
 let letztesFeld = null;
 /* Kommt die Fußleiste zurück, legt sie sich über das zuletzt gefüllte Feld.
@@ -3462,6 +3482,7 @@ function go(name, push = true){
   if(name !== 'circuit' && name !== 'feed') fbNachtragAnwenden();
   praesenzSetzen(PROJ && !archOffen && PROJECT_VIEWS.includes(name) ? PROJ.id : null);
   resumeTickerSetzen(name === 'resume');
+  luftSetzen(0);                                   // v1.123: Tipp-Luft gehört zur alten Ansicht
   $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
   modusZeigen(name);
   $('#title').textContent = TITLES[name] || 'E-Assistent';
