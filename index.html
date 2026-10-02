@@ -10,6 +10,15 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.138 02.10.2026 SAM (Beta): Durchspielen mit Bildern aus der Fotomediathek.
+                    Neuer Schalter in den Einstellungen "SAM-Test: Fotos aus
+                    der Mediathek" (nur dieses Geraet). Ist er an, oeffnet
+                    "Erfassung beginnen" die Fotos statt der Kamera, die
+                    Zwischenseite fuer den Verteiler ebenso, und auf der
+                    SAM-Seite steht neben "Foto aufnehmen" der Knopf "Aus
+                    Fotos". Danach laeuft alles wie sonst bis zum Protokoll.
+                    Bilder aus der Mediathek gehen nicht in den
+                    Trainingsordner.
   v1.137 02.10.2026 SAM (Beta): die aus "fuer nachfolgende Stromkreise"
                     abgeleitete Abdeckung steht ohne Hinweis und ohne
                     Markierung in der Pruefliste (Jean); aendern laesst sie
@@ -2399,7 +2408,7 @@ function nameGross(s){
 
     <!-- ========== SAM (BETA): FOTOS DER VERTEILERBESCHREIBUNG ========== -->
     <section class="view" id="view-sam">
-      <p class="muted small" style="margin:0 0 14px">Zwei Fotos: erst die Beschreibung, dann der Verteiler.
+      <p class="muted small" id="samKopfText" style="margin:0 0 14px">Zwei Fotos: erst die Beschreibung, dann der Verteiler.
         Beide gehen zusätzlich in den Trainingsordner von SAM.</p>
       <div class="card sam-schritt" id="samS_beschreibung">
         <div class="sam-bild" id="samV_beschreibung">1</div>
@@ -2407,6 +2416,7 @@ function nameGross(s){
           <div class="muted small">Die ganze Liste, möglichst gerade und formatfüllend.</div>
           <div class="sam-lesung" id="samLesung" hidden></div>
           <button class="btn" id="samB_beschreibung" type="button">Foto aufnehmen</button>
+          <button class="btn ghost" id="samM_beschreibung" type="button" hidden>Aus Fotos</button>
           <button class="btn ghost" id="samNeuLesen" type="button" hidden>Neu lesen</button></div>
       </div>
       <div class="card sam-schritt" id="samS_verteiler">
@@ -2414,9 +2424,12 @@ function nameGross(s){
         <div class="sam-text"><strong>Verteiler</strong>
           <div class="muted small">Alle Geräte mit ihren Aufdrucken.</div>
           <div class="sam-lesung" id="samGeraeteStand" hidden></div>
-          <button class="btn" id="samB_verteiler" type="button">Foto aufnehmen</button></div>
+          <button class="btn" id="samB_verteiler" type="button">Foto aufnehmen</button>
+          <button class="btn ghost" id="samM_verteiler" type="button" hidden>Aus Fotos</button></div>
       </div>
       <input type="file" id="samFile" accept="image/*" capture="environment" hidden>
+      <!-- v1.138: ohne capture – iOS bietet die Fotomediathek an (SAM-Test) -->
+      <input type="file" id="samMediathek" accept="image/*" hidden>
       <p class="muted small">SAM liest die Beschreibung, während du den Verteiler fotografierst.
         Danach prüfst du die erkannten Einträge und übernimmst sie als Stromkreise.</p>
       <button class="btn ghost" id="samOhne" type="button" hidden>Ohne SAM zum Verteiler</button>
@@ -2736,6 +2749,12 @@ function nameGross(s){
             <input type="checkbox" id="setSam"><span>Wiederholungsprüfung mit SAM beginnen</span></label>
           <p class="muted small" style="margin:0 0 6px">Gilt nur auf diesem Gerät. Nach „Erfassung beginnen“
             öffnet sich die Kamera für die Verteilerbeschreibung, danach für den Verteiler.</p>
+          <label class="chk" style="margin-bottom:8px">
+            <input type="checkbox" id="setSamTest"><span>SAM-Test: Fotos aus der Mediathek</span></label>
+          <p class="muted small" style="margin:0 0 6px">Gilt nur auf diesem Gerät. „Erfassung beginnen“ öffnet
+            dann die Fotomediathek statt der Kamera, und auf der SAM-Seite steht „Aus Fotos“. So lässt sich eine
+            Prüfung mit gespeicherten Bildern bis zum Protokoll durchspielen. Diese Fotos gehen nicht in den
+            Trainingsordner.</p>
           <p class="muted small" id="samTrainStatus" style="margin:0 0 8px"></p>
           <button class="btn ghost" id="btnTraining" type="button" style="margin-bottom:14px">Trainingsordner öffnen</button>
           <div class="eyebrow">Adressen im Protokoll</div>
@@ -2791,7 +2810,7 @@ function nameGross(s){
     <span class="sn-kamera"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor"
       stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5a2 2 0 0 1 2-2h2.2l1.6-2.2h6.4l1.6 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
       <circle cx="12" cy="13" r="3.8"/></svg></span>
-    <span class="sn-tipp">Antippen öffnet die Kamera</span>
+    <span class="sn-tipp" id="snTipp">Antippen öffnet die Kamera</span>
   </button>
   <button class="sn-spaeter" id="snSpaeter" type="button">Später</button>
 </div>
@@ -2950,7 +2969,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.137';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.138';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 02.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4044,7 +4063,7 @@ $('#btnCreate').onclick = () => {
   if(newMode === 'wdh' && CFG.sam){
     PROJ.sam = {};
     stack = ['home']; go('sam', false);
-    samFoto('beschreibung');
+    samFoto('beschreibung', !!CFG.samTest);         // v1.138: im SAM-Test gleich die Fotos
     return;
   }
   stack = ['home']; go('board', false);
@@ -7048,15 +7067,21 @@ $('#photoFile').onchange = async e => {
    ============================================================ */
 const SAM_ARTEN = ['beschreibung', 'verteiler'];
 let samArt = null;                               // welcher Schritt gerade aufnimmt
-function samFoto(art){
+/* v1.138 (Jean: komplette Durchläufe mit Bildern aus der Fotomediathek
+   testen): mediathek wählt das Feld ohne capture. Solche Fotos sind keine
+   neuen Aufnahmen und gehen deshalb nicht in den Trainingsordner. */
+function samFoto(art, mediathek){
   if(!PROJ) return;
   const alt = PROJ.sam && PROJ.sam[art];
   const belegt = (PROJ.photos || []).length - (alt ? 1 : 0);
   if(belegt >= FOTO_MAX){ toast(`Mehr als ${FOTO_MAX} Fotos sind nicht vorgesehen`); return; }
   samArt = art;
-  $('#samFile').click();
+  $(mediathek ? '#samMediathek' : '#samFile').click();
 }
-SAM_ARTEN.forEach(art => { $('#samB_' + art).onclick = () => samFoto(art); });
+SAM_ARTEN.forEach(art => {
+  $('#samB_' + art).onclick = () => samFoto(art);
+  $('#samM_' + art).onclick = () => samFoto(art, true);
+});
 $('#btnSamBoard').onclick = () => go('sam');
 $('#samOhne').onclick = () => {
   const l = PROJ && PROJ.samLesung;
@@ -7094,10 +7119,14 @@ $('#samNeuLesen').onclick = async () => {
    iOS erlaubt das nur aus einer Berührung heraus. Deshalb füllt nach dem
    Foto der Beschreibung eine Fläche den Bildschirm, die sagt, was jetzt dran
    ist; ein Tipp darauf öffnet die Kamera. */
-function samNaechstZeigen(an){ $('#samNaechst').hidden = !an; }
-$('#snFoto').onclick = () => { samNaechstZeigen(false); samFoto('verteiler'); };
+function samNaechstZeigen(an){
+  $('#samNaechst').hidden = !an;
+  if(an) $('#snTipp').textContent = CFG.samTest ? 'Antippen öffnet die Fotos' : 'Antippen öffnet die Kamera';
+}
+$('#snFoto').onclick = () => { samNaechstZeigen(false); samFoto('verteiler', !!CFG.samTest); };
 $('#snSpaeter').onclick = () => samNaechstZeigen(false);
-$('#samFile').onchange = async e => {
+$('#samFile').onchange = $('#samMediathek').onchange = async e => {
+  const ausMediathek = e.target.id === 'samMediathek';   // v1.138: nicht in den Trainingsordner
   const datei = e.target.files && e.target.files[0];
   e.target.value = '';
   const art = samArt; samArt = null;
@@ -7106,7 +7135,8 @@ $('#samFile').onchange = async e => {
   if(weiter) samNaechstZeigen(true);
   /* Zuerst in den Trainingsordner: der ist das Einzige, was bei einem vollen
      Projektspeicher nicht verloren gehen soll. */
-  const tidP = trainingAblegen(datei, art);
+  const tidP = ausMediathek ? null : trainingAblegen(datei, art);
+  if(ausMediathek) delete PROJ[art === 'beschreibung' ? 'samTid' : 'samGeraeteTid'];   // kein alter Eintrag nachtragen
   const eintrag = await fotoAblegen(datei);
   if(!eintrag){ samNaechstZeigen(false); return; }
   PROJ.sam = PROJ.sam || {};
@@ -7134,6 +7164,9 @@ function renderSam(){
     $('#samS_' + art).classList.toggle('dran', art === dran);
     $('#samB_' + art).textContent = fid ? 'Neu aufnehmen' : 'Foto aufnehmen';
     $('#samB_' + art).className = 'btn' + (art === dran ? ' primary' : ' ghost');
+    $('#samM_' + art).hidden = !CFG.samTest;          // v1.138
+    $('#samKopfText').textContent = 'Zwei Fotos: erst die Beschreibung, dann der Verteiler. ' + (CFG.samTest
+      ? 'Aufnahmen gehen in den Trainingsordner von SAM, Bilder aus den Fotos nicht.' : 'Beide gehen zusätzlich in den Trainingsordner von SAM.');
     const feld = $('#samV_' + art);
     /* v1.115: dasselbe Bild nicht bei jeder Zwischenmeldung neu laden */
     if(fid && feld.dataset.fid === fid && feld.querySelector('img')) return;
@@ -9776,6 +9809,7 @@ function renderSettings(){
   $('#setInvHinweis').checked = invAn();
   $('#setInvMonate').value    = invMonate(CFG.invMonate);
   $('#setSam').checked = !!CFG.sam;
+  $('#setSamTest').checked = !!CFG.samTest;
   samTrainStatus();
   fbStatusZeigen();
 }
@@ -9797,6 +9831,7 @@ $('#btnSaveSettings').onclick = () => {
   CFG.invHinweis = $('#setInvHinweis').checked;
   CFG.invMonate  = invMonate($('#setInvMonate').value);
   CFG.sam        = $('#setSam').checked;          // persönlich, geht nicht hinauf
+  CFG.samTest    = $('#setSamTest').checked;      // v1.138, ebenso
   const sel = $('#setDevice').value;
   if(sel && CFG.devices.includes(sel)) CFG.devices = [sel, ...CFG.devices.filter(d => d !== sel)];
   saveCfg();
