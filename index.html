@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.140 02.10.2026 Kamera-Probe: "10 gemittelt" ist ersetzt durch "Schaerfstes
+                    aus 10" - zehn Bilder in kurzer Folge, behalten wird das
+                    schaerfste (Jean: das Mitteln verschwamm aus der Hand,
+                    Verschieben gleicht Drehen und Kippen nicht aus). Die
+                    Schaerfewerte aller zehn stehen dabei.
   v1.139 02.10.2026 SAM (Beta): Kamera-Probe (Einstellungen > SAM). Ein
                     Versuchsplatz fuer eine eigene Kamera in der App: zeigt,
                     was das iPhone in Safari hergibt (Aufloesung, Licht, Fokus,
@@ -2477,7 +2482,7 @@ function nameGross(s){
       </div>
       <div class="btn-row" style="margin-bottom:14px">
         <button class="btn" id="kpEins" type="button">1 Bild</button>
-        <button class="btn primary" id="kpStapel" type="button">10 gemittelt</button>
+        <button class="btn primary" id="kpStapel" type="button">Schärfstes aus 10</button>
       </div>
       <button class="btn ghost" id="kpFoto" type="button" hidden style="margin-bottom:14px">Foto (Fotofunktion)</button>
       <input type="file" id="kpSystemDatei" accept="image/*" capture="environment" hidden>
@@ -3005,7 +3010,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.139';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.140';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 02.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -7467,9 +7472,9 @@ $('#trainProbe').onclick = async () => {
 };
 /* --- Kamera-Probe (v1.139, Jean: "eigene Kamera, schauen was wir rausholen") ---
    Ein Versuchsplatz: was gibt Safari auf dem iPhone her? Auflösung, Dauerlicht,
-   Fokus, die Fotofunktion – und ein selbst gebauter, schwacher Nachtmodus:
-   10 Bilder aus dem Videostrom, aufeinander ausgerichtet und gemittelt, das
-   senkt das Rauschen bei wenig Licht. Zum Vergleich daneben die eingeblendete
+   Fokus, die Fotofunktion – und das schärfste aus 10 Bildern des Videostroms
+   (v1.140; das Mitteln aus v1.139 verschwamm aus der Hand). Zum Vergleich
+   daneben die eingeblendete
    iOS-Kamera. Jedes Ergebnis lässt sich teilen (in Fotos sichern, dort
    vergrößern) oder mit SAM lesen (Probelauf). Gespeichert wird nichts. */
 const KP = {strom:null, spur:null, licht:false, laeuft:false};
@@ -7540,70 +7545,6 @@ const kpNaechstes = () => new Promise(res => {
   const v = $('#kpVideo');
   if(v.requestVideoFrameCallback) v.requestVideoFrameCallback(() => res()); else setTimeout(res, 40);
 });
-/* Graustufen, um den Faktor f verkleinert (Mittel je Block) – für das Ausrichten */
-function kpGrau(d, w, h, f){
-  const W = Math.floor(w / f), H = Math.floor(h / f), o = new Float32Array(W * H);
-  for(let y = 0; y < H; y++) for(let x = 0; x < W; x++){
-    let s = 0;
-    for(let j = 0; j < f; j++){ let i = ((y * f + j) * w + x * f) * 4; for(let k = 0; k < f; k++, i += 4) s += d[i] + 2 * d[i + 1] + d[i + 2]; }
-    o[y * W + x] = s / (4 * f * f);
-  }
-  return {o, W, H};
-}
-/* Versatz von b gegen a suchen: kleinste mittlere Abweichung in einem
-   Ausschnitt der Mitte, im Bereich ±r um (dx, dy) */
-function kpVersatz(a, b, W, H, r, dx0, dy0, rand){
-  let best = [dx0, dy0], min = Infinity;
-  const x0 = Math.floor(W * rand), x1 = W - x0, y0 = Math.floor(H * rand), y1 = H - y0;
-  for(let dy = dy0 - r; dy <= dy0 + r; dy++) for(let dx = dx0 - r; dx <= dx0 + r; dx++){
-    let s = 0, n = 0;
-    for(let y = y0; y < y1; y += 2){
-      const yb = y + dy; if(yb < 0 || yb >= H) continue;
-      for(let x = x0; x < x1; x += 2){
-        const xb = x + dx; if(xb < 0 || xb >= W) continue;
-        s += Math.abs(a[y * W + x] - b[yb * W + xb]); n++;
-      }
-    }
-    if(n && s / n < min){ min = s / n; best = [dx, dy]; }
-  }
-  return best;
-}
-async function kpStapel(n){
-  const v = $('#kpVideo'), w = v.videoWidth, h = v.videoHeight;
-  const summe = new Uint16Array(w * h * 3), anzahl = new Uint8Array(w * h);
-  let ref = null, ref2 = null;
-  const versaetze = [];
-  for(let k = 0; k < n; k++){
-    await kpNaechstes();
-    const {g} = kpBild(), d = g.getImageData(0, 0, w, h).data;
-    /* Ausrichten in zwei Stufen: grob auf 1/8, fein auf 1/2 */
-    const grob = kpGrau(d, w, h, 8), fein = kpGrau(d, w, h, 2);
-    let dx = 0, dy = 0;
-    if(!ref){ ref = grob; ref2 = fein; }
-    else {
-      const [gx, gy] = kpVersatz(ref.o, grob.o, grob.W, grob.H, 6, 0, 0, 0.2);
-      [dx, dy] = kpVersatz(ref2.o, fein.o, fein.W, fein.H, 5, gx * 4, gy * 4, 0.35);
-      dx *= 2; dy *= 2;
-    }
-    versaetze.push(dx + '/' + dy);
-    for(let y = 0; y < h; y++){
-      const yb = y + dy; if(yb < 0 || yb >= h) continue;
-      for(let x = 0; x < w; x++){
-        const xb = x + dx; if(xb < 0 || xb >= w) continue;
-        const i = (yb * w + xb) * 4, o = (y * w + x);
-        summe[o * 3] += d[i]; summe[o * 3 + 1] += d[i + 1]; summe[o * 3 + 2] += d[i + 2]; anzahl[o]++;
-      }
-    }
-  }
-  const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const g = c.getContext('2d'), bild = g.createImageData(w, h), z = bild.data;
-  for(let o = 0; o < w * h; o++){
-    const a = anzahl[o] || 1;
-    z[o * 4] = summe[o * 3] / a; z[o * 4 + 1] = summe[o * 3 + 1] / a; z[o * 4 + 2] = summe[o * 3 + 2] / a; z[o * 4 + 3] = 255;
-  }
-  g.putImageData(bild, 0, 0);
-  return {c, versaetze};
-}
 /* Kennzahlen: Schärfe (Streuung der Kanten in der Bildmitte) und Helligkeit –
    nur zum Vergleichen untereinander, kein absolutes Maß */
 function kpKennzahlen(c){
@@ -7648,9 +7589,18 @@ async function kpLos(knopf, fn){
 $('#kpEins').onclick = () => kpLos($('#kpEins'), async t0 => {
   const {c} = kpBild(); await kpErgebnis('1 Bild aus dem Video', c, null, '', performance.now() - t0);
 });
+/* v1.140 (Jean: "10 gemittelt" verschwimmt aus der Hand – Verschieben
+   gleicht Drehen und Kippen nicht aus): stattdessen 10 Bilder nehmen und
+   das schärfste behalten. Verwackler fallen heraus, nichts wird gemischt. */
 $('#kpStapel').onclick = () => kpLos($('#kpStapel'), async t0 => {
-  const {c, versaetze} = await kpStapel(10);
-  await kpErgebnis('10 Bilder gemittelt', c, null, 'Versatz ' + versaetze.slice(1).join(' '), performance.now() - t0);
+  let best = null, werte = [];
+  for(let k = 0; k < 10; k++){
+    await kpNaechstes();
+    const {c} = kpBild(), m = kpKennzahlen(c);
+    werte.push(m.schaerfe);
+    if(!best || m.schaerfe > best.m.schaerfe) best = {c, m};
+  }
+  await kpErgebnis('Schärfstes aus 10', best.c, null, 'Schärfe der 10: ' + werte.join(' '), performance.now() - t0);
 });
 $('#kpFoto').onclick = () => kpLos($('#kpFoto'), async t0 => {
   const blob = await new ImageCapture(KP.spur).takePhoto();
