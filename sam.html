@@ -1,7 +1,15 @@
 <!DOCTYPE html>
 <!--
   PaddleOCR-Test · Verteilerbeschreibung
-  v0.50 · 03.10.2026
+  v0.51 · 03.10.2026
+
+  v0.51: Verleser gegen den Wortschatz (Jean, 03.10.2026). Wörter hinter dem
+  ersten Begriff werden auch gegen einen Wortschatz geprüft ("Fliesensplegel"
+  -> Fliesenspiegel, "Waschbecke" -> Waschbecken, "Links" -> links);
+  abgeschnittene Wörter ab 7 Zeichen werden ergänzt, wenn genau ein Wort passt
+  ("Waschmasi" -> Waschmaschine, "Überspanungsabk" -> Überspannungsableiter);
+  ein doppelt gelesener letzter Buchstabe fällt weg ("Stromstoßschalterr");
+  dasselbe Wort zweimal hintereinander wird eins ("Relais Relais").
 
   v0.50: Firmenzeile unter der Tabelle (Jean, iPhone, eigener Verteiler):
   "Elektro - Hausgeräte - Service" bekam eine "1" und wurde ein Eintrag. Eine
@@ -867,7 +875,7 @@ pre.abgleich.gut{background:#EAF5DC;border-color:#8FBE36}
 
   <header>
     <h1>PaddleOCR-Test · Verteilerbeschreibung</h1>
-    <span class="ver">v0.50 · 03.10.2026</span>
+    <span class="ver">v0.51 · 03.10.2026</span>
   </header>
 
   <div class="karte">
@@ -1030,6 +1038,18 @@ const BEZEICHNUNGEN = ['Licht','Steckdose','Steckdosen','Beleuchtung','E-Herd','
   'Boiler','Heizung','Rollladen','Arbeitsfläche','Arbeitsplatte','SD','Außensteckdose','Reserve','Zuleitung','Garage',
   'Relais','Steckdose(n)','Dunstabzugshaube','Abzugshaube','Umlufthaube','Spiegelschrank'];
 
+/* v0.51 (Jean, 03.10.2026: Verleser gegen den Wortschatz prüfen): Wörter,
+   die in Bezeichnungen hinter dem ersten Begriff stehen ("Steckdosen
+   Fliesenspiegel", "Steckdose Waschbecken", "Steckdosen links"). Nur zum
+   Berichtigen der folgenden Wörter, nicht als eigene Bezeichnung. */
+const WORTSCHATZ = ['Fliesenspiegel','Waschbecken','Waschtisch','Spiegel','Sockel','Fenster','Wand','Decke','Tür',
+  'links','rechts','linke','rechte','oben','unten','vorne','hinten','Seite','Steuerung','Steuersicherung',
+  'Fernschalter','Flurlicht','Arbeitssteckdose','Nassstrecke','Naßstrecke','Trockenstrecke','Steckdosenring',
+  'Außenbeleuchtung','Außenlicht','Treppenhaus','Spülmaschine','Gefrierschrank','Gefriertruhe','Kochfeld',
+  'Wärmepumpe','Lüftung','Lüfter','Rauchmelder','Sprechanlage','Türöffner','Netzwerk','Telefon','Antenne',
+  'Beleuchtung','Steckdose','Steckdosen','Waschmaschine','Geschirrspüler','Kühlschrank','Trockner',
+  'Überspannungsableiter','Stromstoßschalter','Fehlerstromschutzschalter','Hauptschalter','Dunstabzugshaube'];
+
 const ORTE = ['Bad','Badezimmer','Küche','Flur','Diele','Wohnzimmer','Schlafzimmer','Kinderzimmer',
   'Esszimmer','Büro','Balkon','Terrasse','Keller','Kammer','Speisekammer','Abstellraum',
   'Hauswirtschaftsraum','Wohnung','WC','Gäste-WC','Garage','Dachboden',
@@ -1042,7 +1062,7 @@ const MODELLE = {
   latin: {name:'v5 lateinisch',  konstante:'V5_LATIN_MOBILE_MODEL'}
 };
 
-const VERSION = 'v0.50 · 03.10.2026';
+const VERSION = 'v0.51 · 03.10.2026';
 
 /* ==================== Schrittliste ==================== */
 
@@ -4988,6 +5008,17 @@ function kuerzel(w){
   const k = Object.keys(ABKUERZUNGEN).find(x => x.length === l.length && abstand(x, l) === 1);
   return k ? ABKUERZUNGEN[k] : undefined;
 }
+/* v0.51: am Zeilen- oder Spaltenende abgeschnittene Wörter ergänzen -
+   "Waschmasi" (IMG_5256), "Überspanungsabk". Ab 7 Zeichen, der Anfang eines
+   einzigen, mindestens 2 Zeichen längeren Wortes, höchstens 1 Fehler (ab 12
+   Zeichen 2). */
+function wortErgaenzen(w, liste){
+  if(w.length < 7) return null;
+  const grenze = w.length >= 12 ? 2 : 1;
+  const treffer = [...new Set(liste)].filter(k => k.length >= w.length + 2 &&
+    Math.min(abstand(w, k.substring(0, w.length)), abstand(w, k.substring(0, w.length + 1))) <= grenze);
+  return treffer.length === 1 ? treffer[0] : null;
+}
 function teilDeuten(teil, liste){
   const t = saeubern(teil);
   if(!t) return null;
@@ -5012,17 +5043,34 @@ function teilDeuten(teil, liste){
          stehen, weil nur das erste Wort verglichen wurde. Nur Wörter ab fünf
          Zeichen, und nur eindeutige, nahe Treffer (besteWahl). */
       let rest = t.substring(k.length), neu = false;
-      rest = rest.replace(/[A-Za-zÄÖÜäöüß]{5,}/g, function(w){
+      /* v0.51: ein doppelt gelesener letzter Buchstabe gehört nicht dazu -
+         "Stromstoßschalterr" (IMG_5256); nur der doppelte, sonst wird aus
+         "Steckdosen" (Treffer "Steckdose" + "n") die Einzahl */
+      if(/^[A-Za-zäöüß](?=\s|$)/.test(rest) && rest[0].toLowerCase() === k.slice(-1).toLowerCase()){ rest = rest.substring(1); neu = true; }
+      rest = rest.replace(/[A-Za-zÄÖÜäöüß]{4,}/g, function(w){
         if(liste.some(x => x.toLowerCase() === w.toLowerCase())) return w;
-        const b = besteWahl(w, liste);
+        /* v0.51: Wortschatz in seiner Schreibweise ("Links" -> "links") */
+        const genau = WORTSCHATZ.find(x => x.toLowerCase() === w.toLowerCase());
+        if(genau){ if(genau !== w) neu = true; return genau; }
+        if(w.length < 5) return w;
+        const b = besteWahl(w, liste) || besteWahl(w, WORTSCHATZ);
         if(b && b.d){ neu = true; return b.wort; }
+        const e = wortErgaenzen(w, liste.concat(WORTSCHATZ));
+        if(e){ neu = true; return e; }
         return w;
       });
+      /* v0.51: dasselbe Wort zweimal hintereinander ("Relais Relais", IMG_6784) */
+      const voll = (k + rest).replace(/\b([A-Za-zÄÖÜäöüß-]{4,})(\s+\1)+\b/gi, (m, a) => { neu = true; return a; });
+      rest = voll.substring(k.length);
       return {text: k + rest, herkunft: (d || neu) ? 'korrigiert' : 'gelesen'};
     }
   }
   const w = besteWahl(t, liste);
   if(w) return {text:w.wort, herkunft: w.d ? 'korrigiert' : 'gelesen'};
+  /* v0.51: auch das erste Wort abgeschnitten ("Überspanungsabk", IMG_5256) */
+  const erstes = /^([A-Za-zÄÖÜäöüß]{7,})(\s.*)?$/.exec(t);
+  const e = erstes && wortErgaenzen(erstes[1], liste);
+  if(e){ const d = teilDeuten(e + (erstes[2] || ''), liste); if(d) return {text: d.text, herkunft: 'korrigiert'}; }
   return null;
 }
 
