@@ -1,7 +1,31 @@
 <!DOCTYPE html>
 <!--
   PaddleOCR-Test · Verteilerbeschreibung
-  v0.46 · 28.09.2026
+  v0.48 · 03.10.2026
+
+  v0.48: Jeans Verteiler auf dem iPhone (03.10.2026, als STEIN7A in den
+  Proben): die Nummernspalte kam als "18", "3", "20 20", "21". Der Sprung
+  9 -> 18 aus v0.46 galt nur, wenn die nächste Zeile 19 liest - die war als
+  3 verlesen, und die 18 wurde wieder zur 10. Jetzt bestätigt auch eine der
+  nächsten drei gelesenen Nummern den Sprung (20 zwei Zeilen tiefer); die 3
+  dazwischen holt die Nummernfolge-Kreuzprobe als 19. Dieselbe zweistellige
+  Zahl doppelt gelesen ("20 20") ist eine Nummer, nicht 2020.
+
+  v0.47: die Fehlerbehebungen aus dem iPhone-Durchlauf mit v0.42 (damals als
+  v0.43 im Pull Request #13 vorbereitet, aber nie zusammengeführt - parallel
+  kam die Einbettung als v0.43). Jetzt auf den Stand v0.46 übertragen
+  (Jean, 02.10.2026). Damals 193 von 200 auf dem iPhone; schupa-Karte 1/11,
+  Münch mit Verteiler 12/16. Die einzige Textspalte neben der Absicherung
+  ist nur dann der Ort, wenn die Mehrheit ihrer Zellen bloß Räume nennt
+  (Firmenaufkleber in derselben Spalte drückten die Bezeichnungen unter die
+  Hälfte). Klammerzeichen vor der Nummer ("I 16") fallen weg; über der
+  ersten gelesenen Nummer zählt eine Nummer vorn in der Textspalte ("2 I-
+  E-Herd") und ein Klammerzeichen ("3-I"); beginnt die Liste nicht mit 1 und
+  folgt gleich ein Klammerzeichen, ist der Anfang eine Klammer. Eine Nummer
+  über der erwarteten, auf die die erwartete + 1 folgt, ist verlesen ("12"
+  für 1); gemessene Klammern nehmen die berichtigten Nummern ("12–2",
+  "9–AO"). "40A 30 m" am FI. Der Sprung aus v0.46 bleibt: er greift auch
+  auf die neu gefundenen Nummern.
 
   v0.46: eine sauber gelesene Nummer, die weiter springt, bleibt stehen,
   wenn die nächste Zeile den Sprung fortsetzt (Jean, 28.09.2026, eigener
@@ -829,7 +853,7 @@ pre.abgleich.gut{background:#EAF5DC;border-color:#8FBE36}
 
   <header>
     <h1>PaddleOCR-Test · Verteilerbeschreibung</h1>
-    <span class="ver">v0.46 · 28.09.2026</span>
+    <span class="ver">v0.48 · 03.10.2026</span>
   </header>
 
   <div class="karte">
@@ -1004,7 +1028,7 @@ const MODELLE = {
   latin: {name:'v5 lateinisch',  konstante:'V5_LATIN_MOBILE_MODEL'}
 };
 
-const VERSION = 'v0.46 · 28.09.2026';
+const VERSION = 'v0.48 · 03.10.2026';
 
 /* ==================== Schrittliste ==================== */
 
@@ -2589,6 +2613,11 @@ const VERWECHSLUNG = {'4':['1','7'],'1':['4','7'],'7':['1','4'],'0':['8','6','9'
 function nurNummer(t){
   let raus = '';
   t = (t||'');
+  /* v0.48 (Jeans Verteiler auf dem iPhone, 03.10.2026): dieselbe zweistellige
+     Zahl doppelt gelesen ("20 20") ist eine Nummer, nicht 2020. Nur bei zwei
+     Stellen - "1 1" kann eine zerfallene 11 sein. */
+  const doppelt = /^\s*(\d{2})\s+\1\s*$/.exec(t);
+  if(doppelt) t = doppelt[1];
   for(let i=0;i<t.length;i++){
     const c = t.charAt(i);
     if(/[0-9\/]/.test(c)) raus += c;
@@ -5109,13 +5138,14 @@ function bezUndOrt(roh){
    Auf dem zweiten Blatt sitzt rechts keine Ortsspalte, sondern die
    Absicherung; genau daran ist v0.9 gescheitert. */
 function rolleMessen(zeilen){
-  let n = 0, s = 0, o = 0, b = 0, bo = 0;
+  let n = 0, s = 0, o = 0, b = 0, bo = 0, no = 0;
   (zeilen || []).forEach(function(z){
     const t = saeubern(z.text);
     if(!t) return;
     n++;
     if(sicherungDeuten(t).art) s++;
     const f = bezUndOrt(t);
+    if(f.bez.leer && f.ort && !f.ort.leer) no++;
     if(f.ort && !f.ort.leer && !f.ort.unklar) o++;
     else if(istOrtsteil(t)) o++;
     const d = feldDeuten(t, BEZEICHNUNGEN);
@@ -5124,7 +5154,7 @@ function rolleMessen(zeilen){
        nur für die Frage, ob die einzige Textspalte die Bezeichnung ist */
     else if(f.bez && !f.bez.leer && !f.bez.unklar && f.bez.herkunft !== 'frei') bo++;
   });
-  return {n, sicherung:n?s/n:0, ort:n?o/n:0, bez:n?b/n:0, bezMitOrt:n?(b + bo)/n:0};
+  return {n, sicherung:n?s/n:0, ort:n?o/n:0, bez:n?b/n:0, bezMitOrt:n?(b + bo)/n:0, nurOrt:n?no/n:0};
 }
 
 function rollenVerteilen(teile){
@@ -5151,7 +5181,10 @@ function rollenVerteilen(teile){
        auch wenn in fast jeder Zeile ein Raum steht - auf der schupa-Karte
        (IMG_6014) "Steckdose WZ / SZ / KZ", "Steckd. Küche rechts": als Ort
        gedeutet blieb "Steckdose Wz" stehen. Ort nur, wenn Bezeichnungen fehlen. */
-    rollen[i] = (g[i].n && g[i].ort > g[i].bez && g[i].ort >= 0.5 && g[i].bezMitOrt < 0.5) ? 'ort' : 'bezeichnung';
+    /* v0.47 (aus #13): Ort nur, wenn die Mehrheit der Zellen bloß Räume nennt - auf
+       dem iPhone lagen Firmenaufkleber und Adresse unter der schupa-Karte in
+       derselben Spalte, und die Bezeichnungen fielen unter die Hälfte */
+    rollen[i] = (g[i].n && g[i].nurOrt >= 0.5 && g[i].nurOrt > g[i].bezMitOrt) ? 'ort' : 'bezeichnung';
   }
   return {rollen, guete:g};
 }
@@ -5246,8 +5279,9 @@ function aufsSchema(r){
     if(r.sich && !r.sich.leer && r.sich.art === 'Strom' && r.sich.strom){
       setze(r.sich, 'FI ' + r.sich.strom + ' A / 30 mA'); r.sich.art = 'FI'; r.sich.ma = 30; r.sich.hinweis = '';
     }
-    /* v0.42: Nennstrom und Fehlerstrom nebeneinander, "40A 30 mA" (schupa-Karte) */
-    const fiWerte = r.sich && !r.sich.leer && r.sich.art !== 'FI' ? /^\s*(\d{1,3})\s*A\s*[\/,;]?\s*(\d{1,3})\s*mA\s*$/i.exec(r.sich.text) : null;
+    /* v0.42: Nennstrom und Fehlerstrom nebeneinander, "40A 30 mA" (schupa-Karte);
+       v0.47 (aus #13) auch "40A 30 m" (Streuung, das A am Rand abgeschnitten) */
+    const fiWerte = r.sich && !r.sich.leer && r.sich.art !== 'FI' ? /^\s*(\d{1,3})\s*A\s*[\/,;]?\s*(\d{1,3})\s*mA?\s*$/i.exec(r.sich.text) : null;
     if(fiWerte){ setze(r.sich, 'FI ' + fiWerte[1] + ' A / ' + fiWerte[2] + ' mA'); r.sich.art = 'FI'; r.sich.strom = +fiWerte[1]; r.sich.ma = +fiWerte[2]; r.sich.hinweis = ''; }
     if(r.ort){
       let roh = (r.ort.roh || r.ort.text || '').replace(/\s+/g, ' ').trim();
@@ -5467,42 +5501,91 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
      gehört die Zeile darüber dazu und der Anfang wurde nicht gelesen. */
   const KL_ENDE = /^\s*(\d{1,2})\s*[-–~]\s*(?:[IiHl|!1]e?\.?)?\s*$/;
   const KL_MITTE = /^\s*[IiHl|!]\s*$/;
-  const marke = {}, klGruppe = {};
+  const marke = {}, klGruppe = {}, vorn = {};
+  /* Nummerntext je Eintrag. v0.47 (aus #13) (iPhone mit v0.42, IMG_6014): ein
+     Klammerzeichen vor der Nummer ("I 16") gehört nicht dazu - daraus wurde
+     116; und über der ersten gelesenen Nummer landeten "2 I- E-Herd" und
+     "3-I" in der Textspalte, weil die Spaltengrenze erst ab der 4 galt. Dort
+     wird eine Nummer vorn im Text oder ein ganzes Klammerzeichen genommen. */
+  const ersteNr = reihenListe.findIndex(e => e.zi >= 0);
+  const textSpalte1 = function(e){
+    if(!gitter || e.zi >= 0 || e.eigen) return '';
+    const j = spalteNachZeile[1][e.r];
+    return j === undefined ? '' : (teile[1].zeilen[j].text || '');
+  };
+  const nrText = function(e, k){
+    if(e.zi >= 0){
+      const t = nr[e.zi].text || '';
+      const m = /^\s*[IiHl|!]\s+(\d{1,2}\S*)\s*$/.exec(t);
+      return m ? m[1] : t;
+    }
+    if(ersteNr < 0 || k >= ersteNr) return '';
+    const t1 = textSpalte1(e);
+    if(KL_ENDE.test(t1)){ vorn[k] = {leer: true}; return t1; }
+    const m = /^\s*(\d{1,2})\s+(?:[A-Za-z|!\-–]{1,2}\s+)*(\S.*)$/.exec(t1);
+    if(m){ vorn[k] = {rest: m[2]}; return m[1]; }
+    return '';
+  };
+  const effNr = reihenListe.map(nrText);
   if(nach){
     const markiert = [];
     reihenListe.forEach(function(e, k){
-      if(e.zi < 0) return;
-      const t = nr[e.zi].text || '';
+      const t = effNr[k];
+      if(!t) return;
       const m = KL_ENDE.exec(t);
-      if(m && (!/\d\s*[-–~]\s*\d/.test(t) || +m[1] > 1)) { marke[e.zi] = {art: 'ende', a: +m[1]}; markiert.push(k); }
-      else if(KL_MITTE.test(t) && k > 0){ marke[e.zi] = {art: 'mitte'}; markiert.push(k); }
+      if(m && (!/\d\s*[-–~]\s*\d/.test(t) || +m[1] > 1)) { marke[k] = {art: 'ende', a: +m[1]}; markiert.push(k); }
+      else if(KL_MITTE.test(t) && k > 0){ marke[k] = {art: 'mitte'}; markiert.push(k); }
     });
+    /* v0.47 (aus #13): fängt die Liste nicht mit 1 an und folgt nach höchstens zwei
+       Zeilen ein Klammerzeichen, sind Anfang und Zeichen eine Klammer -
+       "1-I" und "I" standen über allem, was gelesen wurde (IMG_6014 auf dem
+       iPhone: "2 ... Herd", dann "3-I") */
+    const erstesZeichen = markiert.length ? markiert[0] : -1;
+    const ersteZahl = (function(){ for(let k = 0; k < effNr.length; k++){ const m = /^\s*(\d{1,2})/.exec(effNr[k]); if(m) return {k, a: +m[1]}; } return null; })();
+    const anfang = erstesZeichen >= 0 && marke[erstesZeichen].art === 'ende' && ersteZahl && ersteZahl.a > 1 &&
+                   ersteZahl.k < erstesZeichen && erstesZeichen - ersteZahl.k <= 2 && marke[erstesZeichen].a > ersteZahl.a;
     let g = null, gid = 0;
     const schliessen = function(){
-      if(g && g.marken >= 2 && g.enden >= 1){
-        const erste = reihenListe[g.von];
-        if(erste.zi >= 0 && marke[erste.zi].art === 'mitte' && g.von > 0) g.von--;
+      if(g && ((g.marken >= 2 && g.enden >= 1) || (anfang && g.von === erstesZeichen))){
+        if(marke[g.von].art === 'mitte' && g.von > 0) g.von--;
+        if(anfang && g.von === erstesZeichen) g.von = ersteZahl.k;
         gid++;
         for(let k = g.von; k <= g.bis; k++) klGruppe[k] = gid;
       }
       g = null;
     };
     markiert.forEach(function(k){
-      if(g && k - g.bis <= 2){ g.bis = k; g.marken++; if(marke[reihenListe[k].zi].art === 'ende') g.enden++; return; }
+      if(g && k - g.bis <= 2){ g.bis = k; g.marken++; if(marke[k].art === 'ende') g.enden++; return; }
       schliessen();
-      g = {von: k, bis: k, marken: 1, enden: marke[reihenListe[k].zi].art === 'ende' ? 1 : 0};
+      g = {von: k, bis: k, marken: 1, enden: marke[k].art === 'ende' ? 1 : 0};
     });
     schliessen();
   }
+  /* v0.47 (aus #13): die nächste gelesene Nummer nach Eintrag k */
+  const naechsteNr = function(k){
+    for(let q = k + 1; q < reihenListe.length; q++){
+      if(!effNr[q]) continue;
+      const z = zerlege(nurNummer(effNr[q]));
+      return z ? z.a : null;
+    }
+    return null;
+  };
   const klammerZeilen = {};
 
+  /* v0.48 (Jeans Verteiler auf dem iPhone, 03.10.2026: "18", "3", "20 20",
+     "21" - die 19 war als 3 verlesen, und die 18 wurde wieder zur 10): der
+     Sprung gilt auch, wenn erst eine der nächsten drei gelesenen Nummern ihn
+     bestätigt - b plus die Zahl der Zeilen dazwischen. Die verlesene Zeile
+     dazwischen holt danach die Nummernfolge-Kreuzprobe (19). */
   const sprungBestaetigt = function(lk, b){
-    for(let k = lk + 1; k < reihenListe.length; k++){
+    let gesehen = 0;
+    for(let k = lk + 1; k < reihenListe.length && gesehen < 3; k++){
       const zk = reihenListe[k].zi;
       if(zk < 0) continue;
+      gesehen++;
       const roh = (nr[zk].text || '').trim();
       const zz = /^[\d\s\-–—\/]+$/.test(roh) ? zerlege(nurNummer(roh)) : null;
-      return !!zz && zz.a === b + 1;
+      if(zz && zz.a === b + (k - lk)) return true;
     }
     return false;
   };
@@ -5519,27 +5602,34 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
     if(qm){
       n = {text: qm[1], roh: qm[1], geaendert: false, unklar: false, luecke: 0, a: null, b: null, herkunft: 'gelesen'};
       qRest = qm[2];
-    } else if(zi >= 0 && kg && marke[zi] && marke[zi].art === 'mitte'){
+    } else if(kg && marke[lk] && marke[lk].art === 'mitte'){
       n = null;
-    } else if(zi >= 0 && kg && marke[zi]){
-      n = nummerDeuten(String(marke[zi].a), erwartet);
-      n.roh = nr[zi].text; n.herkunft = 'korrigiert'; n.geaendert = true;
-    } else if(zi >= 0 && kg && nummerDeuten(nr[zi].text, erwartet).a !== erwartet && reihenListe[lk - 1] && klGruppe[lk - 1] === kg){
+    } else if(kg && marke[lk]){
+      n = nummerDeuten(String(marke[lk].a), erwartet);
+      n.roh = effNr[lk]; n.herkunft = 'korrigiert'; n.geaendert = true;
+    } else if(effNr[lk] && kg && nummerDeuten(effNr[lk], erwartet).a !== erwartet && reihenListe[lk - 1] && klGruppe[lk - 1] === kg){
       /* Unlesbares zwischen zwei Klammerzeichen ("TE." für 19-I) */
-      n = {text: String(erwartet), roh: nr[zi].text, geaendert: true, unklar: false, luecke: 0,
+      n = {text: String(erwartet), roh: effNr[lk], geaendert: true, unklar: false, luecke: 0,
            a: erwartet, b: erwartet, herkunft: 'korrigiert'};
-    } else if(zi >= 0){
-      const z = nr[zi];
-      n = nach ? nummerDeuten(z.text, erwartet)
-               : {text: saeubern(z.text) || '—', roh:z.text, geaendert:false, unklar:false, luecke:0, b:null};
+    } else if(effNr[lk] || zi >= 0){
+      const t = effNr[lk] || (zi >= 0 ? nr[zi].text : '');
+      n = nach ? nummerDeuten(t, erwartet)
+               : {text: saeubern(t) || '—', roh:t, geaendert:false, unklar:false, luecke:0, b:null};
       /* v0.46: aus einer sauberen Zahl wurde über eine Verwechslung die
          erwartete Nummer - gilt stattdessen der Sprung, wenn die nächste
          Zeile genau dort weiterzählt (18 → 19), nicht bei der erwarteten */
       if(nach && n.geaendert){
-        const sp = nummerDeuten(z.text, erwartet, true);
+        const sp = nummerDeuten(t, erwartet, true);
         if(typeof sp.b === 'number' && sp.a !== n.a && sprungBestaetigt(lk, sp.b)) n = sp;
       }
       n.herkunft = n.geaendert ? 'korrigiert' : 'gelesen';
+      /* v0.47 (aus #13): eine Nummer über der erwarteten, auf die die erwartete + 1
+         folgt, ist verlesen - "12" für die 1 neben dem Klammerstrich (Münch
+         mit Verteiler IMG_6225 auf dem iPhone: 12, 2, 3, 4) */
+      if(nach && n.a !== null && n.a !== undefined && n.a === n.b && n.a > erwartet && naechsteNr(lk) === erwartet + 1){
+        n = {text: String(erwartet), roh: t, geaendert: true, unklar: false, luecke: 0,
+             a: erwartet, b: erwartet, herkunft: 'korrigiert'};
+      }
     } else n = null;   /* v0.33: erst nach dem Inhalt entscheiden, siehe unten */
 
     const roh = {}, restwert = {}, quelle = {};
@@ -5559,6 +5649,11 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
     if(qRest){
       const rolle = rollen[1] || 'bezeichnung';
       roh[rolle] = qRest + (roh[rolle] ? ' ' + roh[rolle] : '');
+    }
+    /* v0.47 (aus #13): Nummer oder Klammerzeichen vorn in der Textspalte (s. nrText) */
+    if(vorn[lk]){
+      const rolle = rollen[1] || 'bezeichnung';
+      if(vorn[lk].leer) delete roh[rolle]; else roh[rolle] = vorn[lk].rest;
     }
     if(!n){
       /* Keine Nummer gelesen, aber das Raster sagt: hier ist eine Zeile.
@@ -6026,9 +6121,18 @@ function klammernZusammenfassen(reihen){
   if(!b || b.fehler || !b.uebernommen || !b.klammern || !b.klammern.length) return null;
   const bericht = [];
   b.klammern.forEach(function(k){
-    const m = /^(\d+)\D+(\d+)$/.exec(k);
-    if(!m) return;
-    const von = +m[1], bis = +m[2];
+    /* v0.47 (aus #13): die Enden sind gelesene Nummern - wurde eine davon in der
+       Tabelle berichtigt ("12" -> 1, "AO" -> 10; Münch mit Verteiler auf dem
+       iPhone), gilt die berichtigte */
+    const teileK = k.split('–');
+    if(teileK.length !== 2) return;
+    const wert = function(t){
+      const r = reihen.find(x => x.n && x.n.roh !== undefined && saeubern(x.n.roh) === saeubern(t) && x.n.a !== null && x.n.a !== undefined);
+      if(r && String(r.n.a) !== t.trim()) return r.n.a;
+      return /^\d+$/.test(t.trim()) ? +t.trim() : (r ? r.n.a : NaN);
+    };
+    const von = wert(teileK[0]), bis = wert(teileK[1]);
+    if(!(von < bis)) return;
     const gruppe = reihen.filter(r => r.n && r.n.a !== null && r.n.a !== undefined && r.n.a === r.n.b && r.n.a >= von && r.n.a <= bis);
     if(gruppe.length < 2){ bericht.push(k + ': nur ' + gruppe.length + ' Zeile gefunden, belassen'); return; }
     /* v0.42: eine Zeile, in der nur ihre eigene Nummer noch einmal steht
