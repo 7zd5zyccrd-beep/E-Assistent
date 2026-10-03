@@ -1,7 +1,15 @@
 <!DOCTYPE html>
 <!--
   PaddleOCR-Test · Verteilerbeschreibung
-  v0.51 · 03.10.2026
+  v0.52 · 03.10.2026
+
+  v0.52: Anhängsel am Ende der Bezeichnung (Jean, 03.10.2026): "TB d",
+  "0.2 r 19", "m" fallen weg, wenn ein einzelner Buchstabe oder eine
+  Dezimalzahl darin steckt ("Licht DA", "12 V" bleiben); die eigene
+  Endnummer mitten im Text ("-46" bei 43-46) und danach doppelte Wörter
+  ebenso. Doppelte Wörter mit Umlaut am Anfang ("Überspannungsableiter")
+  wurden in v0.51 nicht erkannt (\b kennt kein Ü). Messwerte melden
+  "Anhängsel in der Bezeichnung".
 
   v0.51: Verleser gegen den Wortschatz (Jean, 03.10.2026). Wörter hinter dem
   ersten Begriff werden auch gegen einen Wortschatz geprüft ("Fliesensplegel"
@@ -875,7 +883,7 @@ pre.abgleich.gut{background:#EAF5DC;border-color:#8FBE36}
 
   <header>
     <h1>PaddleOCR-Test · Verteilerbeschreibung</h1>
-    <span class="ver">v0.51 · 03.10.2026</span>
+    <span class="ver">v0.52 · 03.10.2026</span>
   </header>
 
   <div class="karte">
@@ -1062,7 +1070,7 @@ const MODELLE = {
   latin: {name:'v5 lateinisch',  konstante:'V5_LATIN_MOBILE_MODEL'}
 };
 
-const VERSION = 'v0.51 · 03.10.2026';
+const VERSION = 'v0.52 · 03.10.2026';
 
 /* ==================== Schrittliste ==================== */
 
@@ -4427,6 +4435,7 @@ function verarbeite(erg, arbeit, winkel, leseDauer, nachleseBericht){
     mess.push('Nummernfolge: ' + (gebaut.folgeBericht && gebaut.folgeBericht.length ? gebaut.folgeBericht.join('; ') : 'keine Nummer außer der Reihe'));
     if(gebaut.fussBericht && gebaut.fussBericht.length) mess.push('Unter der Tabelle, nicht als Eintrag gezählt: ' + gebaut.fussBericht.map(t => '„' + t + '"').join('; '));
     if(letzteHalbeTE) mess.push('Halbe Teilungseinheiten: ' + letzteHalbeTE.text);
+    mess.push('Anhängsel in der Bezeichnung: ' + (gebaut.anhangBericht && gebaut.anhangBericht.length ? gebaut.anhangBericht.join('; ') : 'keine'));
     mess.push('Nummer in der Bezeichnung: ' + (gebaut.nummerBezBericht && gebaut.nummerBezBericht.length ? 'entfernt bei ' + gebaut.nummerBezBericht.join(', ') : 'keine'));
     if(gebaut.geraeteBericht && gebaut.geraeteBericht.length) mess.push('Gleiche Geräte zusammengefasst: ' + gebaut.geraeteBericht.join('; '));
     /* v0.27: ergänzen statt ersetzen - sonst fällt der gefundene Nummernstreifen
@@ -5060,7 +5069,7 @@ function teilDeuten(teil, liste){
         return w;
       });
       /* v0.51: dasselbe Wort zweimal hintereinander ("Relais Relais", IMG_6784) */
-      const voll = (k + rest).replace(/\b([A-Za-zÄÖÜäöüß-]{4,})(\s+\1)+\b/gi, (m, a) => { neu = true; return a; });
+      const voll = (k + rest).replace(/(^|\s)([A-Za-zÄÖÜäöüß-]{4,})(\s+\2)+(?=\s|$)/gi, (m, v, a) => { neu = true; return v + a; });
       rest = voll.substring(k.length);
       return {text: k + rest, herkunft: (d || neu) ? 'korrigiert' : 'gelesen'};
     }
@@ -5939,6 +5948,7 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
   fussAmEnde(reihen, fussBericht);
   const nummerBezBericht = nummerAusBezeichnung(reihen);
   reihen.forEach(aufsSchema);
+  const anhangBericht = anhaengselEntfernen(reihen);
   const geraeteBericht = geraeteZusammenfassen(reihen);
   reihen.forEach(function(r){ [r.bez, r.ort].forEach(f => { if(f && f.text) f.text = f.text.replace(/\u00a0/g, ' '); }); });
 
@@ -6039,7 +6049,7 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
   const ist = reihen.map(r => ({nr: r.n.text || '', bez: r.bez.leer ? '' : r.bez.text,
     ort: (r.ort && !r.ort.leer) ? r.ort.text : '', sich: (r.sich && !r.sich.leer) ? r.sich.text : '',
     zweifel: {nr: !!(r.abgeleitet || r.n.unklar), bez: zw(r.bez), ort: zw(r.ort), sich: zw(r.sich)}}));
-  return {knoten: huelle, text, zuB, zuO, zweifel, ist, klammerBericht: klammerBericht.length ? klammerBericht : null, geraeteBericht, fussBericht, folgeBericht, nummerBezBericht};
+  return {knoten: huelle, text, zuB, zuO, zweifel, ist, klammerBericht: klammerBericht.length ? klammerBericht : null, geraeteBericht, fussBericht, folgeBericht, nummerBezBericht, anhangBericht};
 }
 
 /* v0.44 (Jean, 25.09.2026, sein eigener Verteiler, zurückgehalten und nur
@@ -6154,6 +6164,42 @@ function halbeTEPruefen(reihen){
   const ja = mit.length >= 5 && passend.length >= 0.8*mit.length;
   return {ja, text: (ja ? 'ja' : 'nein') + ' – ' + passend.length + ' von ' + mit.length +
                     ' Einträgen belegen eine gerade Anzahl Nummern ab einer ungeraden'};
+}
+/* v0.52 (Jean, 03.10.2026): Bruchstücke am Ende der Bezeichnung -
+   "Steckdose Waschmaschine TB d" (IMG_6225), "... 0.2 r 19" (IMG_6675),
+   "Licht, Steckdosen m" (IMG_6538). Weg fällt die Folge kurzer Teile am Ende
+   (einzelne Buchstaben, Zahlen, Dezimalzahlen, Zweierkürzel), aber nur, wenn
+   ein einzelner Buchstabe oder eine Dezimalzahl darin steckt - "Licht DA",
+   "Kinderzimmer 2" und "Trafo 230 / 12 V" (Einheit) bleiben. Dazu die eigene
+   Endnummer mitten im Text ("Überspannungsableiter -46 Überspannungsableiter"
+   bei 43-46, IMG_5256) und danach doppelte Wörter. */
+function anhaengselEntfernen(reihen){
+  const bericht = [];
+  const EINHEIT = /^(V|A|W|kW|mA|VA|Hz)$/;
+  reihen.forEach(r => {
+    if(!r.bez || r.bez.leer || !r.bez.text) return;
+    let t = r.bez.text;
+    const vorher = t;
+    if(r.n && typeof r.n.b === 'number') t = t.replace(new RegExp('(^|\\s)[-–]\\s?' + r.n.b + '(?=\\s|$)', 'g'), ' ');
+    const teile = t.trim().split(/\s+/);
+    let i = teile.length, stark = false;
+    while(i > 1){
+      const w = teile[i - 1];
+      if(EINHEIT.test(w)) break;
+      if(/^[A-Za-zäöüß]$/.test(w) || /^\d+[.,]\d+$/.test(w)){ stark = true; i--; continue; }
+      if(/^\d{1,3}$/.test(w) || /^[A-Za-zÄÖÜäöüß]{2}$/.test(w)){ i--; continue; }
+      break;
+    }
+    if(stark && i < teile.length) teile.splice(i);
+    /* ohne \b: "Ü" zählt für \b nicht als Buchstabe */
+    t = teile.join(' ').replace(/(^|\s)([A-Za-zÄÖÜäöüß-]{4,})(\s+\2)+(?=\s|$)/gi, '$1$2').replace(/\s+/g, ' ').trim();
+    if(t && t !== vorher){
+      r.bez.text = t;
+      if(r.bez.herkunft !== 'leer') r.bez.herkunft = 'korrigiert';
+      bericht.push((r.n && r.n.text ? r.n.text + ' ' : '') + '„' + vorher.slice(vorher.length > 40 ? vorher.length - 40 : 0) + '“');
+    }
+  });
+  return bericht;
 }
 /* v0.49: die eigene Kreisnummer noch einmal vorn in der Bezeichnung -
    "13 E-Herd", "14 E-Herd" (IMG_6784, IMG_7120: die Nummer wurde mit der
