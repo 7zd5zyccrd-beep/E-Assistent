@@ -1,7 +1,20 @@
 <!DOCTYPE html>
 <!--
   SAM · Geräte auf dem Verteilerfoto
-  v1.2 · 01.10.2026
+  v1.3 · 03.10.2026
+
+  v1.3: Nummernstreifen (Jean, 03.10.2026). Über oder unter den Reihen
+  trägt die Abdeckung oft fortlaufende Nummern, eine je TE - gedruckt oder
+  nur eingeprägt. Nach der Geräteerkennung (die unverändert bleibt) wird je
+  Reihe darüber und darunter die Zahlenzeile gesucht, Feld für Feld gelesen
+  (Prägungen fand die Textsuche nicht) und auf fortlaufende Zahlen im
+  Abstand einer TE geprüft. Jedes Gerät bekommt die Nummer(n) seiner Felder
+  ("streifen", z. B. "13-14") und "streifenSicher" - sicher nur bei
+  mindestens drei passenden Zahlen, eindeutiger Reihe und Feldern klar unter
+  dem Gerät. Breite Geräte ohne dichten linken Nachbarn tragen den Aufdruck
+  oft rechts (FI/LS über 4 TE, IMG_8029.v1) - ihre Nummer bleibt unsicher.
+  Lernsätze: 93 sichere Nummern richtig, keine falsch; Geräte unverändert.
+  Der Bericht nennt je Reihe, was gefunden wurde oder warum nicht.
 
   v1.2: Durchsicht aller Lernsätze, Bild für Bild (Art 410 -> 510, mit
   Aufdruck 370 -> 488 von 645). Die Regeln stehen mit Bildnamen am Ort im
@@ -112,12 +125,12 @@
 </script>
 </head>
 <body>
-<h1>SAM · Geräte <span class="ver">v1.2 · 01.10.2026</span></h1>
+<h1>SAM · Geräte <span class="ver">v1.3 · 03.10.2026</span></h1>
 <p><button id="start">Erkennung laden</button> <input type="file" id="datei" accept="image/*" disabled></p>
 <pre id="aus"></pre>
 
 <script type="module">
-const VERSION = 'v1.2 · 01.10.2026';
+const VERSION = 'v1.3 · 03.10.2026';
 const WEGE = [
   'https://esm.sh/ppu-paddle-ocr/web?external=onnxruntime-web',
   'https://esm.sh/ppu-paddle-ocr/web',
@@ -201,11 +214,27 @@ self.onmessage = async e => {
     if(d.art === 'start'){ KARTEN_SCHWELLE = d.schwelle; self.postMessage({id: d.id, ok: true, rechner: await starte()}); return; }
     const c = new OffscreenCanvas(d.bild.width, d.bild.height);
     c.getContext('2d').drawImage(d.bild, 0, 0); d.bild.close();
+    if(d.art === 'kaesten'){ self.postMessage({id: d.id, ok: true, texte: await kaestenIn(dienst, c, d.kaesten)}); return; }
     const erg = await dienst.recognize(c, {noCache: true});
     self.postMessage({id: d.id, ok: true, woerter: woerterAus(erg, d.x, d.y)});
   }catch(err){ self.postMessage({id: d.id, ok: false, fehler: String(err && err.message || err)}); }
 };`;
-function woerterAusText(){ return woerterAus.toString(); }
+function woerterAusText(){ return woerterAus.toString() + '\n' + kaestenIn.toString(); }
+/* v1.3: nur lesen, ohne Textsuche - für vorgegebene Kästen (Felder des
+   Nummernstreifens: einzelne Ziffern fand die Textsuche nicht, IMG_5185.v1) */
+async function kaestenIn(dienst, c, kaesten){
+  const erg = await dienst.recognitor.run(c, kaesten, dienst.options.recognition && dienst.options.recognition.charactersDictionary, 'je-kasten');
+  /* die Bibliothek lässt leere und unsichere Lesungen weg und ordnet nach
+     Zeilen - zugeordnet wird über die linke Kante (gleiche Höhe, gleiche Breite) */
+  const flach = [].concat(...(erg || []).map(e => Array.isArray(e) ? e : [e])).filter(e => e && e.box);
+  const raus = kaesten.map(() => ({text: '', conf: 0}));
+  flach.forEach(e => {
+    let best = -1, bd = Infinity;
+    kaesten.forEach((k, i) => { const d = Math.abs(k.x - e.box.x) + Math.abs(k.y - e.box.y); if(d < bd){ bd = d; best = i; } });
+    if(best >= 0 && bd < 0.1 * kaesten[best].width + 3) raus[best] = {text: String(e.text || ''), conf: e.confidence || 0};
+  });
+  return raus;
+}
 let helfer = null, helferStand = 'allein', helferFehler = '';
 /* v0.9: nur Zwischenspeicher füllen - Bibliothek (ohne sie zu starten),
    Modelle und Rechenkern. Kein Rechenspeicher, keine Prozesse. */
@@ -277,6 +306,16 @@ function woerterAus(erg, dx, dy){
     });
   });
   return raus;
+}
+async function kaestenLesen(bild, kaesten){
+  if(helfer && helfer.length){
+    const b = await createImageBitmap(bild);
+    const a = await helfer[0].frage({art: 'kaesten', bild: b, kaesten}, [b]);
+    if(!a.ok) throw new Error(a.fehler);
+    return a.texte;
+  }
+  if(!dienst){ helfer = []; await starteAllein(); }
+  return kaestenIn(dienst, bild, kaesten);
 }
 async function kachelnLesen(bild, fortschritt){
   const K = window.__kachel || 1200, U = Math.round(K / 4), alle = [];
@@ -900,6 +939,213 @@ async function rotFlaechenLesen(c, g){
   }
   return raus;
 }
+/* v1.3: Nummernstreifen (Jean, 03.10.2026). Unter oder über den Reihen trägt
+   die Abdeckung oft fortlaufende Nummern, eine je TE - gedruckt (STEIN7A,
+   IMG_6744.v1) oder nur eingeprägt (IMG_5185, IMG_6698.v1, IMG_8029.v1). Im
+   ganzen Bild las die Erkennung die Prägungen nicht, im Ausschnitt nur
+   zusammengezogen ("456|7|8|9" - die Stege gelten als Striche oder Einsen).
+   Darum in drei Schritten: (1) Streifen zu jeder Seite der Reihe ausschneiden
+   und lesen, nur um die Höhe der Zahlenzeile zu finden; (2) diese Zeile in
+   Felder von 1 TE schneiden, mit Abstand nebeneinanderlegen und jedes Feld für
+   sich lesen (zweimal, um eine halbe TE versetzt, damit keine Zahl nur
+   zerschnitten vorkommt); (3) die gelesenen Zahlen müssen fortlaufend sein und
+   eine TE auseinander stehen - zwei oder drei sichere Felder legen den ganzen
+   Streifen fest. Sicher ist ein Streifen erst mit drei passenden Zahlen; ein
+   Gerät bekommt eine sichere Nummer nur, wenn seine Felder klar unter ihm
+   liegen und der Streifen eindeutig zu seiner Reihe gehört. Die Geräte
+   selbst bleiben unberührt. */
+const STREIFEN_ZEICHEN = /^[\d\s|Il!i\/.,:;'"()\[\]_-]+$/;
+function streifenZahlen(woerter){
+  /* einzelne ein- oder zweistellige Zahlen, ohne Stege und Streuzeichen */
+  const raus = [];
+  woerter.forEach(w => {
+    const t = w.text.trim();
+    if(!STREIFEN_ZEICHEN.test(t)) return;
+    const z = t.replace(/\D/g, '');
+    if(z.length < 1 || z.length > 2 || +z < 1) return;
+    raus.push({n: +z, x: (w.x0 + w.x1) / 2, y: (w.y0 + w.y1) / 2, h: w.y1 - w.y0});
+  });
+  return raus;
+}
+function streifenZeilen(woerter, te){
+  /* Wörter mit Ziffern nach Höhe gruppieren; je Gruppe die Zahl der Ziffern */
+  const ws = woerter.filter(w => /\d/.test(w.text) && STREIFEN_ZEICHEN.test(w.text.trim()))
+                    .map(w => ({x: (w.x0 + w.x1) / 2, y: (w.y0 + w.y1) / 2, h: w.y1 - w.y0, z: w.text.replace(/\D/g, '').length}))
+                    .sort((a, b) => a.y - b.y);
+  const zeilen = [];
+  ws.forEach(w => {
+    const z = zeilen.find(x => Math.abs(x.y - w.y) < Math.max(0.3 * te, 0.6 * w.h));
+    if(z){ z.ws.push(w); z.y = z.ws.reduce((s, v) => s + v.y, 0) / z.ws.length; z.z += w.z; }
+    else zeilen.push({y: w.y, z: w.z, ws: [w]});
+  });
+  zeilen.forEach(z => { const hs = z.ws.map(w => w.h).sort((a, b) => a - b); z.h = hs[hs.length >> 1];
+    /* schräg aufgenommen läuft die Zeile schräg durchs Bild - links abgeschnittene
+       Zahlen (IMG_5185.v1); Neigung aus den Wörtern, höchstens 6° */
+    const mx = z.ws.reduce((q, w) => q + w.x, 0) / z.ws.length;
+    let zq = 0, nq = 0; z.ws.forEach(w => { zq += (w.x - mx) * (w.y - z.y); nq += (w.x - mx) ** 2; });
+    const b = nq > (2 * te) ** 2 ? Math.max(-0.1, Math.min(0.1, zq / nq)) : 0;
+    z.yBei = x => z.y + (x - mx) * b; });
+  return zeilen.filter(z => z.z >= 3).sort((a, b) => b.z - a.z);
+}
+function streifenAusgleich(pkte, te){
+  /* fortlaufende Zahlen im Abstand einer TE (0,7 bis 1,4 der geschätzten -
+     bei schrägen Aufnahmen weicht sie ab, IMG_6744.v1) */
+  let best = null;
+  for(let i = 0; i < pkte.length; i++) for(let j = 0; j < pkte.length; j++){
+    const a = pkte[i], b = pkte[j];
+    if(b.n <= a.n) continue;
+    const s = (b.x - a.x) / (b.n - a.n);
+    if(s < 0.7 * te || s > 1.4 * te) continue;
+    const drin = pkte.filter(p => Math.abs(p.x - (a.x + (p.n - a.n) * s)) < 0.3 * s);
+    const zahlen = new Set(drin.map(p => p.n)).size;
+    const fehler = drin.reduce((q, p) => q + Math.abs(p.x - (a.x + (p.n - a.n) * s)), 0) / drin.length / s;
+    if(!best || zahlen > best.zahlen || (zahlen === best.zahlen && fehler < best.fehler)) best = {drin, zahlen, fehler};
+  }
+  if(!best || best.zahlen < 2) return null;
+  /* Gerade durch die passenden Felder: x = x0 + n * s */
+  const d = best.drin, mn = d.reduce((q, p) => q + p.n, 0) / d.length, mx = d.reduce((q, p) => q + p.x, 0) / d.length;
+  let zq = 0, nq = 0; d.forEach(p => { zq += (p.n - mn) * (p.x - mx); nq += (p.n - mn) ** 2; });
+  const s = nq ? zq / nq : te;
+  if(s < 0.7 * te || s > 1.4 * te) return null;
+  const ns = d.map(p => p.n);
+  /* Ausreißer: gelesene Zahlen auf der Zeile innerhalb des Streifens, die nicht passen */
+  const lo = Math.min(...ns), hi = Math.max(...ns), xLo = mx + (lo - mn) * s - 0.5 * s, xHi = mx + (hi - mn) * s + 0.5 * s;
+  const fremd = pkte.filter(p => !d.includes(p) && p.x > xLo && p.x < xHi && !d.some(q => q.n === p.n && Math.abs(q.x - p.x) < 0.3 * s)).length;
+  return {s, xVon: n => mx + (n - mn) * s, nVon: x => mn + (x - mx) / s, von: lo, bis: hi, zahlen: best.zahlen, fremd};
+}
+async function felderLesen(c, x0, x1, yBei, hz, te){
+  /* Felder von 1 TE Breite in Vierteln einer TE versetzt; jedes wird nur
+     gelesen (die Textsuche fand einzelne Ziffern nicht). Eine Zahl zählt erst,
+     wenn zwei benachbarte Felder sie gleich lesen - ein angeschnittenes Feld
+     liest aus "13" auch "3"; ihre Lage ist die Mitte dieser Felder. Der
+     Streifen wird je TE im Kontrast gestreckt (Prägungen). */
+  const fh = Math.min(c.height, Math.max(2.4 * hz, 0.6 * te));
+  const f = Math.max(1, Math.min(3, 48 / hz));
+  const xs = []; for(let x = x0; x + te <= x1; x += te / 4) xs.push(x);
+  if(xs.length < 3) return [];
+  const yOben = x => Math.max(0, Math.min(c.height - fh, yBei(x + te / 2) - fh / 2));
+  /* gerades Band: jede Spalte von 1/4 TE aus ihrer Höhe geholt */
+  const b = document.createElement('canvas');
+  b.width = Math.round((x1 - x0) * f); b.height = Math.round(fh * f);
+  const k = b.getContext('2d', {willReadFrequently: true}); k.imageSmoothingQuality = 'high';
+  for(let x = x0; x < x1; x += te / 4){
+    const w = Math.min(te / 4, x1 - x);
+    k.drawImage(c, x, Math.max(0, Math.min(c.height - fh, yBei(x + w / 2) - fh / 2)), w, fh, (x - x0) * f, 0, w * f + 1, b.height);
+  }
+  for(let x = 0; x < b.width; x += Math.round(te * f)){
+    const w = Math.min(Math.round(te * f), b.width - x); if(w < 2) break;
+    const bild = k.getImageData(x, 0, w, b.height), p = bild.data, hist = new Array(256).fill(0), grau = new Uint8Array(p.length / 4);
+    for(let q = 0; q < grau.length; q++){ grau[q] = (p[4*q] * 0.3 + p[4*q+1] * 0.59 + p[4*q+2] * 0.11) | 0; hist[grau[q]]++; }
+    let lo = 0, hi = 255, acc = 0; const rand = grau.length * 0.01;
+    while(lo < 255 && (acc += hist[lo]) < rand) lo++;
+    acc = 0; while(hi > 0 && (acc += hist[hi]) < rand) hi--;
+    const sp = Math.max(1, hi - lo);
+    for(let q = 0; q < grau.length; q++){ const v = Math.max(0, Math.min(255, (grau[q] - lo) * 255 / sp)); p[4*q] = p[4*q+1] = p[4*q+2] = v; }
+    k.putImageData(bild, x, 0);
+  }
+  /* Prüfstand: Streifen und Lesungen ansehen (window.__mosaike / __mosaikWoerter) */
+  if(window.__mosaike) window.__mosaike.push(b.toDataURL('image/jpeg', 0.8));
+  /* Kasten eng um die Zahl: die Leseerkennung erwartet Schrift über die ganze Höhe */
+  const kh = Math.min(b.height, Math.round(1.5 * hz * f)), ky = Math.round((b.height - kh) / 2), kw = Math.round((window.__feldB || 0.8) * te * f);
+  const kaesten = xs.map(x => ({x: Math.round((x - x0 + (1 - (window.__feldB || 0.8)) * te / 2) * f), y: ky, width: kw, height: kh}));
+  const texte = await kaestenLesen(b, kaesten);
+  if(window.__mosaikWoerter) window.__mosaikWoerter.push(texte.map((t, i) => i + ':' + t.text + '(' + t.conf.toFixed(2) + ')').join(' '));
+  const zahl = t => { const z = /^\s*(\d{1,2})\s*$/.exec(t.text); return z && t.conf >= 0.6 && +z[1] >= 1 ? +z[1] : 0; };
+  const raus = [];
+  for(let i = 0; i < xs.length; ){
+    const n = zahl(texte[i]);
+    if(!n){ i++; continue; }
+    let j = i; while(j + 1 < xs.length && zahl(texte[j + 1]) === n) j++;
+    if(j > i){
+      const x = (xs[i] + xs[j]) / 2 + te / 2, y = yBei(x);
+      raus.push({text: String(n), conf: 1, x0: x - 0.1 * te, x1: x + 0.1 * te, y0: y - hz / 2, y1: y + hz / 2});
+    }
+    i = j + 1;
+  }
+  return raus;
+}
+async function streifenLesen(c, g, woerterAlle){
+  const reihen = g.reihen.filter(r => r.geraete.length);
+  if(!reihen.length) return 'Streifen: keine Reihen';
+  const te = g.te || 6 * (g.h || 30);
+  const alleG = reihen.flatMap(r => r.geraete);
+  const X0 = Math.max(0, Math.min(...alleG.map(x => x.x0)) - 3 * te), X1 = Math.min(c.width, Math.max(...alleG.map(x => x.x1)) + 3 * te);
+  const info = reihen.map(r => ({r, y0: Math.min(...r.geraete.map(x => x.y0)), y1: Math.max(...r.geraete.map(x => x.y1))}));
+  /* (1) je Reihe ein Band darüber (bis 3,5 TE) und darunter (bis 4,5 TE),
+     nicht in die Nachbarreihe hinein */
+  const funde = [];
+  for(let i = 0; i < info.length; i++){
+    const a = info[i], vor = info[i - 1], nach = info[i + 1];
+    for(const seite of ['oben', 'unten']){
+      const y0 = seite === 'oben' ? Math.max(0, a.y0 - 3.5 * te, vor ? vor.y1 : 0) : a.y1;
+      const y1 = seite === 'oben' ? a.y0 : Math.min(c.height, a.y1 + 4.5 * te, nach ? nach.y0 : c.height);
+      if(y1 - y0 < 0.3 * te) continue;
+      const f = Math.max(1, Math.min(2, 120 / te));
+      const b = document.createElement('canvas'); b.width = Math.round((X1 - X0) * f); b.height = Math.round((y1 - y0) * f);
+      const bk = b.getContext('2d'); bk.imageSmoothingQuality = 'high'; bk.drawImage(c, X0, y0, X1 - X0, y1 - y0, 0, 0, b.width, b.height);
+      const ws = (await kachelnLesen(b)).map(w => Object.assign(w, {x0: X0 + w.x0 / f, x1: X0 + w.x1 / f, y0: y0 + w.y0 / f, y1: y0 + w.y1 / f}))
+        .concat(woerterAlle.filter(w => (w.y0 + w.y1) / 2 > y0 && (w.y0 + w.y1) / 2 < y1));
+      /* (2) bis zu zwei Zahlenzeilen je Band Feld für Feld lesen */
+      let best = null;
+      for(const z of streifenZeilen(ws, te).slice(0, 2)){
+        const fw = await felderLesen(c, X0, X1, z.yBei, z.h, te);
+        const pkte = streifenZahlen(fw.concat(ws.filter(w => Math.abs((w.y0 + w.y1) / 2 - z.yBei((w.x0 + w.x1) / 2)) < Math.max(0.3 * te, z.h))));
+        const a2 = streifenAusgleich(pkte, te);
+        if(a2 && (!best || a2.zahlen > best.zahlen)) best = Object.assign(a2, {y: z.y});
+      }
+      if(best) funde.push(Object.assign(best, {reihe: i, seite}));
+    }
+  }
+  /* derselbe Streifen zwischen zwei Reihen (unten an der einen, oben an der
+     nächsten) - eindeutig nur, wenn die übrigen Reihen ihren Streifen klar auf
+     einer Seite haben (Jean: sonst nicht verwenden; IMG_7038.v1) */
+  const doppelt = f => funde.some(o => o !== f && Math.abs(o.y - f.y) < 0.5 * te && Math.abs(o.reihe - f.reihe) === 1);
+  const klar = funde.filter(f => f.zahlen >= 3 && !doppelt(f));
+  const seiten = new Set(klar.map(f => f.seite));
+  const bericht = [];
+  info.forEach((a, i) => {
+    const kand = funde.filter(f => f.reihe === i);
+    let st = null, grund = '';
+    if(kand.length){
+      const eins = seiten.size === 1 ? kand.filter(f => f.seite === [...seiten][0]) : kand.filter(f => !doppelt(f));
+      st = (eins.length ? eins : kand).sort((p, q) => q.zahlen - p.zahlen)[0];
+      if(st.zahlen < 3) grund = 'nur ' + st.zahlen + ' Zahlen';
+      else if(st.fremd > st.zahlen / 2) grund = st.fremd + ' Zahlen passen nicht';
+      else if(doppelt(st) && seiten.size !== 1) grund = 'zwischen zwei Reihen';
+      else if(kand.length > 1 && seiten.size !== 1 && kand.every(f => f.zahlen >= 3)) grund = 'oben und unten';
+    }
+    const sicher = !!st && !grund;
+    a.r.streifen = st ? {seite: st.seite, von: st.von, bis: st.bis, zahlen: st.zahlen, sicher, grund, y: Math.round(st.y), s: Math.round(st.s), xEins: Math.round(st.xVon(1))} : null;
+    a.r.geraete.forEach(x => { x.streifen = ''; x.streifenSicher = false; });
+    if(!st){ bericht.push('R' + (i + 1) + ' keiner'); return; }
+    /* (3) Nummern je Gerät: Felder, deren Mitte unter dem Aufdruck liegt
+       (±0,25 TE, nicht über die Mitte zum Nachbarn); liegt eine Feldmitte
+       knapp an dieser Grenze (halbe TE versetzt, STEIN7A Reihe 2), ist die
+       Nummer unsicher */
+    const gs = a.r.geraete.slice().sort((p, q) => p.x0 - q.x0), s = st.s;
+    gs.forEach((x, k) => {
+      const l = Math.max(x.x0 - 0.25 * s, k ? (gs[k - 1].x1 + x.x0) / 2 : -Infinity);
+      const r = Math.min(x.x1 + 0.25 * s, k + 1 < gs.length ? (x.x1 + gs[k + 1].x0) / 2 : Infinity);
+      const nl = Math.ceil(st.nVon(l)), nr = Math.floor(st.nVon(r));
+      if(nr < nl) return;
+      const knapp = [nl - 1, nl, nr, nr + 1].some(n => { const xn = st.xVon(n); return Math.min(Math.abs(xn - l), Math.abs(xn - r)) < 0.15 * s; });
+      const weit = nl < st.von - 2 || nr > st.bis + 2 || nl < 1;
+      /* breite Geräte tragen den Aufdruck oft rechts (FI/LS über 4 TE, IMG_8029.v1:
+         Felder 1-4, Aufdruck über 3-4) - ohne Nachbarn dicht links ist ihre erste
+         Nummer offen; Kästen, die in den Nachbarn reichen (rote Fläche des
+         Ableiters), ebenso */
+      const linksOffen = !k || x.x0 - gs[k - 1].x1 > 0.75 * s;
+      const breit = !/^(LS|Stromstoßschalter)$/.test(x.art);
+      const ueberlappt = (k && gs[k - 1].x1 > x.x0) || (k + 1 < gs.length && gs[k + 1].x0 < x.x1);
+      if(nl < 1) return;
+      x.streifen = nl === nr ? String(nl) : nl + '–' + nr;
+      x.streifenSicher = sicher && !knapp && !weit && !(linksOffen && breit) && !ueberlappt;
+    });
+    bericht.push('R' + (i + 1) + ' ' + st.seite + ' ' + st.von + '–' + st.bis + ' (' + st.zahlen + ' gelesen' + (st.fremd ? ', ' + st.fremd + ' fremd' : '') + ', ' + (sicher ? 'sicher' : 'unsicher: ' + grund) + ', ' +
+      gs.filter(x => x.streifenSicher).length + '/' + gs.length + ' Geräte sicher)');
+  });
+  return 'Streifen: ' + bericht.join('; ');
+}
 async function lies(blob, fortschritt){
   try{ return await liesInnen(blob, fortschritt); }
   finally{ if(!window.__helferBehalten) helferBeenden(); }   // v0.9: Rechenspeicher freigeben (Prüfstand behält sie)
@@ -1006,10 +1252,12 @@ async function liesInnen(blob, fortschritt){
       nachlese += ' · rot: ' + rot.length + ' Ableiter';
     }
   }
+  /* v1.3: Nummernstreifen, nach allem anderen - die Geräte bleiben, wie sie sind */
+  if(!window.__ohneStreifen && g.reihen.some(r => r.geraete.length)) nachlese += ' · ' + await streifenLesen(c, g, woerter);
   melde(1);
   return {version: VERSION, rechner: rechnerText(), rechnerFehler: helferFehler, nachlese, h: Math.round(g.h || 0), te: Math.round(g.te || 0), dauer: (performance.now() - t0) / 1000, breite: c.width, hoehe: c.height,
-          woerter, reihen: g.reihen.map(r => ({y: Math.round(r.y), te: Math.round(r.te),
-            geraete: r.geraete.map(x => ({art: x.art, aufdruck: x.aufdruck || '', aufdruckSicher: x.aufdruckSicher !== false, vonBaugleichen: !!x.vonBaugleichen, marke: x.marke, x0: Math.round(x.x0), x1: Math.round(x.x1), y0: Math.round(x.y0), y1: Math.round(x.y1),
+          woerter, reihen: g.reihen.map(r => ({y: Math.round(r.y), te: Math.round(r.te), streifen: r.streifen || null,
+            geraete: r.geraete.map(x => ({art: x.art, aufdruck: x.aufdruck || '', aufdruckSicher: x.aufdruckSicher !== false, vonBaugleichen: !!x.vonBaugleichen, marke: x.marke, streifen: x.streifen || '', streifenSicher: !!x.streifenSicher, x0: Math.round(x.x0), x1: Math.round(x.x1), y0: Math.round(x.y0), y1: Math.round(x.y1),
               anker: (x.anker || []).map(a => [a.w.text, Math.round(a.w.x0), Math.round(a.w.y0), Math.round(a.w.x1), Math.round(a.w.y1)]),
               hinweise: x.hinweise.map(h => h.text)}))}))};
 }
@@ -1049,8 +1297,8 @@ if(new URLSearchParams(location.search).has('einbettung') && window.parent !== w
         antwort({stand:'Verteiler wird gelesen'});
         let zuletzt = -1;
         const r = await lies(d.bild, a => { const p = Math.round(a * 100); if(p !== zuletzt){ zuletzt = p; antwort({stand: 'Verteiler wird gelesen', anteil: a}); } });
-        const reihen = r.reihen.map(x => ({geraete: x.geraete.map(g => ({art: g.art, aufdruck: g.aufdruck, aufdruckSicher: g.aufdruckSicher, marke: g.marke,
-          x0: g.x0, x1: g.x1, y0: g.y0, y1: g.y1, texte: g.anker.map(a => a[0])}))}));
+        const reihen = r.reihen.map(x => ({streifen: x.streifen, geraete: x.geraete.map(g => ({art: g.art, aufdruck: g.aufdruck, aufdruckSicher: g.aufdruckSicher, marke: g.marke,
+          streifen: g.streifen, streifenSicher: g.streifenSicher, x0: g.x0, x1: g.x1, y0: g.y0, y1: g.y1, texte: g.anker.map(a => a[0])}))}));
         antwort({fertig:true, ok: reihen.some(x => x.geraete.length), reihen, h: r.h, te: r.te, rechner: r.rechner, rechnerFehler: r.rechnerFehler,
                  breite: r.breite, hoehe: r.hoehe, dauer: r.dauer, nachlese: r.nachlese});
       }catch(err){ antwort({fertig:true, ok:false, fehler: (err && err.message) ? err.message : String(err)}); }
