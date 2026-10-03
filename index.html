@@ -10,6 +10,13 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.147 03.10.2026 SAM (Beta): Nummer vom Verteiler ohne Bernstein, wenn die
+                    Nachbarn sie bestaetigen (Jean): schliesst sie genau die
+                    Luecke zwischen dem Eintrag davor und danach, bei denen
+                    Blatt und Verteiler uebereinstimmen, gilt sie als
+                    gesichert - auch gegen eine sicher gelesene Nummer auf dem
+                    Blatt, die sonst doppelt waere. Der Vermerk "Nr. vom
+                    Verteiler (Blatt: ...)" bleibt stehen.
   v1.146 03.10.2026 SAM (Beta): Nummernstreifen am Verteiler. Die Geraete-
                     erkennung (Werkstatt v1.3) liest die Nummern auf der
                     Abdeckung, gedruckt oder eingepraegt. Ist eine Nummer auf
@@ -3091,7 +3098,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.146';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.147';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 03.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -8316,8 +8323,9 @@ function samStreifenAbgleich(P, rs, geraete){
      anderen Eintrag in die Quere kommen */
   const belegt = (ohne, a, b) => rs.some(y => { if(y === ohne) return false; const m = samNummer(y.nr);
     return m && m.start <= b && a <= m.start + m.te - 1; });
-  let ersetzt = 0, markiert = 0;
-  rs.forEach(z => {
+  /* erst alle Einträge vergleichen – die Nachbarn entscheiden mit (v1.147) */
+  const abw = [];
+  rs.forEach((z, i) => {
     const v = z.verteiler;
     if(!v || !v.passt || z.uebernommen || z.geprueft) return;
     const s = samStreifenNr(geraete.slice(v.idx[0], v.idx[1] + 1));
@@ -8327,14 +8335,33 @@ function samStreifenAbgleich(P, rs, geraete){
        die Erkennung nur den LS über 3 (IMG_6675.v1) */
     if(n && s.start >= n.start && s.start <= n.start + n.te - 1){ v.nrGleich = true; return; }
     if(!n && !z.zweifel.nr) return;                      // "Q1" am FI ist gewollt
-    z.vt = Object.assign(z.vt || {}, {nr: z.nr, nrZw: z.zweifel.nr});
-    const te = n ? n.te : s.ende - s.start + 1;          // Breite vom Blatt, wo es eine hat
-    if(z.zweifel.nr && !belegt(z, s.start, s.start + te - 1)){
-      z.nr = te > 1 ? s.start + '–' + (s.start + te - 1) : String(s.start);
-      z.nrVt = true; ersetzt++;
-    } else { v.nrStreifen = s.start; markiert++; }
-    z.zweifel.nr = true;
+    abw.push({z, i, s, n});
   });
+  /* v1.147 (Jean: "Kann 4 hier nicht als gesichert gelten?"): schließt die
+     Nummer vom Verteiler genau die Lücke zwischen zwei Nachbarn, bei denen
+     Blatt und Verteiler übereinstimmen, ist sie gesichert – auch gegen eine
+     sicher gelesene Nummer auf dem Blatt, die dann doppelt wäre oder eine
+     Lücke ließe. Beide Nachbarn müssen vom Verteiler bestätigt sein (am
+     Anfang oder Ende der Liste der eine). Dann ohne Bernstein, mit Vermerk. */
+  const bestaetigt = y => y && y.verteiler && y.verteiler.nrGleich && samNummer(y.nr);
+  let ersetzt = 0, markiert = 0, gesichert = 0;
+  abw.forEach(({z, i, s, n}) => {
+    const v = z.verteiler;
+    const te = n ? n.te : s.ende - s.start + 1;          // Breite vom Blatt, wo es eine hat
+    const a = s.start, e = s.start + te - 1;
+    const vor = rs[i - 1], nach = rs[i + 1];
+    const passtVor = !vor || (bestaetigt(vor) && samNummer(vor.nr).start + samNummer(vor.nr).te - 1 === a - 1);
+    const passtNach = !nach || (bestaetigt(nach) && samNummer(nach.nr).start === e + 1);
+    const sicher = (vor || nach) && passtVor && passtNach && !belegt(z, a, e);
+    z.vt = Object.assign(z.vt || {}, {nr: z.nr, nrZw: z.zweifel.nr});
+    if(sicher || (z.zweifel.nr && !belegt(z, a, e))){
+      z.nr = te > 1 ? a + '–' + e : String(a);
+      z.nrVt = true;
+      if(sicher){ z.zweifel.nr = false; v.nrGesichert = true; gesichert++; }
+      else { z.zweifel.nr = true; ersetzt++; }
+    } else { v.nrStreifen = s.start; z.zweifel.nr = true; markiert++; }
+  });
+  P.samLesung.abgleich.nrGesichert = gesichert;
   P.samLesung.abgleich.nrErsetzt = ersetzt; P.samLesung.abgleich.nrMarkiert = markiert;
 }
 
