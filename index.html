@@ -10,6 +10,12 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.151 03.10.2026 SAM (Beta): eine falsch gelesene Zeile mit fraglicher
+                    Nummer (Jean: Firmenzeile "Elektro - Hausgeraete - Service"
+                    als "1") nimmt kein Geraet mehr weg, das der sichere
+                    Nummernstreifen einem anderen Eintrag zuweist - vorher
+                    bekam sie den dritten LS des Herds 1-3 und den Vermerk
+                    "Verteiler: Nr. 3". Pruefstand: 433 richtig, 0 falsch.
   v1.150 03.10.2026 SAM (Beta): Zuordnung zum Verteiler. Ein Geraet, von dem nur
                     die Marke lesbar ist (ABB, legrand), gilt als
                     wahrscheinlich LS, wenn ein lesbarer LS derselben Marke im
@@ -3119,7 +3125,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.150';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.151';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 03.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -8209,6 +8215,11 @@ function samAusrichten(A, T, G, AS, GS, ES, AN, GN){
        Herd 1–3 mit dem LS über Feld 4. */
     /* ein Eintrag über mehrere Nummern (Herd 1–3): jede Nummer im Bereich passt */
     if(w >= 2 && AN && GN && AN[i] && !AN[i].zw && GN[t] != null) w += AN[i].start === GN[t] ? 1.5 : GN[t] > AN[i].start && GN[t] <= AN[i].ende ? 0 : -2;
+    /* v1.151 (Jean: die Fußzeile "Elektro - Hausgeräte - Service" mit fraglicher
+       "1" bekam den dritten LS des Herds 1–3): gehört die sichere Streifennummer
+       in den Bereich eines anderen, sicher nummerierten Eintrags, ist das Gerät
+       seins – für jeden anderen Eintrag −4, auch bei fraglicher Nummer (−3 reichte nicht: der Herd bekommt für weitere Geräte nur +0,5) */
+    if(AN && GN && GN[t] != null && AN.some((x, k) => k !== i && x && !x.zw && GN[t] >= x.start && GN[t] <= x.ende)) w -= 4;
     return w;
   };
   const D = Array.from({length: n + 1}, () => new Array(m + 1).fill(-Infinity));
