@@ -10,6 +10,14 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.149 03.10.2026 SAM (Beta): "Relais", "Eltako", "Fernschalter" auf dem Blatt
+                    werden ein Stromstossschalter statt eines LS (Jean: mit
+                    "16 A" wurde daraus sogar ein B16-Automat; die 16 A sind
+                    der Kontakt). Bauart aus der Typnummer am Geraet (ABB
+                    E290-16-10/12: 12 V, 1 Schliesser; E252, S12-200: 2-fach),
+                    sonst 12V 1-fach bei Trafo im Verteiler, sonst 230V.
+                    Bernsteinfarben, bis der Verteiler dort einen
+                    Stromstossschalter bestaetigt.
   v1.148 03.10.2026 SAM (Beta): ein Nachbar bestaetigt eine Nummer vom
                     Verteiler auch dann, wenn seine Nummer auf dem Blatt sicher
                     ist und der Streifen darueber nicht widerspricht (nur
@@ -3104,7 +3112,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.148';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.149';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 03.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -8103,7 +8111,8 @@ async function samGeraeteLesen(P, fid, datei, tidP, nochmal){
   } catch(e){ d = {ok:false, fehler: e && e.message || String(e)}; }
   if(!P.samGeraete || P.samGeraete.fid !== fid) return;
   const reihen = (d.reihen || []).map(r => (r.geraete || []).map(g => ({art: g.art || '—', aufdruck: g.aufdruck || '', unsicher: g.aufdruckSicher === false, marke: g.marke || '',
-                                   streifen: g.streifen || '', streifenSicher: !!g.streifenSicher})))   // v1.146: Nummernstreifen
+                                   streifen: g.streifen || '', streifenSicher: !!g.streifenSicher,   // v1.146: Nummernstreifen
+                                   texte: g.texte || []})))                                      // v1.149: Typnummer (Stromstoßschalter)
                                  .filter(r => r.length);
   P.samGeraete = {fid, laeuft:false, ok: !!d.ok && reihen.length > 0, fehler: d.fehler || '',
                   version: d.version || '', zeit: Date.now(), dauer: Math.round(d.dauer || 0), rechner: d.rechner || '', reihen};
@@ -8130,7 +8139,7 @@ function samBlattArt(z){
      der Stromstoßschalter */
   if(z.geraet !== 'other') return /relais|stromsto|eltako|fernschalt/.test(s) ? 'Stromstoßschalter'
     : /trafo|klingel/.test(s) ? 'Trafo' : 'LS';           // v1.134: "Trafo 230 / 12 V" ist kein LS (IMG_7120)
-  return /stromsto|eltako|fernschalt|telegraf/.test(s) ? 'Stromstoßschalter'
+  return /\brelais\b|stromsto|eltako|fernschalt|telegraf/.test(s) ? 'Stromstoßschalter'
        : /überspann|ueberspann|blitz/.test(s) ? 'Überspannungsableiter'
        : /hauptschalt/.test(s) ? 'Hauptschalter'
        : /trafo|klingel/.test(s) ? 'Trafo' : 'Sonstiges';
@@ -8251,7 +8260,8 @@ function samVerknuepfen(P){
       if(z.vt.nrZw != null && z.zweifel) z.zweifel.nr = z.vt.nrZw;
     }
     delete z.vt; delete z.verteiler; delete z.sichVt; delete z.nrVt;
-    if(z.zweifel) z.zweifel.geraet = false;
+    if(z.zweifel) z.zweifel.geraet = !!z.ss && !z.geprueft;   // v1.149: Bauart geraten
+    if(z.ss && !z.geprueft && z.ssBlatt) z.special = z.ssBlatt;
   });
   delete l.abgleich;
   if(!l.ok || !g || !g.ok || !g.reihen || !g.reihen.length) return;
@@ -8289,6 +8299,15 @@ function samVerknuepfen(P){
       v.passt = true;
     } else if(!v.passt && v.art !== '—'){
       z.zweifel.geraet = true;
+      return;
+    }
+    /* v1.149: der Verteiler bestätigt den Stromstoßschalter – Bauart aus der
+       Typnummer am Gerät, sonst nach Trafo; nicht mehr markiert (Jean) */
+    if(z.ss && v.art === 'Stromstoßschalter'){
+      const ss = geraete.slice(v.idx[0], v.idx[1] + 1);
+      const trafo = geraete.some(x => x.art === 'Trafo') || rs.some(y => /trafo|klingel/.test(samNorm(y.bez)));
+      z.special = samSsBauart(ss.flatMap(x => x.texte || []), trafo).name;
+      z.zweifel.geraet = false;
       return;
     }
     if(!text || !v.passt) return;
@@ -8395,8 +8414,33 @@ function samGeraet(z){
   const b = z.bez || '', sich = z.sich || '';
   if(/FI\s*\/\s*LS/i.test(b + ' ' + sich)) return 'rcbo';
   if(/FI-?Schutzschalter|Fehlerstrom|^FI\b/i.test(b) || /^FI\b/i.test(sich)) return 'rcd';
+  if(samIstStromstoss(b)) return 'other';                 // v1.149: "Relais" ist kein LS
   if(samSonder(b)) return 'other';
   return 'ls';
+}
+/* v1.149 (Jean: "Relais" wurde als LS übernommen, mit "16 A" sogar als B16 –
+   ist aber ein Stromstoßschalter; in allen Werkstattbeispielen mit Verteiler
+   sitzt dort einer, auch bei "Relais Beleuchtung 16 A", IMG_6014). Die 16 A
+   sind dann der Kontakt, keine Absicherung. */
+const samIstStromstoss = b => /\brelais\b|stromsto|eltako|fernschalt|telegraf/.test(samNorm(b));
+/* Bauart aus der Typnummer am Gerät: ABB E290-16-10/12 (Schließer -10/-20,
+   Spule /12), E251/E252, Eltako S12-100/-200; sonst 12V, wenn ein Trafo im
+   Verteiler oder auf dem Blatt ist, sonst 230V (Jean, 03.10.2026) */
+function samSsBauart(texte, trafo){
+  const t = (texte || []).join(' ');
+  let volt = '', zwei = false, ausGeraet = false;
+  let m = /E2\d\dS?\s?-\s?\d+\s?-\s?([12])0\s?\/\s?(\d+)/i.exec(t);
+  if(m){ zwei = m[1] === '2'; volt = +m[2] >= 100 ? '230V' : '12V'; ausGeraet = true; }
+  else {
+    if((m = /\bE\s?25([12])\b/i.exec(t))){ zwei = m[1] === '2'; ausGeraet = true; }
+    else if((m = /\bE?S\s?12\s?-\s?([12])00/i.exec(t))){ zwei = m[1] === '2'; ausGeraet = true; }
+    if(/\b(12|24)\s?V\b/i.test(t)) volt = '12V'; else if(/\b230\s?V\b/i.test(t)) volt = '230V';
+  }
+  if(!volt) volt = trafo ? '12V' : '230V';
+  const bauart = volt === '230V' ? '230V' : '12V ' + (zwei ? '2' : '1') + '-fach';
+  const namen = specialNames();
+  const name = namen.find(n => n.startsWith('Stromstoßschalter ' + bauart)) || namen.find(n => /^Stromstoß/.test(n)) || 'Stromstoßschalter ' + bauart;
+  return {name, ausGeraet};
 }
 function samZeilen(reihen){
   const rs = reihen
@@ -8406,8 +8450,13 @@ function samZeilen(reihen){
                  zweifel: Object.assign({nr:false, bez:false, ort:false, sich:false}, r.zweifel || {})};
       z.geraet  = samGeraet(z);
       z.special = z.geraet === 'other' ? samSonder(z.bez) : '';
+      if(samIstStromstoss(z.bez)) z.ss = true;            // Bauart folgt unten
       return z;
     });
+  /* v1.149: Bauart der Stromstoßschalter – ohne Verteiler nur geraten, also
+     markiert, bis der Verteiler dort einen Stromstoßschalter bestätigt */
+  const trafo = rs.some(z => /trafo|klingel/.test(samNorm(z.bez)));
+  rs.forEach(z => { if(z.ss){ z.special = z.ssBlatt = samSsBauart([], trafo).name; z.zweifel.geraet = true; } });
   /* Nach Nummer ordnen, wenn alle eine tragen – bei zwei Spalten auf dem Blatt
      (Münch) kommt ein nachgetragener Kreis sonst mitten in die Liste. */
   if(rs.every(z => samNummer(z.nr))) rs.sort((a, b) => samNummer(a.nr).start - samNummer(b.nr).start);
