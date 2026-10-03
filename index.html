@@ -10,6 +10,17 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.143 03.10.2026 SAM (Beta): eigene Kamera der App fuer die Fotos der
+                    Pruefung (Ergebnis der Kamera-Probe: schaerfstes aus zehn
+                    Bildern mit Licht las fehlerfrei). Bildschirmfuellend, oben
+                    steht, was dran ist (VERTEILERBESCHREIBUNG, dann
+                    VERTEILER), das Licht ist bei jedem Oeffnen an und laesst
+                    sich ausschalten. Ausloesen nimmt zehn Bilder und behaelt
+                    das schaerfste, danach "Benutzen" oder "Wiederholen". Die
+                    Kamera bleibt zwischen beiden Fotos offen, die Zwischen-
+                    seite entfaellt. Schalter in den Einstellungen "Kamera der
+                    App verwenden" (an); aus = iOS-Kamera wie bisher. Startet
+                    die Kamera nicht, wird die iOS-Kamera angeboten.
   v1.142 03.10.2026 Kamera-Probe: das eingeschaltete Licht geht nach dem Lesen
                     und Zurueckkehren wieder an (bisher war es dann aus).
   v1.141 03.10.2026 Kamera-Probe: neben "Liste lesen" (bisher "SAM liest")
@@ -1688,6 +1699,28 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
   font-family:var(--f-body); font-size:15px; padding:10px 24px; min-height:var(--tap); margin-bottom:8px;
 }
 
+/* ---------- SAM: Kamera der App (v1.143) ---------- */
+#samKam{
+  position:fixed; inset:0; z-index:4500; background:#0D100B; color:#fff;
+  display:flex; flex-direction:column;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+#samKam[hidden]{ display:none; }
+.sk-kopf{ display:flex; flex-direction:column; align-items:center; padding:12px 16px 8px; gap:2px; }
+.sk-jetzt{ font-family:var(--f-label); font-size:13px; letter-spacing:.12em; text-transform:uppercase; opacity:.75; }
+.sk-art{ font-family:var(--f-label); font-weight:700; font-size:clamp(20px,6.4vw,34px); letter-spacing:.02em; max-width:100%; overflow-wrap:anywhere; text-align:center; text-transform:uppercase; }
+.sk-buehne{ flex:1; min-height:0; position:relative; display:flex; align-items:center; justify-content:center; }
+.sk-buehne video,.sk-buehne img{ max-width:100%; max-height:100%; object-fit:contain; display:block; }
+.sk-hinweis{ text-align:center; font-size:15px; opacity:.8; margin:8px 16px; min-height:20px; }
+.sk-fuss{ display:flex; align-items:center; justify-content:space-around; padding:6px 12px 14px; gap:10px; }
+.sk-fuss[hidden]{ display:none; }
+.sk-knopf{ background:none; border:1.5px solid rgba(255,255,255,.6); color:#fff; border-radius:var(--r-btn);
+  font-family:var(--f-body); font-size:16px; min-height:var(--tap); padding:0 18px; min-width:120px; cursor:pointer; }
+.sk-gut{ background:var(--brand); border-color:var(--brand); color:#0D100B; font-weight:600; }
+.sk-ausloeser{ width:74px; height:74px; border-radius:50%; border:4px solid #fff; background:var(--brand); cursor:pointer; flex:0 0 74px; }
+.sk-ausloeser.arbeitet{ background:#fff; animation:skPuls .5s ease-in-out infinite alternate; }
+@keyframes skPuls{ from{ opacity:1 } to{ opacity:.4 } }
+
 /* ---------- Quittierungspflichtiges Popup ---------- */
 #modal{
   /* Muss über dem Bildbetrachter liegen (4500), sonst erscheint die Rückfrage
@@ -2796,6 +2829,10 @@ function nameGross(s){
           <p class="muted small" style="margin:0 0 6px">Gilt nur auf diesem Gerät. Nach „Erfassung beginnen“
             öffnet sich die Kamera für die Verteilerbeschreibung, danach für den Verteiler.</p>
           <label class="chk" style="margin-bottom:8px">
+            <input type="checkbox" id="setEigeneKamera"><span>Kamera der App verwenden</span></label>
+          <p class="muted small" style="margin:0 0 6px">Gilt nur auf diesem Gerät. Die Kamera der App nimmt mit Licht
+            das schärfste aus zehn Bildern; ausgeschaltet öffnet sich wie früher die Kamera von iOS.</p>
+          <label class="chk" style="margin-bottom:8px">
             <input type="checkbox" id="setSamTest"><span>SAM-Test: Fotos aus der Mediathek</span></label>
           <p class="muted small" style="margin:0 0 6px">Gilt nur auf diesem Gerät. „Erfassung beginnen“ öffnet
             dann die Fotomediathek statt der Kamera, und auf der SAM-Seite steht „Aus Fotos“. So lässt sich eine
@@ -2860,6 +2897,22 @@ function nameGross(s){
     <span class="sn-tipp" id="snTipp">Antippen öffnet die Kamera</span>
   </button>
   <button class="sn-spaeter" id="snSpaeter" type="button">Später</button>
+</div>
+
+<!-- v1.143: Kamera der App für SAM -->
+<div id="samKam" hidden>
+  <div class="sk-kopf"><span class="sk-jetzt">Jetzt fotografieren</span><span class="sk-art" id="skArt"></span></div>
+  <div class="sk-buehne"><video id="skVideo" playsinline muted autoplay></video><img id="skBild" alt="" hidden></div>
+  <p class="sk-hinweis" id="skHinweis"></p>
+  <div class="sk-fuss" id="skAufnahme">
+    <button class="sk-knopf" id="skLicht" type="button" style="visibility:hidden">Licht aus</button>
+    <button class="sk-ausloeser" id="skAusloesen" type="button" aria-label="Auslösen"></button>
+    <button class="sk-knopf" id="skZu" type="button">Abbrechen</button>
+  </div>
+  <div class="sk-fuss" id="skPruefen" hidden>
+    <button class="sk-knopf" id="skWiederholen" type="button">Wiederholen</button>
+    <button class="sk-knopf sk-gut" id="skBenutzen" type="button">Benutzen</button>
+  </div>
 </div>
 
 <div id="fotoView" hidden>
@@ -3016,7 +3069,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.142';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.143';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 02.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -3731,6 +3784,7 @@ $('#btnModus').onclick = () => {
 function go(name, push = true){
   if(push && name !== current) stack.push(current);
   if(current === 'kamprobe' && name !== 'kamprobe') kpStoppen();   // v1.139: Kamera und Licht aus
+  if(!$('#samKam').hidden) samKamSchliessen();                      // v1.143
   /* Die Blattvorschau steht als verkleinertes 1024-Pixel-Blatt in einer eigenen
      Ebene. Beim Verlassen bleibt davon auf dem iPhone ein Streifen am rechten
      Rand stehen; das Leeren räumt die Ebene ganz weg. Beim nächsten Aufruf
@@ -7124,9 +7178,103 @@ function samFoto(art, mediathek){
   const alt = PROJ.sam && PROJ.sam[art];
   const belegt = (PROJ.photos || []).length - (alt ? 1 : 0);
   if(belegt >= FOTO_MAX){ toast(`Mehr als ${FOTO_MAX} Fotos sind nicht vorgesehen`); return; }
+  if(!mediathek && CFG.eigeneKamera !== false && navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+    samKamOeffnen(art); return;                   // v1.143: Kamera der App
+  }
   samArt = art;
   $(mediathek ? '#samMediathek' : '#samFile').click();
 }
+
+/* --- Kamera der App (v1.143) ------------------------------------------------------
+   Jean, Kamera-Probe 03.10.2026: das schärfste aus 10 Bildern des Videostroms
+   mit Dauerlicht las fehlerfrei, besser als die eingeblendete iOS-Kamera und
+   als die Fotofunktion (die außerdem das Licht ausschaltet). Die Kamera zeigt
+   oben, was dran ist, und bleibt zwischen Beschreibung und Verteiler offen –
+   die Zwischenseite entfällt hier. Das Licht ist bei jedem Öffnen an und wird
+   bei Bedarf von Hand ausgeschaltet (Jean). Geht die Kamera nicht auf, bietet
+   ein Dialog die iOS-Kamera an (iOS öffnet sie nur aus einem Tipp heraus). */
+const SK = {strom:null, spur:null, art:null, licht:false, blob:null, laeuft:false, nurEins:false};
+const SAM_KAM_TITEL = {beschreibung:'Verteilerbeschreibung', verteiler:'Verteiler'};
+async function samKamOeffnen(art){
+  SK.art = art; SK.blob = null;
+  SK.nurEins = !!(PROJ.sam || {})[art === 'beschreibung' ? 'verteiler' : 'beschreibung'] || art === 'verteiler';
+  $('#samKam').hidden = false;
+  samKamZeigen();
+  if(!SK.strom){
+    try {
+      SK.strom = await navigator.mediaDevices.getUserMedia({audio:false,
+        video:{facingMode:{ideal:'environment'}, width:{ideal:4096}, height:{ideal:3072}}});
+    } catch(e){
+      samKamSchliessen();
+      showDialog({title:'Kamera der App nicht verfügbar', ok:'iOS-Kamera öffnen',
+        body:'Die Kamera ließ sich nicht starten (' + (e && e.name || 'Fehler') + '). Stattdessen die Kamera von iOS verwenden?',
+        onOk: () => { samArt = art; $('#samFile').click(); }});
+      return;
+    }
+    SK.spur = SK.strom.getVideoTracks()[0];
+    const v = $('#skVideo');
+    v.srcObject = SK.strom;
+    try { await v.play(); } catch(e){}
+    await new Promise(res => v.videoWidth ? res() : v.addEventListener('loadedmetadata', res, {once:true}));
+    const c = SK.spur.getCapabilities ? SK.spur.getCapabilities() : {};
+    $('#skLicht').style.visibility = c.torch ? '' : 'hidden';   // Platz bleibt, der Auslöser steht mittig
+    if(c.torch) samKamLicht(true);                // immer an (Jean)
+  }
+}
+function samKamZeigen(){
+  const vorschau = !!SK.blob;
+  $('#skArt').textContent = SAM_KAM_TITEL[SK.art] || '';
+  $('#skVideo').hidden = vorschau; $('#skBild').hidden = !vorschau;
+  $('#skAufnahme').hidden = vorschau; $('#skPruefen').hidden = !vorschau;
+  $('#skHinweis').textContent = vorschau ? 'Ist die Schrift gut lesbar?' : 'Auslösen und kurz ruhig halten';
+}
+async function samKamLicht(an){
+  if(!SK.spur) return;
+  try { await SK.spur.applyConstraints({advanced:[{torch: an}]}); SK.licht = an; } catch(e){ SK.licht = false; }
+  $('#skLicht').textContent = SK.licht ? 'Licht aus' : 'Licht an';
+}
+function samKamSchliessen(){
+  if(SK.strom) SK.strom.getTracks().forEach(t => t.stop());
+  SK.strom = SK.spur = null; SK.licht = false; SK.blob = null; SK.laeuft = false;
+  const v = $('#skVideo'); v.srcObject = null;
+  const b = $('#skBild'); if(b.src) { try { URL.revokeObjectURL(b.src); } catch(e){} b.removeAttribute('src'); }
+  $('#samKam').hidden = true;
+}
+$('#skLicht').onclick = () => samKamLicht(!SK.licht);
+$('#skZu').onclick = samKamSchliessen;
+$('#skAusloesen').onclick = async () => {
+  if(SK.laeuft || !SK.spur) return;
+  SK.laeuft = true;
+  const k = $('#skAusloesen'); k.classList.add('arbeitet');
+  $('#skHinweis').textContent = 'Ruhig halten …';
+  const v = $('#skVideo');
+  let best = null;
+  try {
+    for(let i = 0; i < 10; i++){
+      await kpNaechstes(v);
+      const {c} = kpBild(v), m = kpKennzahlen(c);
+      if(!best || m.schaerfe > best.m.schaerfe) best = {c, m};
+    }
+    SK.blob = await new Promise(res => best.c.toBlob(res, 'image/jpeg', 0.95));
+  } catch(e){ toast('Aufnahme fehlgeschlagen'); }
+  k.classList.remove('arbeitet'); SK.laeuft = false;
+  if(!SK.blob) return;
+  const b = $('#skBild'); if(b.src) { try { URL.revokeObjectURL(b.src); } catch(e){} }
+  b.src = URL.createObjectURL(SK.blob);
+  samKamZeigen();
+};
+$('#skWiederholen').onclick = () => { SK.blob = null; samKamZeigen(); };
+$('#skBenutzen').onclick = () => {
+  if(!SK.blob || !PROJ) return;
+  const art = SK.art;
+  const datei = new File([SK.blob], `${art}-${Date.now()}.jpg`, {type:'image/jpeg'});
+  samFotoVerarbeiten(datei, art, false);
+  if(art === 'beschreibung' && !SK.nurEins){       // gleich weiter zum Verteiler
+    SK.art = 'verteiler'; SK.nurEins = true; SK.blob = null; samKamZeigen();
+    return;
+  }
+  samKamSchliessen();
+};
 SAM_ARTEN.forEach(art => {
   $('#samB_' + art).onclick = () => samFoto(art);
   $('#samM_' + art).onclick = () => samFoto(art, true);
@@ -7182,6 +7330,10 @@ $('#samFile').onchange = $('#samMediathek').onchange = async e => {
   if(!datei || !PROJ || !art) return;
   const weiter = art === 'beschreibung' && !(PROJ.sam || {}).verteiler && current === 'sam';
   if(weiter) samNaechstZeigen(true);
+  samFotoVerarbeiten(datei, art, ausMediathek);
+};
+/* v1.143: gemeinsamer Weg für Kamera der App, iOS-Kamera und Fotos */
+async function samFotoVerarbeiten(datei, art, ausMediathek){
   /* Zuerst in den Trainingsordner: der ist das Einzige, was bei einem vollen
      Projektspeicher nicht verloren gehen soll. */
   const tidP = ausMediathek ? null : trainingAblegen(datei, art);
@@ -7201,7 +7353,7 @@ $('#samFile').onchange = $('#samMediathek').onchange = async e => {
   renderSam();
   if(art === 'beschreibung'){ SAM_LESER.frei = false; samLesen(PROJ, eintrag.fid, datei, tidP); }
   if(art === 'verteiler') samGeraeteLesen(PROJ, eintrag.fid, datei, tidP);
-};
+}
 function renderSam(){
   if(!PROJ) return;
   if(!(PROJ.sam || {}).beschreibung) SAM_LESER.frei = false;   // neues Blatt: wieder vorladen
@@ -7545,14 +7697,15 @@ $('#kpVideo').addEventListener('click', async e => {
   try { await t.applyConstraints({advanced:[was]}); toast('Scharfgestellt'); } catch(err){ toast('Scharfstellen ging nicht'); }
 });
 /* Ein Bild aus dem Videostrom in voller Größe */
-function kpBild(){
-  const v = $('#kpVideo'), c = document.createElement('canvas');
+function kpBild(v){
+  v = v || $('#kpVideo');
+  const c = document.createElement('canvas');
   c.width = v.videoWidth; c.height = v.videoHeight;
   const g = c.getContext('2d', {willReadFrequently:true}); g.drawImage(v, 0, 0);
   return {c, g};
 }
-const kpNaechstes = () => new Promise(res => {
-  const v = $('#kpVideo');
+const kpNaechstes = v => new Promise(res => {
+  v = v || $('#kpVideo');
   if(v.requestVideoFrameCallback) v.requestVideoFrameCallback(() => res()); else setTimeout(res, 40);
 });
 /* Kennzahlen: Schärfe (Streuung der Kanten in der Bildmitte) und Helligkeit –
@@ -10014,6 +10167,7 @@ function renderSettings(){
   $('#setInvMonate').value    = invMonate(CFG.invMonate);
   $('#setSam').checked = !!CFG.sam;
   $('#setSamTest').checked = !!CFG.samTest;
+  $('#setEigeneKamera').checked = CFG.eigeneKamera !== false;
   samTrainStatus();
   fbStatusZeigen();
 }
@@ -10036,6 +10190,7 @@ $('#btnSaveSettings').onclick = () => {
   CFG.invMonate  = invMonate($('#setInvMonate').value);
   CFG.sam        = $('#setSam').checked;          // persönlich, geht nicht hinauf
   CFG.samTest    = $('#setSamTest').checked;      // v1.138, ebenso
+  CFG.eigeneKamera = $('#setEigeneKamera').checked; // v1.143, ebenso
   const sel = $('#setDevice').value;
   if(sel && CFG.devices.includes(sel)) CFG.devices = [sel, ...CFG.devices.filter(d => d !== sel)];
   saveCfg();
