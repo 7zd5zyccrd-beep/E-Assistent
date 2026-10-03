@@ -10,6 +10,13 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.150 03.10.2026 SAM (Beta): Zuordnung zum Verteiler. Ein Geraet, von dem nur
+                    die Marke lesbar ist (ABB, legrand), gilt als
+                    wahrscheinlich LS, wenn ein lesbarer LS derselben Marke im
+                    Verteiler sitzt - vorher verrutschten dahinter alle
+                    Eintraege (Pruefstand 420 -> 429 richtig, 14 -> 5 falsch).
+                    Zwei gleiche Trafo-Zeilen mit aufeinanderfolgenden
+                    Nummern werden ein Eintrag ueber 2 TE ("11-12 Trafo").
   v1.149 03.10.2026 SAM (Beta): "Relais", "Eltako", "Fernschalter" auf dem Blatt
                     werden ein Stromstossschalter statt eines LS (Jean: mit
                     "16 A" wurde daraus sogar ein B16-Automat; die 16 A sind
@@ -3112,7 +3119,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.149';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.150';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 03.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -8180,7 +8187,10 @@ function samAusrichten(A, T, G, AS, GS, ES, AN, GN){
   const n = A.length, m = G.length;
   /* "LS?": LS nur, weil auf dem Blatt nichts anderes steht – dann ist ein
      FI/LS fast so gut */
-  const art = (a, g) => g === a || (a === 'LS?' && g === 'LS') ? 3 : a === 'LS?' && g === 'FI/LS' ? 2 : g === '—' ? 1 : -2;
+  /* v1.150: "LS~" – vom Gerät ist nur die Marke lesbar (samGeraetArt); zu einem
+     LS-Eintrag passt es fast so gut wie ein LS, zu anderem weder gut noch schlecht */
+  const art = (a, g) => g === a || (a === 'LS?' && g === 'LS') ? 3 : a === 'LS?' && g === 'FI/LS' ? 2
+    : g === 'LS~' ? (a === 'LS' || a === 'LS?' ? 2.5 : 0) : g === '—' ? 1 : -2;
   /* v1.134 (Jean: "erst abwägen, dann die Regel"): auch der Aufdruck zählt –
      gleich auf Blatt und Gerät +1, verschieden −2 (dann nicht besser als ein
      unklares Gerät, IMG_6552: "10 A" am B16). Bei Läufen gleicher LS
@@ -8246,6 +8256,19 @@ function samSichErwartet(z){
   if(/^(licht|beleuchtung)\b/.test(b)) return '10 A';
   return '';
 }
+/* v1.150 (Jean: Lösungen für die Fälle, die heute schiefgehen): ein Gerät, von
+   dem nur die Marke lesbar ist ("ABB", "legrand"), blieb unklar – am Rand eines
+   Herds 1–3 nicht erlaubt, und alle Einträge danach verrutschten (IMG_6674.v1,
+   IMG_7038.v2). In den Werkstattfotos waren 36 von 46 solcher Geräte LS. Es
+   zählt deshalb als "wahrscheinlich LS", wenn im Verteiler ein lesbarer LS
+   derselben Marke sitzt und kein Stromstoßschalter direkt daneben (ABB E251
+   tragen dasselbe Logo, IMG_6784). */
+function samGeraetArt(gs, k){
+  const x = gs[k];
+  if(x.art !== '—' || !x.marke || x.aufdruck) return x.art;
+  if([gs[k - 1], gs[k + 1]].some(y => y && y.art === 'Stromstoßschalter')) return x.art;
+  return gs.some(y => y.art === 'LS' && y.marke === x.marke) ? 'LS~' : x.art;
+}
 function samVerknuepfen(P){
   const l = P.samLesung, g = P.samGeraete;
   if(!l || !l.reihen) return;
@@ -8270,7 +8293,7 @@ function samVerknuepfen(P){
   const vermutet = z => z.geraet === 'ls' && !/\bLS\b/i.test(z.bez + ' ' + z.sich);
   const paar = samAusrichten(rs.map(z => { const a = samBlattArt(z); return a === 'LS' && vermutet(z) ? 'LS?' : a; }),
     rs.map(z => { const n = samNummer(z.nr); return n ? Math.min(n.te, 4) : 1; }),
-    geraete.map(x => x.art),
+    geraete.map((x, k) => samGeraetArt(geraete, k)),
     rs.map(z => z.sich || ''),
     geraete.map(x => x.aufdruck ? samAufdruckText(x.aufdruck) : ''),
     rs.map(samSichErwartet),
@@ -8281,7 +8304,8 @@ function samVerknuepfen(P){
     if(!p) return;
     const gs = geraete.slice(p[0], p[1] + 1), z = rs[i];
     const art = gs[0].art, mit = gs.find(x => x.aufdruck) || {}, aufdruck = mit.aufdruck || '';
-    z.verteiler = {art, aufdruck, unsicher: !!mit.unsicher, n: gs.length, passt: art === samBlattArt(z), idx: p};
+    const wohl = samGeraetArt(geraete, p[0]) === 'LS~' && samBlattArt(z) === 'LS';   // v1.150
+    z.verteiler = {art: wohl ? 'LS' : art, wohl, aufdruck, unsicher: !!mit.unsicher, n: gs.length, passt: wohl || art === samBlattArt(z), idx: p};
     zugeordnet++; if(z.verteiler.passt) gleich++;
   });
   l.abgleich = {geraete: geraete.length, eintraege: rs.length, zugeordnet, gleich};
@@ -8471,7 +8495,7 @@ function samZeilen(reihen){
         z.hinweis = 'Blatt zählt Geräte – Breite 4 TE angenommen, bitte prüfen';
       }
     });
-  } else samFiPlaetze(rs);
+  } else { samFiPlaetze(rs); samTrafoPlaetze(rs); }
   samFiAbdeckung(rs);
   return rs;
 }
@@ -8554,6 +8578,23 @@ function samFiPlaetze(rs){
       z.hinweis = 'ein FI belegt mindestens 2 Plätze – Nummer prüfen';
     }
   });
+}
+/* v1.150 (Jean: "Trafo" gehört zu den gleichen Geräten über mehrere
+   Einzelnummern): zwei gleiche Trafo-Zeilen mit aufeinanderfolgenden Nummern
+   sind ein Trafo über 2 TE – "11 Trafo", "12 Trafo" → "11–12 Trafo" (IMG_7120,
+   IMG_6784, IMG_6615; im Verteiler sitzt dort jeweils ein Trafo) */
+function samTrafoPlaetze(rs){
+  for(let i = 0; i + 1 < rs.length; i++){
+    const a = rs[i], b = rs[i + 1];
+    if(samBlattArt(a) !== 'Trafo' || samBlattArt(b) !== 'Trafo') continue;
+    const na = samNummer(a.nr), nb = samNummer(b.nr);
+    if(!na || !nb || nb.start !== na.start + na.te) continue;
+    if(samNorm(a.bez) !== samNorm(b.bez) || (a.ort && b.ort && a.ort !== b.ort)) continue;
+    a.nr = na.start + '–' + (nb.start + nb.te - 1);
+    a.ort = a.ort || b.ort; a.sich = a.sich || b.sich;
+    a.zweifel.nr = a.zweifel.nr || b.zweifel.nr;
+    rs.splice(i + 1, 1); i--;
+  }
 }
 /* v1.114 (Jean: FI 25 A, in der Liste stand 40 A): ohne gelesenen
    Nennstrom nahm die Übernahme stillschweigend den 40-A-FI aus der Auswahl.
