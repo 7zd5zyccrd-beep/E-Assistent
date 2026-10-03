@@ -1,7 +1,13 @@
 <!DOCTYPE html>
 <!--
   SAM · Geräte auf dem Verteilerfoto
-  v1.3 · 03.10.2026
+  v1.4 · 03.10.2026
+
+  v1.4: vierpoliger FI nicht mehr in zwei Geräte geteilt. Prüftaste und
+  Bestellnummer ("TEST", "2CSP204101R3400") stehen beim F 204 gut 2,5 TE
+  rechts neben dem Text und wurden ein zweiter FI (IMG_6635.v1). Wie schon
+  die Marke dürfen sie beim vierpoligen bis 3,6 TE entfernt liegen. Nur dieses
+  Foto ändert sich.
 
   v1.3: Nummernstreifen (Jean, 03.10.2026). Über oder unter den Reihen
   trägt die Abdeckung oft fortlaufende Nummern, eine je TE - gedruckt oder
@@ -125,12 +131,12 @@
 </script>
 </head>
 <body>
-<h1>SAM · Geräte <span class="ver">v1.3 · 03.10.2026</span></h1>
+<h1>SAM · Geräte <span class="ver">v1.4 · 03.10.2026</span></h1>
 <p><button id="start">Erkennung laden</button> <input type="file" id="datei" accept="image/*" disabled></p>
 <pre id="aus"></pre>
 
 <script type="module">
-const VERSION = 'v1.3 · 03.10.2026';
+const VERSION = 'v1.4 · 03.10.2026';
 const WEGE = [
   'https://esm.sh/ppu-paddle-ocr/web?external=onnxruntime-web',
   'https://esm.sh/ppu-paddle-ocr/web',
@@ -769,12 +775,15 @@ function geraeteFinden(woerterRoh){
       /* v1.2: beim vierpoligen FI (CDA 440, F 204, F 374, "4P") steht die Marke am
          rechten Rand, gut 1,5 TE neben dem Text (hager, IMG_6698.v2) */
       const vier = fa && a.anker.some(k => /^CDA\s?4|^F\s?[23]?[07]4|\b4\s?P\b|4\s?pol/i.test(k.w.text));
+      /* v1.4: beim vierpoligen liegen Prüftaste und Bestellnummer rechts gut
+         2,5 TE neben dem Text ("TEST", "2CSP204101R3400" neben "F204 A",
+         IMG_6635.v1) - wie die Marke bis 3,6 TE */
       /* beim vierpoligen auch eine rechte Hälfte ohne Marke und Art ("Un~230/400 V",
          "IP40" beim F 374, IMG_6775) */
       const rest = vier && b.art === '—' && !b.marke;
       const eins = (fa || fb) && (fa || nurTaste(a)) &&
                    (fb || nurTaste(b) || rest || (nurMarke(b, a) && b.x0 - a.x1 < (vier ? 2 : 0.6) * te)) && !(a.marke && b.marke) &&
-                   b.xm - a.xm < (vier && nurMarke(b, a) ? 3.6 : 1.6) * te && b.x0 - a.x1 < (vier ? 2 : 1) * te;
+                   b.xm - a.xm < (vier && (nurMarke(b, a) || nurTaste(b)) ? 3.6 : 1.6) * te && b.x0 - a.x1 < (vier ? 2 : 1) * te;
       if(!eins){ i++; continue; }
       const anker = a.anker.concat(b.anker);
       const g = {x0: Math.min(a.x0, b.x0), x1: Math.max(a.x1, b.x1), y0: Math.min(a.y0, b.y0), y1: Math.max(a.y1, b.y1),

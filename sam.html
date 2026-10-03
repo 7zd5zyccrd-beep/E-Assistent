@@ -1,7 +1,21 @@
 <!DOCTYPE html>
 <!--
   PaddleOCR-Test · Verteilerbeschreibung
-  v0.48 · 03.10.2026
+  v0.50 · 03.10.2026
+
+  v0.50: Firmenzeile unter der Tabelle (Jean, iPhone, eigener Verteiler):
+  "Elektro - Hausgeräte - Service" bekam eine "1" und wurde ein Eintrag. Eine
+  letzte Zeile mit Briefkopf-Wörtern (Hausgeräte, Service, GmbH, Tel. ...) und
+  ohne Absicherung fällt jetzt auch mit Nummer weg, wenn die Nummer nicht in
+  die Folge passt. Bericht: "Briefkopf: ..." unter Fußtext.
+
+  v0.49: Fälle, die bisher schiefgingen (Jean, 03.10.2026). Steht die eigene
+  Kreisnummer noch einmal vorn in der Bezeichnung ("13 E-Herd", "4, E-Herd"
+  bei 14; IMG_6784, IMG_7120), fällt sie weg - sonst wurden die drei Herd-
+  Zeilen nicht zu 13-15. Der Trafo zählt zu den gleichen Geräten über mehrere
+  Einzelnummern ("11 Trafo", "12 Trafo" -> 11-12, Jeans Schema-Regel;
+  Musterlösungen IMG_7120, IMG_6784, IMG_6615 angepasst). Messwerte melden
+  "Nummer in der Bezeichnung".
 
   v0.48: Jeans Verteiler auf dem iPhone (03.10.2026, als STEIN7A in den
   Proben): die Nummernspalte kam als "18", "3", "20 20", "21". Der Sprung
@@ -853,7 +867,7 @@ pre.abgleich.gut{background:#EAF5DC;border-color:#8FBE36}
 
   <header>
     <h1>PaddleOCR-Test · Verteilerbeschreibung</h1>
-    <span class="ver">v0.48 · 03.10.2026</span>
+    <span class="ver">v0.50 · 03.10.2026</span>
   </header>
 
   <div class="karte">
@@ -1028,7 +1042,7 @@ const MODELLE = {
   latin: {name:'v5 lateinisch',  konstante:'V5_LATIN_MOBILE_MODEL'}
 };
 
-const VERSION = 'v0.48 · 03.10.2026';
+const VERSION = 'v0.50 · 03.10.2026';
 
 /* ==================== Schrittliste ==================== */
 
@@ -4393,6 +4407,7 @@ function verarbeite(erg, arbeit, winkel, leseDauer, nachleseBericht){
     mess.push('Nummernfolge: ' + (gebaut.folgeBericht && gebaut.folgeBericht.length ? gebaut.folgeBericht.join('; ') : 'keine Nummer außer der Reihe'));
     if(gebaut.fussBericht && gebaut.fussBericht.length) mess.push('Unter der Tabelle, nicht als Eintrag gezählt: ' + gebaut.fussBericht.map(t => '„' + t + '"').join('; '));
     if(letzteHalbeTE) mess.push('Halbe Teilungseinheiten: ' + letzteHalbeTE.text);
+    mess.push('Nummer in der Bezeichnung: ' + (gebaut.nummerBezBericht && gebaut.nummerBezBericht.length ? 'entfernt bei ' + gebaut.nummerBezBericht.join(', ') : 'keine'));
     if(gebaut.geraeteBericht && gebaut.geraeteBericht.length) mess.push('Gleiche Geräte zusammengefasst: ' + gebaut.geraeteBericht.join('; '));
     /* v0.27: ergänzen statt ersetzen - sonst fällt der gefundene Nummernstreifen
        heraus (daran scheiterten v0.23 und v0.26 auf dem Münch-Blatt) */
@@ -5874,6 +5889,7 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
      Fußtext direkt unter dem letzten Eintrag (Jeans Verteiler, blind) */
   const folgeBericht = nummernfolgePruefen(reihen);
   fussAmEnde(reihen, fussBericht);
+  const nummerBezBericht = nummerAusBezeichnung(reihen);
   reihen.forEach(aufsSchema);
   const geraeteBericht = geraeteZusammenfassen(reihen);
   reihen.forEach(function(r){ [r.bez, r.ort].forEach(f => { if(f && f.text) f.text = f.text.replace(/\u00a0/g, ' '); }); });
@@ -5975,7 +5991,7 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
   const ist = reihen.map(r => ({nr: r.n.text || '', bez: r.bez.leer ? '' : r.bez.text,
     ort: (r.ort && !r.ort.leer) ? r.ort.text : '', sich: (r.sich && !r.sich.leer) ? r.sich.text : '',
     zweifel: {nr: !!(r.abgeleitet || r.n.unklar), bez: zw(r.bez), ort: zw(r.ort), sich: zw(r.sich)}}));
-  return {knoten: huelle, text, zuB, zuO, zweifel, ist, klammerBericht: klammerBericht.length ? klammerBericht : null, geraeteBericht, fussBericht, folgeBericht};
+  return {knoten: huelle, text, zuB, zuO, zweifel, ist, klammerBericht: klammerBericht.length ? klammerBericht : null, geraeteBericht, fussBericht, folgeBericht, nummerBezBericht};
 }
 
 /* v0.44 (Jean, 25.09.2026, sein eigener Verteiler, zurückgehalten und nur
@@ -6043,9 +6059,22 @@ function fussAmEnde(reihen, fussBericht){
   const woerter = r => [r.bez, r.ort].filter(f => f && !f.leer).map(f => f.text).join(' ')
     .split(/[\s,\/;+]+/).filter(w => w.replace(/[^A-Za-zÄÖÜäöüß]/g, '').length >= 3);
   const treffer = w => !!(teilDeuten(w, BEZEICHNUNGEN) || teilDeuten(w, ORTE));
+  /* v0.50 (Jean, iPhone, eigener Verteiler): die Firmenzeile "Elektro -
+     Hausgeräte - Service" unter der Tabelle bekam dort eine "1" und blieb als
+     Eintrag stehen. Eine letzte Zeile mit Briefkopf-Wörtern und ohne
+     Absicherung fällt auch mit Nummer weg, wenn die Nummer nicht in die Folge
+     passt (kleiner als eine davor) oder fraglich ist - Schemawörter zählen
+     dort nicht ("Elektro") */
+  const BRIEFKOPF = /hausger|service|revision|installation|gmbh|\btel\b|\bfax\b|www\.|e-?mail/i;
+  const nrBis = r => r.n && typeof r.n.b === 'number' ? r.n.b : null;
   while(reihen.length > 1){
     const r = reihen[reihen.length - 1];
-    if(!r.abgeleitet || !r.n || r.n.herkunft !== 'frei' || (r.sich && !r.sich.leer)) break;
+    if(r.sich && !r.sich.leer) break;
+    const vorher = reihen.slice(0, -1).map(nrBis).filter(x => x !== null);
+    const kopf = BRIEFKOPF.test(woerter(r).join(' ')) && (!r.n || r.abgeleitet || r.n.herkunft === 'frei' ||
+      (nrBis(r) !== null && vorher.length && nrBis(r) <= Math.max(...vorher)));
+    if(kopf){ fussBericht.push('Briefkopf: ' + woerter(r).join(' ').slice(0, 60)); reihen.pop(); continue; }
+    if(!r.abgeleitet || !r.n || r.n.herkunft !== 'frei') break;
     const ws = woerter(r);
     if(!ws.length || ws.some(treffer)) break;
     fussBericht.push(ws.join(' ').slice(0, 60));
@@ -6058,7 +6087,10 @@ function fussAmEnde(reihen, fussBericht){
    01-04 (Hofmann), E-Herd 37-39 (Blatt 2), Hauptschalter, und FI, wenn sie
    dieselben Kreise abdecken (Dewitz 2: 7 und 8 "Stromkreis 6"). Nur bei
    gleichem Ort und gleicher Absicherung. */
-const MEHRPOLIG = /^(Überspannungsableiter|E-Herd|Hauptschalter|FI-Schutzschalter|Fehlerstromschutzschalter)$/;
+/* v0.49 (Jean, 03.10.2026): auch der Trafo - "11 Trafo", "12 Trafo" ist ein
+   Trafo über 2 TE (IMG_7120, IMG_6784, IMG_6615); seine Bezeichnung darf die
+   Spannung tragen ("Trafo 230 / 12 V") */
+const MEHRPOLIG = /^(Überspannungsableiter|E-Herd|Hauptschalter|FI-Schutzschalter|Fehlerstromschutzschalter|Trafo\b.*)$/;
 /* v0.39 (Jean, 25.09.2026): Nummerierung in halben Teilungseinheiten -
    Schmidtgen & Mieth: jeder Eintrag belegt zwei Nummern, beginnend bei einer
    ungeraden (3-4, 5-6 ... 31-38), der E-Herd steht dreimal mit je zwei
@@ -6074,6 +6106,25 @@ function halbeTEPruefen(reihen){
   const ja = mit.length >= 5 && passend.length >= 0.8*mit.length;
   return {ja, text: (ja ? 'ja' : 'nein') + ' – ' + passend.length + ' von ' + mit.length +
                     ' Einträgen belegen eine gerade Anzahl Nummern ab einer ungeraden'};
+}
+/* v0.49: die eigene Kreisnummer noch einmal vorn in der Bezeichnung -
+   "13 E-Herd", "14 E-Herd" (IMG_6784, IMG_7120: die Nummer wurde mit der
+   Zeile gelesen, bei 14 nur "4,"). Dann sind die drei Zeilen verschieden und
+   werden nicht zum E-Herd 13-15. Entfernt wird nur eine Zahl am Anfang, die
+   die eigene Nummer ist oder deren Ende; danach muss Text folgen. */
+function nummerAusBezeichnung(reihen){
+  const bericht = [];
+  reihen.forEach(r => {
+    if(!r.bez || r.bez.leer || !r.n || typeof r.n.b !== 'number') return;
+    const m = /^\s*(\d{1,2})\s*[,.:;]?\s+(?=[A-Za-zÄÖÜäöü])/.exec(r.bez.text || '');
+    if(!m) return;
+    const eigen = [r.n.a, r.n.b].filter(x => typeof x === 'number').map(String);
+    if(!eigen.some(x => x === m[1] || (x.length > m[1].length && x.endsWith(m[1])))) return;
+    r.bez.text = r.bez.text.slice(m[0].length);
+    if(r.bez.herkunft !== 'leer') r.bez.herkunft = 'korrigiert';
+    bericht.push(r.n.text || String(r.n.b));
+  });
+  return bericht;
 }
 function geraeteZusammenfassen(reihen){
   const bericht = [];
