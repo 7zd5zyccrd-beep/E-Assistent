@@ -1,7 +1,26 @@
 <!DOCTYPE html>
 <!--
   PaddleOCR-Test · Verteilerbeschreibung
-  v0.52 · 03.10.2026
+  v0.54 · 03.10.2026
+
+  v0.54: Jeans Verteiler aus etwas Abstand (03.10.2026, als STEIN7B in den
+  Proben). Das Blatt hing mitten auf der Tür; die Nummern standen nicht im
+  linken Drittel des Fotos, der Kopf ("elektro Dewitz GmbH", "Installation
+  Revision Service") blieb stehen und bekam die Nummern 1 und 2, der Herd
+  verrutschte. Steht im linken Drittel des Fotos keine Nummer, zählt das
+  Drittel jetzt ab dem linken Rand der Schrift (nur dann - als Regel für alle
+  setzte es auf IMG_5256 den Schnitt zu tief und kostete dort 3 Zeilen). Dazu:
+  in der eigens gelesenen Nummernspalte zählen Verleser ohne Ziffer ("EI" aus
+  "Elektro") nur zwischen echten Nummern - unten zog das "EI" das Raster bis
+  zur Fußzeile, und "21 Waschmaschine" fiel heraus. STEIN7B 7/10 -> 10/10.
+
+  v0.53: Warnung bei zu kleiner Schrift (Jean, 03.10.2026: warnen, die Wahl
+  lassen). Gemessen wird die mittlere Höhe der Beschriftungswörter im
+  Originalfoto. Die schlecht gelesenen Fernaufnahmen liegen bei 35-44
+  Punkten (IMG_5256, IMG_6215, IMG_6676, IMG_7420, IMG_6536, IMG_7795), gut
+  gelesene ab 48 (STEIN7A); Grenze 45. Die Kennzahlen nennen die Schriftgröße immer,
+  die Einbettung gibt schrift und schriftKlein an die App. Am Lesen selbst
+  ändert sich nichts.
 
   v0.52: Anhängsel am Ende der Bezeichnung (Jean, 03.10.2026): "TB d",
   "0.2 r 19", "m" fallen weg, wenn ein einzelner Buchstabe oder eine
@@ -883,7 +902,7 @@ pre.abgleich.gut{background:#EAF5DC;border-color:#8FBE36}
 
   <header>
     <h1>PaddleOCR-Test · Verteilerbeschreibung</h1>
-    <span class="ver">v0.52 · 03.10.2026</span>
+    <span class="ver">v0.54 · 03.10.2026</span>
   </header>
 
   <div class="karte">
@@ -1070,7 +1089,7 @@ const MODELLE = {
   latin: {name:'v5 lateinisch',  konstante:'V5_LATIN_MOBILE_MODEL'}
 };
 
-const VERSION = 'v0.52 · 03.10.2026';
+const VERSION = 'v0.54 · 03.10.2026';
 
 /* ==================== Schrittliste ==================== */
 
@@ -2906,6 +2925,10 @@ function textDeuten(roh, liste){
 
 let quelle = null;         /* Canvas mit dem entzerrten Bild */
 let quelleOriginal = null, letzterZuschnitt = null;
+/* v0.53: Schriftgröße der Beschreibung im Originalfoto (mittlere Höhe der
+   Wörter, die auf den Listen stehen, in Bildpunkten des Originals) - für die
+   Warnung "Beschreibung im Foto sehr klein" */
+let letzteSchrift = null;
 let letzteAusgabe = '';
 let letzterDateiname = '';
 const leinwand = document.getElementById('leinwand');
@@ -2979,6 +3002,7 @@ async function beschriftungSuchen(ganz, original){
   if(!original) return {text: 'kein Original vorhanden'};
   const erg = await dienst.recognize(ganz, { noCache: true });
   const woerter = holeWoerter(erg).filter(w => w.confidence >= 40);
+  letzteSchrift = {px: null, woerter: woerter.length};
   if(woerter.length < 5) return {text: 'zu wenige Wörter im Foto (' + woerter.length + ') – kein Zuschnitt'};
   const hoehen = woerter.map(w => w.bbox.y1 - w.bbox.y0).sort((a, b) => a - b);
   const h = hoehen[Math.floor(hoehen.length/2)] || 20;
@@ -2992,6 +3016,11 @@ async function beschriftungSuchen(ganz, original){
     return Math.min(n, 3);
   };
   const mit = woerter.map(w => ({w, n: treffer(w)})).filter(x => x.n > 0);
+  {
+    const quelleH = (mit.length >= 3 ? mit.map(x => x.w) : woerter).map(w => w.bbox.y1 - w.bbox.y0).sort((a, b) => a - b);
+    const mh = quelleH[Math.floor(quelleH.length/2)] || 0;
+    letzteSchrift = {px: Math.round(mh * original.height / ganz.height), woerter: woerter.length, beschriftung: mit.length};
+  }
   const summe = mit.reduce((a, x) => a + x.n, 0);
   if(summe < 4) return {text: 'nur ' + summe + ' Beschriftungswörter gefunden – kein Zuschnitt'};
   /* Gruppen: Treffer, deren Kästen weniger als fünf Zeilenhöhen auseinander liegen */
@@ -3111,6 +3140,17 @@ async function beschriftungSuchen(ganz, original){
           ' aus dem Original (vorher ' + Math.round((r.x1 - r.x0)) + ' Punkte breit), Gruppen ' + gruppenText + ', ' + Math.round(jetzt() - t0) + ' ms'};
 }
 
+/* v0.53 (Jean, 03.10.2026: warnen, wenn die Beschreibung im Foto zu klein
+   ist): Grenze aus den Lernblättern - Fernaufnahmen (IMG_7795, IMG_5256,
+   IMG_6536 ...) liegen darunter, gut gelesene darüber */
+const SCHRIFT_KLEIN = 45;   /* Fernaufnahmen 35-44 (IMG_5256, IMG_6215, IMG_6676, IMG_7420, IMG_6536, IMG_7795), gut gelesene ab 48 (STEIN7A - aus 1932 Punkten Breite, mit der Kamera der App wären es rund 75) */
+const schriftKlein = () => !!(letzteSchrift && (letzteSchrift.px === null ? letzteSchrift.woerter < 5 : letzteSchrift.px < SCHRIFT_KLEIN));
+function schriftText(){
+  if(!letzteSchrift) return 'nicht gemessen (Beschriftung suchen abgeschaltet)';
+  if(letzteSchrift.px === null) return 'nicht messbar – ' + letzteSchrift.woerter + ' Wörter' + (schriftKlein() ? ' – Beschreibung im Foto zu klein oder unlesbar, näher heran und neu fotografieren' : '');
+  return letzteSchrift.px + ' Punkte Wort-Höhe im Original (' + letzteSchrift.beschriftung + ' Beschriftungswörter von ' + letzteSchrift.woerter + ')' +
+         (schriftKlein() ? ' – SEHR KLEIN: Ergebnis unsicher, näher heran und neu fotografieren' : '');
+}
 async function lauf(){
   if(!quelle || !dienst) return;
   letzteErnte = null;
@@ -3122,7 +3162,7 @@ async function lauf(){
      geöffneter Tür neben dem Verteilerkasten, wird sie aus dem Original
      ausgeschnitten und alles Weitere läuft nur auf ihr */
   let quelleLauf = quelle;
-  letzterZuschnitt = null;
+  letzterZuschnitt = null; letzteSchrift = null;
   if(document.getElementById('optZuschnitt').checked){
     try{
       const z = await beschriftungSuchen(quelle, quelleOriginal);
@@ -3612,6 +3652,13 @@ async function nummernstreifenLesen(arbeit, st){
     });
     if(yb >= H) break;
   }
+  /* v0.54: Verleser ohne Ziffer ("EI" aus "Elektro" in der Fußzeile, STEIN7B)
+     zählen nur zwischen echten Nummern - oben und unten am Streifen sind es
+     Kopf oder Fuß. Das "EI" zog das Zeilenraster bis zur Fußzeile, und die
+     letzte Zeile ("21 Waschmaschine") fiel heraus. */
+  woerter.sort((p, q) => p.bbox.y0 - q.bbox.y0);
+  while(woerter.length && !/\d/.test(erstesTeil(woerter[woerter.length - 1].text))) woerter.pop();
+  while(woerter.length && !/\d/.test(erstesTeil(woerter[0].text))) woerter.shift();
   laeufe.sort((p, q) => p.a - q.a);
   const striche = [];
   laeufe.forEach(function(l){
@@ -4188,18 +4235,35 @@ function verarbeite(erg, arbeit, winkel, leseDauer, nachleseBericht){
         im linken Drittel. Der Firmenkopf sitzt darüber und gehört nicht dazu. */
   let schnitt = null;
   if(kopfWeg){
-    const drittel = arbeit.width / 3;
-    let oben = Infinity;
-    const kand = [];
-    alle.forEach(w => {
-      if(!w.behalten) return;
-      const mx = (w.bbox.x0 + w.bbox.x1)/2;
-      if(mx > drittel) return;
-      if(!istKreisnummer(w.text)) return;
-      const z = zerlege(nurNummer(w.text));
-      kand.push({y0: w.bbox.y0, ym: (w.bbox.y0 + w.bbox.y1)/2, a: z.a, b: z.b});
-      if(w.bbox.y0 < oben) oben = w.bbox.y0;
-    });
+    /* v0.54 (Jean, eigener Verteiler aus etwas Abstand, STEIN7B): das Blatt hing
+       in der Mitte der Tür, die Nummern standen bei 40 % der Bildbreite - nicht
+       im linken Drittel des Fotos, der Kopf "elektro Dewitz GmbH" blieb und
+       bekam die Nummern 1 und 2. Steht im linken Drittel des Fotos keine
+       Nummer, zählt das Drittel ab dem linken Rand der Schrift. Nur dann: als
+       Regel für alle setzte es auf IMG_5256 den Schnitt zu tief. */
+    const kandidaten = drittel => {
+      const k = []; let o = Infinity;
+      alle.forEach(w => {
+        if(!w.behalten) return;
+        const mx = (w.bbox.x0 + w.bbox.x1)/2;
+        if(mx > drittel) return;
+        if(!istKreisnummer(w.text)) return;
+        const z = zerlege(nurNummer(w.text));
+        k.push({y0: w.bbox.y0, ym: (w.bbox.y0 + w.bbox.y1)/2, a: z.a, b: z.b});
+        if(w.bbox.y0 < o) o = w.bbox.y0;
+      });
+      return {k, o};
+    };
+    let gefunden = kandidaten(arbeit.width / 3), abSchrift = false;
+    if(!gefunden.k.length){
+      const xs = alle.filter(w => w.behalten).map(w => w.bbox.x0), xe = alle.filter(w => w.behalten).map(w => w.bbox.x1);
+      if(xs.length){
+        const links = Math.min(...xs), rechts = Math.max(...xe);
+        gefunden = kandidaten(links + (rechts - links) / 3); abSchrift = true;
+      }
+    }
+    let oben = gefunden.o;
+    const kand = gefunden.k;
     const hoehe = zeilenBilden(alle.filter(w=>w.behalten)).hoehe || 30;
     /* v0.36: die oberste Nummer, auf die in den nächsten Zeilen ihre
        Nachfolgerin folgt. Auf dem Jüngling-Blatt las die Zellenlesung im
@@ -4218,7 +4282,7 @@ function verarbeite(erg, arbeit, winkel, leseDauer, nachleseBericht){
       const erste = kand.find(c => c.y0 === oben);
       if(erste) schnitt = Math.max(schnitt, erste.ym - 0.8*hoehe);
       rueck.kopf = 'Kopf: Schnitt bei y ' + Math.round(schnitt) + ' (oberste Nummer mit Nachfolgerin bei y ' + Math.round(oben) +
-                   ', Zeilenhöhe ' + Math.round(hoehe) + ', ' + kand.length + ' Nummern im linken Drittel)';
+                   ', Zeilenhöhe ' + Math.round(hoehe) + ', ' + kand.length + ' Nummern im linken Drittel' + (abSchrift ? ' der Schrift – im Foto keine' : '') + ')';
       alle.forEach(w => {
         if((w.bbox.y0 + w.bbox.y1)/2 < schnitt) w.behalten = false;
       });
@@ -4592,6 +4656,7 @@ function verarbeite(erg, arbeit, winkel, leseDauer, nachleseBericht){
              (letzteEntzerrung && letzteEntzerrung.art !== 'drehung'
                 ? 'aus ' + letzteEntzerrung.stuecke + (letzteEntzerrung.art === 'linien' ? ' gedruckten Linien' : ' Textzeilen') + ' entzerrt\n'
                 : (winkel ? winkel.toFixed(2) : '0') + '° Schräglage\n') +
+             'Schriftgröße: ' + schriftText() + '\n' +
              'Einstellungen: Modell ' + (MODELLE[aktivesModell] ? MODELLE[aktivesModell].name : aktivesModell) +
              ', Schwelle ' + document.getElementById('schwelle').value +
              (document.getElementById('optEntzerren').checked ? ', entzerrt' : ', nicht entzerrt') +
@@ -6816,7 +6881,8 @@ if(new URLSearchParams(location.search).has('einbettung') && window.parent !== w
         aktuellesSoll = null;
         letzteReihen = null;
         const ok = await bildAnnehmen(d.bild, 'sam');
-        antwort({fertig:true, ok: !!ok && !!letzteReihen, reihen: letzteReihen || [], bericht: letzteAusgabe || ''});
+        antwort({fertig:true, ok: !!ok && !!letzteReihen, reihen: letzteReihen || [], bericht: letzteAusgabe || '',
+                 schrift: letzteSchrift, schriftKlein: schriftKlein()});   // v0.53: Warnung in der App
       }catch(err){
         antwort({fertig:true, ok:false, fehler: (err && err.message) ? err.message : String(err)});
       }
