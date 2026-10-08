@@ -125,8 +125,9 @@ Umgesetzt nach dem Bedienkonzept vom 08.10.2026 (Artifact „E-Assistent Bedienk
   `sam-geraete.html`). Beide laufen unsichtbar im iframe und antworten über
   postMessage (`SAM_LESER`, `SAM_GER`, Antwort `{fertig, ok, reihen:[…]}`).
   Nicht hier bearbeiten, sondern in der Werkstatt und herüberkopieren.
-- Laden (v1.126): erst beim Öffnen der Ansicht „Wiederholungsprüfung“
-  (`samVorladen` in `renderModeMenu`), beide Erkennungen gleich. Nach dem
+- Laden: seit v1.160 beim Antippen von „+ Wiederholungsprüfung“ (`samVorladen`
+  in `startProject`; die Ansicht „Auswahl“ aus v1.126 gibt es nicht mehr),
+  beide Erkennungen gleich. Nach dem
   Lesen wird die Beschreibung freigegeben (Speicher auf dem iPhone, v1.118).
 - Ablauf (v1.125): „Erfassung beginnen“ öffnet die Kamera für die
   Beschreibung. Danach Zwischenseite `#samNaechst` („Jetzt fotografieren –
