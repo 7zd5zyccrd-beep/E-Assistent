@@ -10,6 +10,27 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.164 08.10.2026 Bedienkonzept, Etappe 6: Einstellungen und Anlegen. Die
+                    Einstellungen sind eine Uebersicht wie in iOS: "Dieses
+                    Geraet" (Pruefer, Messgeraet, Messfolge, Kamera der App)
+                    und "Fuer alle" (Adressen, Listen, Lager), dazu SAM, Konto
+                    und Abgleich, Daten. Was man aendert, gilt sofort - je Feld
+                    nur dessen Wert, damit nichts eine gerade hereingekommene
+                    Aenderung eines Kollegen ueberschreibt; "Einstellungen
+                    speichern" entfaellt. Die Listen stehen Zeile fuer Zeile da
+                    (aendern, nach oben, entfernen, hinzufuegen), die Breite der
+                    sonstigen Geraete als eigenes Feld statt ", 3"; die Bauteile
+                    lassen sich weiter als Text bearbeiten. Wird ein Bauteil
+                    umbenannt, das im Lager gefuehrt wird, fragt die App, ob der
+                    Lagerartikel mitgeht. SAM: "SAM auf diesem Geraet freigeben";
+                    Mediathek, Trainingsordner und Kamera-Probe stehen darunter
+                    unter "Werkstatt", nur bei freigegebenem SAM. Neues Projekt:
+                    bei freigegebenem SAM "Mit Fotos beginnen" oder "Ohne Fotos
+                    beginnen" (der zuletzt gewaehlte Weg oben) statt eines
+                    Schalters, der still die Kamera oeffnete. Pruefer und
+                    Messgeraet als Zeile mit "aendern", Standort als Knopf am
+                    Adressfeld. Die abweichende Nummerierung steht in den
+                    Projektdaten (unter "...").
   v1.163 08.10.2026 Bedienkonzept, Etappe 5: Stromkreis. Die Geraeteart steht in
                     einem Schalter LS - FI/LS - FI - Sonstiges; "Sonstiges"
                     oeffnet die sonstigen Geraete als Blatt (bisher eine eigene
@@ -1721,6 +1742,41 @@ header h1.tippbar{cursor:pointer}
 .chk-item .t .zst{width:18px;height:18px;flex-basis:18px;margin-top:1px}
 .chk-item .t .vs{margin-left:auto;font-size:12px;font-weight:600;color:var(--signal-ink);white-space:nowrap}
 #btnSamBoard[hidden] + .eyebrow{margin-top:0}
+/* v1.164: Einstellungen als gegliederte Liste wie in den iOS-Einstellungen */
+.set-gk{display:flex;justify-content:space-between;align-items:baseline;margin:22px 4px 8px;
+  font-family:var(--f-label);font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);font-weight:600}
+.set-gk:first-child{margin-top:0}
+.set-gk em{font-style:normal;font-family:var(--f-body);font-size:12px;letter-spacing:0;text-transform:none;font-weight:500}
+.set-gruppe{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:14px}
+.set-zeile{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:6px 14px;margin:0;border:0;
+  border-top:1px solid var(--line);background:none;text-align:left;font-size:16px;color:var(--ink)}
+.set-gruppe > .set-zeile:first-child{border-top:0}
+.set-zeile > span{flex:0 0 auto}
+.set-zeile .v{margin-left:auto;font-style:normal;color:var(--ink-soft);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.set-zeile .chev{flex:0 0 16px;color:var(--ink-soft)}
+.set-zeile input:not([type="checkbox"]),.set-zeile select{flex:1;min-width:0;height:44px;border:0;background:none;text-align:right;
+  font-size:16px;color:var(--ink-soft);padding:0}
+.set-zeile select{text-align-last:right;background-image:none}
+.set-zeile input:focus,.set-zeile select:focus{outline:none;color:var(--ink)}
+.set-hinweis{margin:-6px 4px 6px}
+input.schalter{appearance:none;-webkit-appearance:none;margin-left:auto;width:51px;height:31px;flex:0 0 51px;border-radius:16px;
+  background:var(--line);position:relative;border:0;padding:0;min-height:0;transition:background .15s}
+input.schalter::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+input.schalter:checked{background:var(--pe)}
+input.schalter:checked::after{transform:translateX(20px)}
+/* Listen Zeile für Zeile (statt Textfeld mit Sonderregeln) */
+.le-zeile{display:flex;align-items:center;gap:6px;padding:4px 6px 4px 12px;border-top:1px solid var(--line)}
+.le-zeile:first-child{border-top:0}
+.le-zeile input{flex:1;min-width:0;height:44px;border:0;background:none;padding:0;font-size:16px}
+.le-zeile input.te{flex:0 0 56px;text-align:center;border:1px solid var(--line);border-radius:var(--r);height:36px}
+.le-zeile button{flex:0 0 40px;height:40px;border:0;background:none;color:var(--ink-soft);display:flex;align-items:center;justify-content:center}
+.le-zeile button.weg{color:var(--fault)}
+.le-vor{font-size:11px;font-weight:600;color:var(--signal-ink);border:1px solid var(--signal);border-radius:4px;padding:1px 5px;white-space:nowrap}
+.feld-mit-knopf{position:relative}
+.feldknopf{position:absolute;right:0;top:-4px;display:flex;align-items:center;gap:4px;padding:4px 2px 4px 8px;border:0;
+  background:none;color:var(--brand-dark);font-size:14px;font-weight:600}
+#btnCreate.zweizeilig small{font-size:13px}
 .loeschzeile{display:block;margin:22px auto 6px;padding:12px 18px;background:none;border:0;
   color:var(--fault);font-size:15px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .btn.softred{border-color:var(--fault);color:var(--fault);background:var(--warn-bg);font-weight:600}
@@ -2731,12 +2787,14 @@ function nameGross(s){
 
     <!-- ========== NEUES PROJEKT ========== -->
     <section class="view" id="view-new">
-      <div class="eyebrow">Standort</div>
-      <label class="field"><span>Adresse</span>
+      <div class="field feld-mit-knopf"><span>Adresse</span>
+        <!-- v1.164: der Standort ist ein Knopf am Adressfeld statt eines eigenen Knopfs darunter -->
+        <button class="feldknopf" id="btnGps" type="button"><svg viewBox="0 0 24 24" width="16" height="16" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path
+          d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>Standort</button>
         <textarea id="npAddress" placeholder="Straße Hausnummer&#10;PLZ Ort"></textarea>
-      </label>
-      <button class="btn ghost" id="btnGps">Standort ermitteln</button>
-      <p class="muted small" id="gpsOut" style="margin:8px 0 0"></p>
+      </div>
+      <p class="muted small" id="gpsOut" style="margin:-6px 0 0"></p>
 
       <div class="field" style="margin-top:14px">
         <span>Wohnung</span>
@@ -2744,10 +2802,12 @@ function nameGross(s){
         <div class="chk-grid" id="flatSug" hidden></div>
       </div>
 
-      <div class="eyebrow">Rahmendaten</div>
-      <label class="field"><span>Prüfer</span><input id="npTester" autocomplete="name"></label>
-      <label class="field"><span>Messgerät</span><select id="npDevice"></select></label>
-      <p class="muted small">Gerät und Prüfer-Vorgabe änderst du in den Einstellungen.</p>
+      <!-- v1.164: Prüfer und Messgerät wechseln fast nie – eine Zeile mit "ändern" -->
+      <div class="card" id="npRahmenZeile" style="margin-top:14px"></div>
+      <div id="npRahmen">
+        <label class="field"><span>Prüfer</span><input id="npTester" autocomplete="name"></label>
+        <label class="field"><span>Messgerät</span><select id="npDevice"></select></label>
+      </div>
 
       <label class="chk" id="fldAbwNr" style="margin-top:14px" hidden>
         <input type="checkbox" id="npAbwNr"><span>Abweichende Stromkreisnummerierung</span></label>
@@ -2756,6 +2816,7 @@ function nameGross(s){
 
       <div class="actionbar"><div class="inner">
         <button class="btn primary" id="btnCreate">Erfassung beginnen</button>
+        <button class="btn ghost" id="btnCreateOhne" hidden>Ohne Fotos beginnen</button>
       </div></div>
     </section>
 
@@ -3103,75 +3164,104 @@ function nameGross(s){
 
     <!-- ========== EINSTELLUNGEN ========== -->
     <section class="view" id="view-settings">
-      <div class="panes">
-        <div class="pane">                     <!-- zweispaltig links: Vorgaben -->
-          <p class="muted small" style="margin:0 0 14px">Prüfer und Reihenfolge im Messen-Modus gelten nur auf diesem Gerät. Alles Übrige – Adressen und Listen – ist für alle gleich und wird abgeglichen.</p>
-          <label class="field"><span>Prüfer (Vorgabe)</span><input id="setTester"></label>
-          <label class="field"><span>Messgerät (Vorgabe)</span><select id="setDevice"></select></label>
-          <label class="field"><span>Reihenfolge im Messen-Modus</span><select id="setMessfolge">
+      <!-- v1.164: gegliederte Einstellungen (Bedienkonzept E8). Was man ändert,
+           gilt sofort; der Knopf "Einstellungen speichern" entfällt. -->
+      <div class="set-seite" data-seite="start">
+        <div class="set-gk">Dieses Gerät <em>nur hier</em></div>
+        <div class="set-gruppe">
+          <label class="set-zeile"><span>Prüfer</span><input id="setTester" placeholder="Name" autocomplete="name"></label>
+          <label class="set-zeile"><span>Messgerät</span><select id="setDevice"></select></label>
+          <label class="set-zeile"><span>Messfolge</span><select id="setMessfolge">
             <option value="nr">Nummernfolge</option>
             <option value="weg">Messweg</option></select></label>
-          <p class="muted small" style="margin:-8px 0 14px">Messweg: erst Zuleitung, Herd und CEE, dann reine Beleuchtungskreise, danach raumweise. Die FI folgen jeweils hinter den Kreisen, die sie abdecken. Tragen die Stromkreisnummern nicht, wird immer raumweise gemessen. Betrifft nur „Speichern &amp; weiter“, nicht die Liste im Verteiler.</p>
-          <div class="eyebrow">SAM <span class="beta">Beta</span></div>
-          <label class="chk" style="margin-bottom:8px">
-            <input type="checkbox" id="setSam"><span>Wiederholungsprüfung mit SAM beginnen</span></label>
-          <p class="muted small" style="margin:0 0 6px">Gilt nur auf diesem Gerät. Nach „Erfassung beginnen“
-            öffnet sich die Kamera für die Verteilerbeschreibung, danach für den Verteiler.</p>
-          <label class="chk" style="margin-bottom:8px">
-            <input type="checkbox" id="setEigeneKamera"><span>Kamera der App verwenden</span></label>
-          <p class="muted small" style="margin:0 0 6px">Gilt nur auf diesem Gerät. Die Kamera der App nimmt mit Licht
-            das schärfste aus zehn Bildern; ausgeschaltet öffnet sich wie früher die Kamera von iOS.</p>
-          <label class="chk" style="margin-bottom:8px">
-            <input type="checkbox" id="setSamTest"><span>SAM-Test: Fotos aus der Mediathek</span></label>
-          <p class="muted small" style="margin:0 0 6px">Gilt nur auf diesem Gerät. „Erfassung beginnen“ öffnet
-            dann die Fotomediathek statt der Kamera, und auf der SAM-Seite steht „Aus Fotos“. So lässt sich eine
-            Prüfung mit gespeicherten Bildern bis zum Protokoll durchspielen. Diese Fotos gehen nicht in den
-            Trainingsordner.</p>
-          <p class="muted small" id="samTrainStatus" style="margin:0 0 8px"></p>
-          <button class="btn ghost" id="btnTraining" type="button" style="margin-bottom:8px">Trainingsordner öffnen</button>
-          <button class="btn ghost" id="btnKamProbe" type="button" style="margin-bottom:14px">Kamera-Probe</button>
-          <div class="eyebrow">Adressen im Protokoll</div>
-          <p class="muted small">Höchstens drei Zeilen je Feld – mehr zeigt das Protokoll nicht an.</p>
-          <label class="field"><span>Auftraggeber / Anlagenbetreiber</span><textarea id="setAuftraggeber" rows="3"></textarea></label>
-          <label class="field"><span>Auftragnehmer</span><textarea id="setAuftragnehmer" rows="3"></textarea></label>
+          <label class="set-zeile"><span>Kamera der App</span><input type="checkbox" class="schalter" id="setEigeneKamera"></label>
         </div>
-
-        <div class="pane">                     <!-- zweispaltig rechts: Listen -->
-          <div class="eyebrow">Listen bearbeiten</div>
-          <p class="muted small">Eine Zeile pro Eintrag. Der erste Eintrag ist die Vorauswahl.</p>
-          <label class="field"><span>Messgeräte</span><textarea id="setDevices"></textarea></label>
-          <label class="field"><span>Charakteristiken</span><textarea id="setChars"></textarea></label>
-          <label class="field"><span>Nennströme</span><textarea id="setRated"></textarea></label>
-          <label class="field"><span>FI / RCD</span><textarea id="setRcds"></textarea></label>
-          <label class="field" style="margin-bottom:4px"><span>Sonstige Geräte</span><textarea id="setSpecials"></textarea></label>
-          <p class="muted small" style="margin:0 0 14px">Feste TE-Breite optional mit Komma anhängen, z.B. „Hauptschalter, 3".</p>
-          <label class="field"><span>Kabelarten</span><textarea id="setCables"></textarea></label>
-          <label class="field"><span>Bauteile</span><textarea id="setMaterial" style="min-height:200px"></textarea></label>
-          <div class="eyebrow">Lager</div>
-          <label class="chk" style="margin-bottom:8px">
-            <input type="checkbox" id="setInvHinweis"><span>An die Inventur erinnern</span></label>
-          <label class="field"><span>Zeitspanne (Monate)</span>
-            <input id="setInvMonate" type="number" min="1" max="120" step="1" inputmode="numeric"></label>
-          <p class="muted small" style="margin:-8px 0 14px">Der Hinweis erscheint im Lager,
-            sobald eine Position länger nicht gezählt wurde. Die betroffenen Artikel tragen in der
-            Liste den Vermerk „Inventur fällig“.</p>
-          <div class="eyebrow">Zugang und Abgleich</div>
-          <p class="muted small" id="fbStatus" style="margin-bottom:6px"></p>
-          <p class="muted small">„Abmelden“ meldet dieses Gerät ab; beim nächsten Öffnen werden Name und Passwort wieder abgefragt. Die Projekte auf dem Gerät bleiben erhalten. „App neu laden“ holt die Datei frisch vom Server, ohne die Daten anzurühren.</p>
-          <div class="row" style="margin-bottom:14px">
-            <button class="btn ghost" id="btnLock">Abmelden</button>
-            <button class="btn ghost" id="btnReload">App neu laden</button>
-          </div>
-          <div class="eyebrow">Daten</div>
-          <p class="muted small">Weitergabe-Dateien aus der Zeit vor dem Abgleich lassen sich hier noch einlesen.</p>
-          <button class="btn ghost" id="btnImport" style="margin-bottom:14px">Projektdatei einlesen</button>
-          <input type="file" id="importFile" accept=".json,application/json" hidden>
+        <p class="muted small set-hinweis">Messweg: erst Zuleitung, Herd und CEE, dann reine Beleuchtungskreise, danach raumweise; die FI hinter den Kreisen, die sie abdecken. Gilt für „Weiter messen“ und die Liste im Bereich Messen. Die Kamera der App nimmt mit Licht das schärfste aus zehn Bildern; aus = Kamera von iOS.</p>
+        <div class="set-gk">Für alle <em>wird abgeglichen</em></div>
+        <div class="set-gruppe">
+          <button class="set-zeile" type="button" data-seite="adressen"><span>Adressen im Protokoll</span><svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+          <button class="set-zeile" type="button" data-seite="listen"><span>Listen</span><em class="v">Geräte, Kabel, Bauteile</em><svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+          <button class="set-zeile" type="button" data-seite="lager"><span>Lager</span><em class="v" id="setLagerWert"></em><svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+        <div class="set-gruppe">
+          <button class="set-zeile" type="button" data-seite="sam"><span>SAM <span class="beta">Beta</span></span><em class="v" id="setSamWert"></em><svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+          <button class="set-zeile" type="button" data-seite="konto"><span>Konto und Abgleich</span><em class="v" id="setKontoWert"></em><svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+          <button class="set-zeile" type="button" data-seite="daten"><span>Daten</span><svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
         </div>
       </div>
 
-      <div class="actionbar"><div class="inner">
-        <button class="btn primary" id="btnSaveSettings">Einstellungen speichern</button>
-      </div></div>
+      <div class="set-seite" data-seite="adressen" hidden>
+        <p class="muted small">Höchstens drei Zeilen je Feld – mehr zeigt das Protokoll nicht an. Gilt für alle.</p>
+        <label class="field"><span>Auftraggeber / Anlagenbetreiber</span><textarea id="setAuftraggeber" rows="3"></textarea></label>
+        <label class="field"><span>Auftragnehmer</span><textarea id="setAuftragnehmer" rows="3"></textarea></label>
+      </div>
+
+      <div class="set-seite" data-seite="listen" hidden>
+        <p class="muted small">Gilt für alle Geräte und wird abgeglichen.</p>
+        <div class="set-gruppe" id="setListen"></div>
+      </div>
+
+      <div class="set-seite" data-seite="liste" hidden>
+        <p class="muted small" id="listeHinweis"></p>
+        <div class="set-gruppe" id="listeEditor"></div>
+        <div class="row" style="margin-top:4px">
+          <input id="listeNeu" placeholder="Neuer Eintrag">
+          <input id="listeNeuTe" inputmode="numeric" placeholder="TE" style="flex:0 0 70px" hidden>
+          <button class="btn" id="btnListeNeu" type="button" style="flex:0 0 110px">Hinzufügen</button>
+        </div>
+        <div id="listeText" hidden style="margin-top:22px">
+          <button class="btn ghost" id="btnListeText" type="button">Als Text bearbeiten</button>
+          <div id="listeTextFeld" hidden style="margin-top:12px">
+            <p class="muted small">Eine Zeile pro Eintrag – für größere Umbauten.</p>
+            <textarea id="setMaterial" style="min-height:240px"></textarea>
+            <button class="btn" id="btnListeTextOk" type="button" style="margin-top:10px">Text übernehmen</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="set-seite" data-seite="lager" hidden>
+        <label class="chk" style="margin-bottom:8px">
+          <input type="checkbox" id="setInvHinweis"><span>An die Inventur erinnern</span></label>
+        <label class="field"><span>Zeitspanne (Monate)</span>
+          <input id="setInvMonate" type="number" min="1" max="120" step="1" inputmode="numeric"></label>
+        <p class="muted small" style="margin:-8px 0 14px">Der Hinweis erscheint im Lager,
+          sobald eine Position länger nicht gezählt wurde. Die betroffenen Artikel tragen in der
+          Liste den Vermerk „Inventur fällig“. Gilt für alle.</p>
+      </div>
+
+      <div class="set-seite" data-seite="sam" hidden>
+        <label class="chk" style="margin-bottom:8px">
+          <input type="checkbox" id="setSam"><span>SAM auf diesem Gerät freigeben</span></label>
+        <p class="muted small" style="margin:0 0 6px">Gilt nur auf diesem Gerät. Beim Anlegen einer
+          Wiederholungsprüfung stehen dann „Mit Fotos beginnen“ und „Ohne Fotos beginnen“ zur Wahl.</p>
+        <div id="setWerkstatt" hidden>
+          <div class="eyebrow">Werkstatt</div>
+          <label class="chk" style="margin-bottom:8px">
+            <input type="checkbox" id="setSamTest"><span>Fotos aus der Mediathek</span></label>
+          <p class="muted small" style="margin:0 0 6px">„Mit Fotos beginnen“ öffnet dann die Fotomediathek
+            statt der Kamera, und auf der SAM-Seite steht „Aus Fotos“. So lässt sich eine Prüfung mit
+            gespeicherten Bildern bis zum Protokoll durchspielen. Diese Fotos gehen nicht in den Trainingsordner.</p>
+          <p class="muted small" id="samTrainStatus" style="margin:0 0 8px"></p>
+          <button class="btn ghost" id="btnTraining" type="button" style="margin-bottom:8px">Trainingsordner öffnen</button>
+          <button class="btn ghost" id="btnKamProbe" type="button" style="margin-bottom:14px">Kamera-Probe</button>
+        </div>
+      </div>
+
+      <div class="set-seite" data-seite="konto" hidden>
+        <p class="muted small" id="fbStatus" style="margin-bottom:6px"></p>
+        <p class="muted small">„Abmelden“ meldet dieses Gerät ab; beim nächsten Öffnen werden Name und Passwort wieder abgefragt. Die Projekte auf dem Gerät bleiben erhalten. „App neu laden“ holt die Datei frisch vom Server, ohne die Daten anzurühren.</p>
+        <div class="row" style="margin-bottom:14px">
+          <button class="btn ghost" id="btnLock">Abmelden</button>
+          <button class="btn ghost" id="btnReload">App neu laden</button>
+        </div>
+        <p class="muted small" id="buildTagSet"></p>
+      </div>
+
+      <div class="set-seite" data-seite="daten" hidden>
+        <p class="muted small">Weitergabe-Dateien aus der Zeit vor dem Abgleich lassen sich hier noch einlesen.</p>
+        <button class="btn ghost" id="btnImport" style="margin-bottom:14px">Projektdatei einlesen</button>
+        <input type="file" id="importFile" accept=".json,application/json" hidden>
+      </div>
     </section>
   </main>
 </div>
@@ -3377,7 +3467,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.163';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.164';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 08.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4224,7 +4314,7 @@ function go(name, push = true){
   schutzMerken(name);                              // v1.159: Stand für die Rückfrage beim Verlassen
 }
 $('#btnZahnrad').innerHTML = GEAR_SVG;
-$('#btnZahnrad').onclick = () => go('settings');
+$('#btnZahnrad').onclick = () => { setSeite = 'start'; go('settings'); };
 $('#btnWolke').onclick = () => {
   const warten = qVor.length + qOrig.length;
   showDialog({title:'Abgleich', body: fbStatusText()
@@ -4234,6 +4324,7 @@ $('#btnWolke').onclick = () => {
 };
 $('#btnBack').onclick = () => {
   if(current === 'home'){ go('settings'); return; }
+  if(settingsZurueck()) return;                    // v1.164: Unterseiten der Einstellungen
   vorVerlassen(() => { const p = stack.pop(); if(p) go(p, false); });
 };
 
@@ -4255,7 +4346,6 @@ const SCHUTZ = {
   lagerart: {stand: () => ['#lgName','#lgStamm','#lgEinheit','#lgMelde','#lgSoll','#lgVpe','#lgArtnr','#lgStart']
                .map(id => { const e = $(id); return e ? e.value : ''; }).join('\u0001'),
              speichern: () => $('#btnLagerArtSave').click()},
-  settings: {stand: () => feldStand('#view-settings'), speichern: () => $('#btnSaveSettings').click()},
   new:      {stand: () => projEdit ? feldStand('#view-new') : '', speichern: () => $('#btnCreate').click()}
 };
 let schutzStart = null;                          // {view, stand} beim Betreten
@@ -4420,11 +4510,42 @@ function startProject(mode){
   fillSelect($('#npDevice'), CFG.devices, CFG.devices[0]);
   $('#npAbwNr').checked = false;
   abwNrFeld(mode);
+  /* v1.164: die abweichende Nummerierung gehört zum Verteiler – sie steht in den
+     Projektdaten, und SAM schaltet sie selbst ein, wenn das Blatt Geräte zählt. */
+  $('#fldAbwNr').hidden = true; $('#abwNrHint').hidden = true;
+  rahmenZeigen(false);
+  anlegenKnoepfe(mode);
   $('#gpsOut').textContent = '';
   const vn = $('#view-new');
   delete vn.dataset.lat; delete vn.dataset.lng;
   go('new');
   if(mode === 'wdh') samVorladen();                // v1.125; seit v1.126 meist schon geladen
+}
+/* Prüfer und Messgerät als Zeile; "ändern" blendet die Felder ein. */
+function rahmenZeigen(felder){
+  $('#npRahmen').hidden = !felder;
+  $('#npRahmenZeile').hidden = felder;
+  if(felder) return;
+  $('#npRahmenZeile').innerHTML = `<div class="small">Prüfer <strong>${esc($('#npTester').value || '–')}</strong> · `
+    + `Messgerät <strong>${esc($('#npDevice').value || '–')}</strong></div>`
+    + `<button class="linkbtn" id="btnRahmen" type="button">ändern</button>`;
+  $('#btnRahmen').onclick = () => rahmenZeigen(true);
+}
+/* SAM wird beim Anlegen gewählt, nicht über einen Schalter, der still das
+   Verhalten von "Erfassung beginnen" ändert (Bedienkonzept E7). Vorbelegt ist
+   der zuletzt gewählte Weg. */
+function anlegenKnoepfe(mode){
+  const sam = mode === 'wdh' && CFG.sam;
+  const k = $('#btnCreate'), o = $('#btnCreateOhne');
+  o.hidden = !sam;
+  if(!sam){ k.className = 'btn primary'; k.textContent = 'Erfassung beginnen'; return; }
+  k.className = 'btn primary zweizeilig';
+  k.innerHTML = `<span>Mit Fotos beginnen</span><small>Beschreibung, dann Verteiler · SAM liest</small>`;
+  const ohneZuerst = CFG.samLetzt === 'ohne';
+  o.className = ohneZuerst ? 'btn primary' : 'btn ghost';
+  k.className = ohneZuerst ? 'btn ghost zweizeilig' : 'btn primary zweizeilig';
+  o.style.order = ohneZuerst ? '-1' : '';
+  k.parentElement.style.display = 'flex'; k.parentElement.style.flexDirection = 'column';
 }
 function projektAendern(){
   if(!PROJ) return;
@@ -4440,6 +4561,8 @@ function projektAendern(){
   fillSelect($('#npDevice'), geraete, PROJ.device);
   $('#npAbwNr').checked = !!PROJ.abwNr;
   abwNrFeld(PROJ.mode || 'wdh');
+  rahmenZeigen(true);
+  $('#btnCreate').className = 'btn primary'; $('#btnCreateOhne').hidden = true;
   $('#gpsOut').textContent = '';
   const vn = $('#view-new');
   if(PROJ.lat) vn.dataset.lat = PROJ.lat; else delete vn.dataset.lat;
@@ -4566,7 +4689,9 @@ function abwNrUmschalten(an){
   return true;
 }
 
-$('#btnCreate').onclick = () => {
+$('#btnCreate').onclick = () => anlegen(true);
+$('#btnCreateOhne').onclick = () => anlegen(false);
+function anlegen(mitFotos){
   const v = $('#view-new');
   if(projEdit){
     /* Nachbessern: nur die Angaben aus dieser Ansicht werden übernommen.
@@ -4612,14 +4737,15 @@ $('#btnCreate').onclick = () => {
   CFG.tester = PROJ.tester; saveCfg(); saveProj();
   /* SAM: die Kamera geht noch im selben Antippen auf – iOS öffnet sie nur aus
      einer Berührung heraus, nicht nach einer Verzögerung. */
-  if(newMode === 'wdh' && CFG.sam){
+  if(newMode === 'wdh' && CFG.sam){ CFG.samLetzt = mitFotos ? 'mit' : 'ohne'; saveCfg(); }
+  if(newMode === 'wdh' && CFG.sam && mitFotos){
     PROJ.sam = {};
     stack = ['home']; go('sam', false);
     samFoto('beschreibung', !!CFG.samTest);         // v1.138: im SAM-Test gleich die Fotos
     return;
   }
   stack = ['home']; go('board', false);
-};
+}
 
 /* ============================================================
    VERTEILER — Schiene und Liste
@@ -10975,54 +11101,165 @@ async function erneutSichern(e, knopf){
 /* ============================================================
    EINSTELLUNGEN
    ============================================================ */
+/* ---------- Einstellungen (v1.164, Bedienkonzept E8) ----------
+   Eine Übersicht mit Unterseiten statt einer langen Seite. Was man ändert, gilt
+   sofort – übernommen wird je Feld nur dessen Wert, damit eine Änderung, die
+   gerade von einem Kollegen hereinkam, nicht von einem alten Feldinhalt
+   überschrieben wird. Die Listen stehen Zeile für Zeile da statt als Textfeld
+   mit Sonderregeln ("erste Zeile ist Vorauswahl", "Hauptschalter, 3"). */
+let setSeite = 'start', setListe = null;
+const SET_TITEL = {start:'Einstellungen', adressen:'Adressen im Protokoll', listen:'Listen', lager:'Lager',
+  sam:'SAM (Beta)', konto:'Konto und Abgleich', daten:'Daten'};
+const LISTEN = [
+  {k:'devices',  t:'Messgeräte',        hw:'Der erste Eintrag ist die Vorgabe für neue Projekte.'},
+  {k:'chars',    t:'Charakteristiken',  hw:'Der erste Eintrag ist die Vorauswahl.'},
+  {k:'rated',    t:'Nennströme',        hw:'Der erste Eintrag ist die Vorauswahl.'},
+  {k:'rcds',     t:'FI-Typen',          hw:'Nennstrom, Nennfehlerstrom und Polzahl stehen im Namen (z. B. „FI 40A / 30mA / 4-polig“) – daran rechnet die App.'},
+  {k:'specials', t:'Sonstige Geräte',   hw:'Mit fester Breite in TE, wenn das Gerät immer gleich breit ist.', te:true},
+  {k:'cables',   t:'Kabelarten',        hw:'Der erste Eintrag ist die Vorauswahl.'},
+  {k:'material', t:'Bauteile',          hw:'Die Bauteile für Materialliste und Lager. Wird ein Bauteil umbenannt, das im Lager geführt wird, fragt die App, ob der Lagerartikel mitgeht.', text:true}
+];
 function renderSettings(){
   $('#setTester').value = CFG.tester || '';
   $('#setMessfolge').value = CFG.messfolge === 'weg' ? 'weg' : 'nr';
   $('#setAuftraggeber').value  = CFG.auftraggeber  || '';
   $('#setAuftragnehmer').value = CFG.auftragnehmer || '';
   fillSelect($('#setDevice'), CFG.devices, CFG.devices[0]);
-  $('#setDevices').value  = CFG.devices.join('\n');
-  $('#setChars').value = CFG.chars.join('\n');
-  $('#setRated').value = CFG.rated.join('\n');
-  $('#setRcds').value     = CFG.rcds.join('\n');
-  $('#setSpecials').value = CFG.specials.join('\n');
-  $('#setCables').value   = CFG.cables.join('\n');
-  $('#setMaterial').value = CFG.material.join('\n');
   $('#setInvHinweis').checked = invAn();
   $('#setInvMonate').value    = invMonate(CFG.invMonate);
   $('#setSam').checked = !!CFG.sam;
   $('#setSamTest').checked = !!CFG.samTest;
   $('#setEigeneKamera').checked = CFG.eigeneKamera !== false;
+  $('#setWerkstatt').hidden = !CFG.sam;
+  $('#setLagerWert').textContent = invAn() ? `Inventur nach ${invMonate(CFG.invMonate)} Monaten` : 'Inventur aus';
+  $('#setSamWert').textContent = CFG.sam ? 'an' : 'aus';
+  $('#setKontoWert').textContent = fbEin && netzAn ? 'verbunden' : 'ohne Verbindung';
+  $('#buildTagSet').textContent = 'E-Assistent ' + BUILD;
+  $('#setListen').innerHTML = LISTEN.map(l => `<button class="set-zeile" type="button" data-liste="${l.k}">`
+    + `<span>${esc(l.t)}</span><em class="v">${(CFG[l.k] || []).length}</em><svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>`).join('');
+  $$('#setListen [data-liste]').forEach(b => b.onclick = () => { setListe = b.dataset.liste; seiteZeigen('liste'); });
+  if(setSeite === 'liste') renderListe();
   samTrainStatus();
-  fbStatusZeigen();
-}
-const lines = el => el.value.split('\n').map(s => s.trim()).filter(Boolean);
-$('#btnSaveSettings').onclick = () => {
-  CFG.tester   = $('#setTester').value.trim();
-  CFG.messfolge = $('#setMessfolge').value === 'weg' ? 'weg' : 'nr';
-  /* Adressen zeilenweise säubern, aber Leerzeilen dazwischen nicht schlucken */
-  const adr = el => el.value.split('\n').map(z => z.trim()).join('\n').replace(/\n{2,}/g, '\n').trim();
-  CFG.auftraggeber  = adr($('#setAuftraggeber'));
-  CFG.auftragnehmer = adr($('#setAuftragnehmer'));
-  CFG.devices  = lines($('#setDevices'));
-  CFG.chars = lines($('#setChars'));
-  CFG.rated = lines($('#setRated'));
-  CFG.rcds     = lines($('#setRcds'));
-  CFG.specials = lines($('#setSpecials'));
-  CFG.cables   = lines($('#setCables'));
-  CFG.material = lines($('#setMaterial'));
-  CFG.invHinweis = $('#setInvHinweis').checked;
-  CFG.invMonate  = invMonate($('#setInvMonate').value);
-  CFG.sam        = $('#setSam').checked;          // persönlich, geht nicht hinauf
-  CFG.samTest    = $('#setSamTest').checked;      // v1.138, ebenso
-  CFG.eigeneKamera = $('#setEigeneKamera').checked; // v1.143, ebenso
-  const sel = $('#setDevice').value;
-  if(sel && CFG.devices.includes(sel)) CFG.devices = [sel, ...CFG.devices.filter(d => d !== sel)];
-  saveCfg();
-  fbHoch(); fbNameHoch();          // betriebliche Listen und Adressen für alle
   fbFremd = false;
-  toast('Einstellungen gespeichert'); go('home');
+  fbStatusZeigen();
+  seiteZeigen(setSeite);
+}
+function seiteZeigen(seite){
+  setSeite = seite;
+  $$('#view-settings .set-seite').forEach(d => d.hidden = d.dataset.seite !== seite);
+  const l = LISTEN.find(x => x.k === setListe);
+  $('#title').textContent = seite === 'liste' && l ? l.t : (SET_TITEL[seite] || 'Einstellungen');
+  if(seite === 'liste') renderListe();
+  bildNach(0);
+}
+$$('#view-settings [data-seite]').forEach(b => { if(b.tagName === 'BUTTON') b.onclick = () => seiteZeigen(b.dataset.seite); });
+/* Zurück innerhalb der Einstellungen: von der Liste zu den Listen, sonst zur Übersicht. */
+function settingsZurueck(){
+  if(current !== 'settings' || setSeite === 'start') return false;
+  seiteZeigen(setSeite === 'liste' ? 'listen' : 'start');
+  return true;
+}
+
+/* Je Feld genau dessen Wert übernehmen. */
+const adrText = el => el.value.split('\n').map(z => z.trim()).join('\n').replace(/\n{2,}/g, '\n').trim();
+const SET_FELD = {
+  setTester:        () => { CFG.tester = $('#setTester').value.trim(); return 'name'; },
+  setDevice:        () => { const v = $('#setDevice').value;
+                            if(v && CFG.devices.includes(v)) CFG.devices = [v, ...CFG.devices.filter(d => d !== v)]; return 'fb'; },
+  setMessfolge:     () => { CFG.messfolge = $('#setMessfolge').value === 'weg' ? 'weg' : 'nr'; },
+  setEigeneKamera:  () => { CFG.eigeneKamera = $('#setEigeneKamera').checked; },
+  setAuftraggeber:  () => { CFG.auftraggeber  = adrText($('#setAuftraggeber'));  return 'fb'; },
+  setAuftragnehmer: () => { CFG.auftragnehmer = adrText($('#setAuftragnehmer')); return 'fb'; },
+  setInvHinweis:    () => { CFG.invHinweis = $('#setInvHinweis').checked; return 'fb'; },
+  setInvMonate:     () => { CFG.invMonate  = invMonate($('#setInvMonate').value); return 'fb'; },
+  setSam:           () => { CFG.sam     = $('#setSam').checked; },      // persönlich, geht nicht hinauf
+  setSamTest:       () => { CFG.samTest = $('#setSamTest').checked; }   // v1.138, ebenso
 };
+function cfgSichern(art){
+  saveCfg();
+  if(art === 'fb') fbHoch();
+  if(art === 'name') fbNameHoch();
+}
+$('#view-settings').addEventListener('change', e => {
+  const f = SET_FELD[e.target.id];
+  if(!f) return;
+  cfgSichern(f());
+  toast('Gespeichert');
+  if(['setSam', 'setInvHinweis', 'setInvMonate'].includes(e.target.id)) renderSettings();
+});
+
+/* --- Eine Liste bearbeiten --- */
+function renderListe(){
+  const l = LISTEN.find(x => x.k === setListe); if(!l) return;
+  const arr = CFG[l.k] || [];
+  $('#listeHinweis').textContent = l.hw + ' Gilt für alle Geräte.';
+  $('#listeNeuTe').hidden = !l.te;
+  $('#listeText').hidden = !l.text;
+  $('#listeTextFeld').hidden = true;
+  $('#listeEditor').innerHTML = arr.length ? arr.map((z, i) => {
+    const sp = l.te ? parseSpecial(z) : null;
+    return `<div class="le-zeile">
+      <input data-i="${i}" value="${esc(sp ? sp.name : z)}" aria-label="Eintrag ${i + 1}">
+      ${l.te ? `<input class="te" data-te="${i}" inputmode="numeric" placeholder="TE" value="${esc(sp.te || '')}" aria-label="Breite in TE">` : ''}
+      ${i === 0 && l.k !== 'material' && l.k !== 'specials' && l.k !== 'rcds' ? '<span class="le-vor">Vorauswahl</span>'
+        : `<button type="button" data-hoch="${i}" aria-label="nach oben"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>`}
+      <button type="button" class="weg" data-weg="${i}" aria-label="entfernen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button></div>`;
+  }).join('') : '<div class="le-zeile"><span class="muted">Noch leer.</span></div>';
+  const sichern = () => { saveCfg(); fbHoch(); };
+  $$('#listeEditor input[data-i], #listeEditor input[data-te]').forEach(inp => inp.onchange = () => {
+    const i = +(inp.dataset.i ?? inp.dataset.te);
+    const name = $(`#listeEditor input[data-i="${i}"]`).value.trim();
+    if(!name){ renderListe(); return; }
+    const alt = arr[i];
+    if(l.te){
+      const te = ($(`#listeEditor input[data-te="${i}"]`).value || '').replace(/\D/g, '');
+      arr[i] = te ? `${name}, ${te}` : name;
+    } else arr[i] = name;
+    sichern(); toast('Gespeichert');
+    if(l.k === 'material' && alt !== name) lagerUmbenennenFragen(alt, name);
+  });
+  $$('#listeEditor [data-hoch]').forEach(b => b.onclick = () => {
+    const i = +b.dataset.hoch; if(i < 1) return;
+    [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
+    sichern(); renderListe();
+  });
+  $$('#listeEditor [data-weg]').forEach(b => b.onclick = () => {
+    const i = +b.dataset.weg;
+    showDialog({title:'Eintrag entfernen', danger:true, ok:'Entfernen',
+      body:`„${arr[i]}“ aus der Liste entfernen? Schon erfasste Kreise und Projekte behalten ihren Wert.`,
+      onOk:() => { arr.splice(i, 1); sichern(); renderListe(); toast('Entfernt'); }});
+  });
+}
+$('#btnListeNeu').onclick = () => {
+  const l = LISTEN.find(x => x.k === setListe); if(!l) return;
+  const name = $('#listeNeu').value.trim(); if(!name) return;
+  const te = l.te ? ($('#listeNeuTe').value || '').replace(/\D/g, '') : '';
+  CFG[l.k] = CFG[l.k] || [];
+  CFG[l.k].push(te ? `${name}, ${te}` : name);
+  $('#listeNeu').value = ''; $('#listeNeuTe').value = '';
+  saveCfg(); fbHoch(); renderListe(); toast('Hinzugefügt');
+};
+$('#btnListeText').onclick = () => {
+  $('#setMaterial').value = (CFG.material || []).join('\n');
+  $('#listeTextFeld').hidden = !$('#listeTextFeld').hidden;
+};
+$('#btnListeTextOk').onclick = () => {
+  CFG.material = $('#setMaterial').value.split('\n').map(z => z.trim()).filter(Boolean);
+  saveCfg(); fbHoch(); renderListe(); toast('Übernommen');
+};
+/* Ein Bauteil, das im Lager geführt wird, hängt dort am Namen. Beim Umbenennen
+   wird gefragt, ob der Lagerartikel mitgeht – sonst verlöre er die Verbindung
+   (Bestand, Bewegungen und offene Bestellungen bleiben dabei erhalten). */
+function lagerUmbenennenFragen(alt, neu){
+  if(!LAGER) return;
+  const a = Object.values(LAGER.artikel).find(x => x.stamm && lagerNorm(x.name) === lagerNorm(alt));
+  if(!a) return;
+  waehlDialog('Lagerartikel mit umbenennen?', `Im Lager wird „${alt}“ geführt. Soll er künftig „${neu}“ heißen? `
+    + 'Bestand, Bewegungen und Bestellungen bleiben erhalten.', [
+    {t:'Mit umbenennen', cls:'primary', fn:() => {
+      lagerSchreiben('artikel', a.id, Object.assign({}, a, {name: neu})); lagerGeaendert(false); toast('Lagerartikel umbenannt'); }},
+    {t:'Nur das Bauteil', cls:'ghost', fn:null}]);
+}
 
 /* GitHub Pages lässt den Browser zehn Minuten lang nicht beim Server nachfragen.
    Eine neue Adresse umgeht das; die Daten hängen am Ursprung und bleiben. */
@@ -11171,7 +11408,12 @@ FB.bereit.then(() => {
       fbEmpfang = false;
       /* Steht die Einstellungsansicht gerade offen, wird sie NICHT neu
          aufgebaut – das würde eine begonnene Eingabe wegwischen. */
-      if(current === 'settings'){ fbFremd = true; fbStatusZeigen(); }
+      if(current === 'settings'){
+        /* v1.164: steht gerade kein Feld im Fokus, wird die Seite neu aufgebaut. */
+        if($('#view-settings').contains(document.activeElement) && document.activeElement.matches('input, textarea, select')){
+          fbFremd = true; fbStatusZeigen();
+        } else renderSettings();
+      }
     }));
     fbStatusZeigen();
   }).catch(() => { fbEin = false; fbStatusZeigen(); });
