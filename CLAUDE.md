@@ -87,6 +87,37 @@ GitHub Pages aus `main` ausgeliefert. Nutzer ist Jean, Elektriker, kein Entwickl
   Zuleitung ab `FEED_MIN_QS` (6 mm²). Alles Übrige über „Andere …“; ein dort
   gewählter oder gespeicherter Wert bleibt in der Auswahl stehen.
 
+## Bedienkonzept (v1.159–v1.165)
+
+Umgesetzt nach dem Bedienkonzept vom 08.10.2026 (Artifact „E-Assistent Bedienkonzept“).
+- **Startseite:** offene Projekte direkt als Karten (`renderHome`, `projektKarte`,
+  `projektStand`); Zahnrad rechts (`#btnZahnrad`), links das Logo; Wolke `#btnWolke`
+  zeigt den Abgleich. Die Ansichten „Auswahl“ und „Fortsetzen“ gibt es nicht mehr.
+- **Bereichsleiste** `#bereiche` im Projekt: Erfassen · Messen · Prüfpunkte ·
+  Abschluss (`bereichVon`, `bereichWechseln`, `bereicheZeigen`). Erfassen/Messen
+  ist weiter `PROJ.modus` ('edit'/'mess'); der alte Schalter `#btnModus` bleibt
+  versteckt. „…“ oben rechts (`#btnMehr`): Projektdaten, SAM, Vorab ausgeben,
+  Projekt löschen. Titel im Projekt = Adresse (`projektTitel`).
+- **Zurück fragt** bei Ungespeichertem: `SCHUTZ` je Ansicht, `schutzMerken` am
+  Ende von `go`, `vorVerlassen(weiter)` vor jedem Verlassen (auch Bereichsleiste,
+  Liste im Zweispalten-Layout). Rückfragen mit mehreren Wegen: `waehlDialog`.
+  Auf dem iPhone erscheint `#modal` als Blatt von unten.
+- **Zustände** mit Zeichen: Klassen `z-ok/z-bad/z-none/z-ask/z-open` (+ `z-plain`,
+  `z-liefer`) und `<i class="zst">`; `zustand()` für Messen, `erfassZustand()` für
+  Erfassen, `chkZustand()` für Prüfpunkte. Bernstein heißt nur „bitte ansehen“,
+  „keine Messung“ ist grau (`--neutral`).
+- **Stromkreis:** Geräteart LS/FI-LS/FI/Sonstiges in `#segDevice` („Sonstiges“ →
+  `sonstigesWaehlen`), Breite als Stepper, Absicherung/Pole/Kabel als Kacheln
+  (`kachelnMalen`) – die Auswahllisten bleiben unsichtbar die Quelle.
+  Übersicherung: kein Dialog beim Speichern, Hinweiskarte `#ovZeile` und Liste
+  im Abschluss (`offeneUebersicherungen`); Ausgabe erst nach Entscheidung.
+- **Abschluss:** Ausgabe mit Bestätigungsblatt (`ausgebenJetzt`), erst nach
+  bestätigten Prüfpunkten; Unterschrift im Vollbild `#sigView` (3:1 bleibt).
+- **Einstellungen:** Seiten (`setSeite`, `seiteZeigen`, `settingsZurueck`), je
+  Feld sofort gespeichert (`SET_FELD`), Listen über `renderListe`/`LISTEN`.
+  SAM-Werkstatt nur bei freigegebenem SAM. Neues Projekt: „Mit/Ohne Fotos
+  beginnen“ (`anlegen(mitFotos)`, `CFG.samLetzt`).
+
 ## SAM (Beta)
 
 - Die Erkennung kommt aus dem privaten Repository `sam-werkstatt`
@@ -102,8 +133,8 @@ GitHub Pages aus `main` ausgeliefert. Nutzer ist Jean, Elektriker, kein Entwickl
   Verteiler“), ein Tipp öffnet die Kamera wieder. iOS öffnet die Kamera nur aus
   einer Berührung heraus und lässt nichts in die Kamera schreiben – eine eigene
   Kamera (getUserMedia) hat Jean abgelehnt.
-- Trainingsordner und Probelauf: Einstellungen › SAM › „Trainingsordner
-  öffnen“, Foto antippen, „Durchspielen“ (v1.121).
+- Trainingsordner und Probelauf: Einstellungen › SAM (Beta) › Werkstatt ›
+  „Trainingsordner öffnen“, Foto antippen, „Durchspielen“ (v1.121).
 - Verknüpfung mit dem Verteiler (v1.134–v1.155): `samAusrichten` ordnet die
   Einträge den Geräten zu (Aufdruck, Nummern vom Streifen der Abdeckung,
   −4 für eine Streifennummer, die einem anderen sicheren Eintrag gehört);
