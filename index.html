@@ -10,6 +10,18 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.162 08.10.2026 Bedienkonzept, Etappe 4: Zustaende mit Zeichen und Farbe.
+                    Haken gruen = fertig, Ausrufezeichen rot = Handlungsbedarf
+                    (Wert fehlt oder Grenzwert), Strich grau = ohne Messung,
+                    Fragezeichen bernstein = bitte ansehen (SAM-Zweifel,
+                    Vorschlag, Kabelart offen, Inventur faellig), gestrichelter
+                    Kreis = offen. "Keine Messung" ist damit grau statt gelb,
+                    "bestellt" im Lager grau mit Lieferwagen. Bernstein heisst
+                    nur noch "bitte ansehen". Im Bereich Erfassen zeigt die
+                    Liste Geraet und Kabel statt der Messwerte und ist nicht
+                    mehr rot, nur weil noch nicht gemessen ist; ein noch nicht
+                    begonnener Kreis ist im Bereich Messen "offen" statt rot.
+                    Pruefpunkte tragen ihr Zeichen und "Vorschlag".
   v1.161 08.10.2026 Bedienkonzept, Etappe 3: Bereichsleiste im Projekt. Unter
                     der Kopfleiste stehen Erfassen - Messen - Pruefpunkte -
                     Abschluss, jederzeit erreichbar, mit Zaehler (gemessen von
@@ -1244,6 +1256,9 @@
   --info-bg:#EBF0F5;
   --ok-bg:#EDF4DE;
   --field-border:#8D9585;
+  --neutral:#6F7C8A;          /* v1.162: "ohne Messung" und "bestellt" – entschieden, nichts zu tun */
+  --neutral-bg:#E9EDF1;
+  --signal-ink:#8A6200;       /* Bernstein als Schrift- und Zeichenfarbe auf Hell */
 
   --f-label:"Barlow Condensed",  "Oswald", "Arial Narrow", sans-serif;
   --f-body:"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -1614,7 +1629,7 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
 .list-item.projekt-karte{border-left:1px solid var(--line)}
 .list-item.projekt-karte .t{white-space:normal}
 .list-item.projekt-karte .s{font-family:var(--f-body);font-size:13px;white-space:normal}
-.list-item.projekt-karte .s.kollege{color:var(--signal);font-weight:600}
+.list-item.projekt-karte .s.kollege{color:var(--signal-ink);font-weight:600}
 .art-chip{display:inline-block;font-family:var(--f-label);font-weight:700;font-size:12px;letter-spacing:.08em;
   line-height:18px;padding:0 6px;border-radius:4px;background:var(--ink);color:var(--enclosure);
   margin-right:7px;vertical-align:1px}
@@ -1659,6 +1674,33 @@ header h1.tippbar{cursor:pointer}
 .sig-vorschau img{display:block;width:100%;max-width:420px;aspect-ratio:3/1;margin:0 auto}
 .btn.zweizeilig{flex-direction:column;gap:0;line-height:1.2}
 .btn.zweizeilig small{font-size:13px;font-weight:500;opacity:.8;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ---------- Zustände (v1.162, Bedienkonzept E4) ----------
+   Jede Farbe hat genau eine Bedeutung, und jeder Zustand trägt ein Zeichen –
+   bei Gegenlicht, im Keller und bei Rot-Grün-Schwäche ist Farbe allein zu
+   wenig. Bis v1.161 hieß Bernstein sechserlei (ohne Messung, SAM-Zweifel,
+   Vorschlag, bestellt, Inventur, kein Netz) und Rot zweierlei.
+     ✓ grün      fertig
+     ! rot       Handlungsbedarf: Wert fehlt oder Grenzwert überschritten
+     – grau      ohne Messung, entschieden; im Lager: bestellt
+     ? bernstein bitte ansehen: SAM-Zweifel, Vorschlag, Kabelart offen, Inventur
+     ○ ohne      offen, noch nicht begonnen */
+.zst{display:inline-block;width:20px;height:20px;flex:0 0 20px;background:currentColor;
+  -webkit-mask:var(--zm) center/contain no-repeat;mask:var(--zm) center/contain no-repeat}
+.z-ok   .zst{color:var(--pe);--zm:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M8 12.5l2.8 2.8 5.2-5.6'/%3E%3C/svg%3E")}
+.z-bad  .zst{color:var(--fault);--zm:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7.3v6M12 16.6v.2'/%3E%3C/svg%3E")}
+.z-none .zst{color:var(--neutral);--zm:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M8 12h8'/%3E%3C/svg%3E")}
+.z-ask  .zst{color:var(--signal-ink);--zm:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M9.6 9.6a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.5v.3M12 16.6v.2'/%3E%3C/svg%3E")}
+.z-open .zst{color:var(--ink-soft);--zm:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9' stroke-dasharray='2.4 2.3'/%3E%3C/svg%3E")}
+.z-liefer .zst{color:var(--neutral);--zm:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 6h11v10.5h-11zM13.5 9.5h4l3 3.2v3.8h-7'/%3E%3Ccircle cx='6.5' cy='18' r='1.8'/%3E%3Ccircle cx='17' cy='18' r='1.8'/%3E%3C/svg%3E")}
+.list-item.z-ok,.chk-item.z-ok{border-left-color:var(--pe)}
+.list-item.z-bad,.chk-item.z-bad{border-left-color:var(--fault);background:var(--warn-bg)}
+.list-item.z-none,.list-item.z-liefer,.chk-item.z-none{border-left-color:var(--neutral);background:var(--neutral-bg)}
+.list-item.z-ask,.chk-item.z-ask{border-left-color:var(--signal);background:var(--sig-bg)}
+.list-item.z-open,.chk-item.z-open,.list-item.z-plain{border-left-color:var(--line)}
+.chk-item .t{display:flex;gap:8px;align-items:flex-start}
+.chk-item .t .zst{width:18px;height:18px;flex-basis:18px;margin-top:1px}
+.chk-item .t .vs{margin-left:auto;font-size:12px;font-weight:600;color:var(--signal-ink);white-space:nowrap}
+#btnSamBoard[hidden] + .eyebrow{margin-top:0}
 .loeschzeile{display:block;margin:22px auto 6px;padding:12px 18px;background:none;border:0;
   color:var(--fault);font-size:15px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .btn.softred{border-color:var(--fault);color:var(--fault);background:var(--warn-bg);font-weight:600}
@@ -1834,14 +1876,14 @@ header h1.tippbar{cursor:pointer}
    Rot und Gelb sind dieselben wie bei den Stromkreisen: handeln bzw. läuft schon. */
 #btnLager.ring-rot {box-shadow:0 0 0 3px var(--enclosure),0 0 0 6px var(--fault);
   border-color:var(--fault);color:var(--ink)}
-#btnLager.ring-gelb{box-shadow:0 0 0 3px var(--enclosure),0 0 0 6px var(--signal);
+#btnLager.ring-gelb{box-shadow:0 0 0 3px var(--enclosure),0 0 0 6px var(--neutral);
   border-color:var(--signal);color:var(--ink)}
 .lg-menge{font-family:var(--f-data);font-size:18px;font-weight:600;white-space:nowrap}
 .lg-menge em,.lg-bestand em{font-style:normal;font-family:var(--f-body);font-size:13px;
   font-weight:400;color:var(--ink-soft);margin-left:4px}
 .lg-best{border-left:5px solid var(--signal)}
 .lg-kopf.state-red{border-left:5px solid var(--fault);background:var(--warn-bg)}
-.lg-kopf.state-yellow{border-left:5px solid var(--signal);background:var(--sig-bg)}
+.lg-kopf.state-grau{border-left:5px solid var(--neutral);background:var(--neutral-bg)}
 .lg-name{font-weight:700;font-size:18px}
 .lg-bestand{font-family:var(--f-data);font-size:34px;font-weight:600;margin:10px 0 2px}
 .lg-akt{margin-bottom:10px}
@@ -2120,6 +2162,9 @@ header h1.tippbar{cursor:pointer}
     --sig-bg:#38300F;
     --info-bg:#1E2A36;
     --ok-bg:#252E14;
+    --neutral:#93A1AE;
+    --neutral-bg:#23292F;
+    --signal-ink:#E3B23C;
   }
   .list-item.state-red{background:var(--warn-bg)}
   .list-item.state-yellow{background:var(--sig-bg)}
@@ -3307,7 +3352,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.161';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.162';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 08.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4246,7 +4291,7 @@ const HOME_EIGENE = 5, HOME_KOLLEGEN = 3;
    ist, was gemessen oder bewusst ohne Messung ist und keinen Grenzwert reißt. */
 function projektStand(p){
   const zu = [p.feed || blankFeed(), ...(p.items || []).filter(c => c.kind === 'circuit' && !isSpecial(c))];
-  const fertig = zu.filter((o, i) => tileState(o, i === 0) !== 'state-red').length;
+  const fertig = zu.filter((o, i) => ['z-ok', 'z-none'].includes(zustand(o, i === 0))).length;
   const bereich = p.checksDone ? 'Abschluss' : p.modus === 'mess' ? 'Messen' : 'Erfassen';
   return {fertig, gesamt: zu.length, bereich};
 }
@@ -4682,12 +4727,39 @@ function isSpecial(o){ return !!(o && o.special); }   // SPD, Hauptschalter, Str
 function devOf(o){ return o.device || 'ls'; }   // Zuleitung verhält sich wie ein LS-Kreis
 
 /* Einheitlicher Kachelzustand für Zuleitung und Stromkreise */
-function tileState(o, isFeed){
-  if(isSpecial(o))                                    return 'state-green';    // nichts zu messen
-  if(isFeed && o.cable == null)                       return 'state-red';      // noch nicht erfasst
-  if(o.status !== 'measured')                         return 'state-yellow';   // bewusst ohne Messung
-  if(missingValues(o) || checkCircuit(o).length)      return 'state-red';      // Werte fehlen / Grenzwert
-  return 'state-green';
+/* v1.162: Messzustand mit Zeichen (siehe Zustände im Stil). "Offen" heißt:
+   noch kein Wert da; "fehlt" (rot) erst, wenn etwas eingetragen ist und der
+   Rest fehlt, oder ein Grenzwert überschritten ist. */
+function zustand(o, isFeed){
+  if(isSpecial(o))                      return 'z-ok';
+  if(isFeed && o.cable == null)         return 'z-open';
+  if(o.status !== 'measured')           return 'z-none';
+  if(checkCircuit(o).length)            return 'z-bad';
+  if(missingValues(o))                  return hasMeasure(o) ? 'z-bad' : 'z-open';
+  return 'z-ok';
+}
+/* Im Bereich Erfassen zählt nicht die Messung, sondern ob die Angaben zum Gerät
+   vollständig sind – sonst stünde beim Aufnehmen eines Verteilers jede neue
+   Zeile rot da (Bedienkonzept B7). */
+function erfassZustand(o, isFeed){
+  if(isFeed) return o.cable == null ? 'z-ask' : 'z-plain';
+  return (o.sam && devOf(o) !== 'rcd' && !isSpecial(o) && !o.cable) ? 'z-ask' : 'z-plain';
+}
+const ZST = '<i class="zst" aria-hidden="true"></i>';
+/* Was an einem roten Kreis fehlt oder nicht stimmt – steht in der Zeile, damit
+   das Zeichen nicht allein spricht. */
+function mangelText(c){
+  if(checkCircuit(c).length) return 'Grenzwert überschritten';
+  const m = c.m || {}, dev = devOf(c), leer = v => v == null || v === '';
+  const f = [];
+  if(c.sam && dev !== 'rcd' && !c.cable) f.push('Kabelart');
+  if(c.status === 'measured'){
+    if(dev !== 'rcd' && leer(m.iso)) f.push('ISO');
+    if(dev !== 'rcd' && leer(m.zs))  f.push('Zs');
+    if(dev !== 'ls'  && leer(m.idn)) f.push('IΔ');
+    if(dev !== 'ls'  && leer(m.t))   f.push('t');
+  }
+  return f.length ? f.join(', ') + ' fehlt' : '';
 }
 function feedSummary(f){
   if(f.status !== 'measured') return (REASONS[f.reason] || 'Keine Messung') + (f.note ? ' – ' + f.note : '');
@@ -4702,18 +4774,20 @@ function renderBoard(){
   const f = PROJ.feed;
   const captured = f.cable != null;
   const btn = $('#btnFeed');
-  btn.className = 'list-item ' + tileState(f, true);
-  btn.innerHTML = captured
+  const mess = messModus();
+  btn.className = 'list-item ' + (mess ? zustand(f, true) : erfassZustand(f, true));
+  btn.innerHTML = (mess || !captured ? ZST : '') + (captured
     ? `<span class="body">
         <span class="t">${esc(f.name || 'Zuleitung')}${f.cable ? ' · ' + esc(f.cable) : ''}</span>
-        <span class="s">${esc(feedSummary(f))}</span>
+        <span class="s">${esc(mess ? feedSummary(f) : (f.fuse || 'Absicherung unbekannt'))}</span>
       </span>`
     : `<span class="body">
         <span class="t">${esc(f.name || 'Zuleitung')}</span>
         <span class="s">Noch nicht erfasst</span>
-      </span>`;
+      </span>`);
   const n = circuits().length;
   weiterMessenKnopf();                               // v1.161
+  bereicheZeigen(current);                           // Zähler in der Leiste mitführen
   $('#boardBody').innerHTML = n === 0
     ? `<div class="rail-empty">Noch kein Stromkreis erfasst.<br>Unten beginnen.</div>`
     : listHtml();
@@ -4785,11 +4859,18 @@ function listHtml(){
       : ovw === 'offen' ? ' · Übersicherung: nicht zu klären'
       : u.stufe === 'gewiss' ? ' · Übersicherung: offen'
       : ' · mögliche Übersicherung';
-    return out += `<button class="list-item ${tileState(it, false)}" data-idx="${idx}">
-      <span class="no">${esc(circuitLabel(it) || '–')}</span>
+    /* Erfassen zeigt Gerät und Kabel, Messen die Werte (v1.162). */
+    const z = mess ? zustand(it, false) : erfassZustand(it, false);
+    const fehlt = !mess && z === 'z-ask' ? 'Kabelart fehlt' : '';
+    const offen = mess && z === 'z-open' ? 'offen' : '';
+    const zeile = mess
+      ? [it.breaker, it.cable].filter(Boolean).join(' ') + ' · ' + (offen || [z === 'z-bad' ? mangelText(it) : '', vals].filter(Boolean).join(' · ') || 'Werte fehlen') + ov
+      : [it.breaker, fehlt || it.cable, isSpecial(it) ? '' : ''].filter(Boolean).join(' · ') + ov;
+    return out += `<button class="list-item ${z}" data-idx="${idx}">
+      ${z === 'z-plain' ? '' : ZST}<span class="no">${esc(circuitLabel(it) || '–')}</span>
       <span class="body">
         <span class="t">${esc(it.name || 'Ohne Bezeichnung')}${it.room ? ' · ' + esc(it.room) : ''}</span>
-        <span class="s">${esc(it.breaker || '')} ${esc(it.cable || '')} · ${esc(vals || 'Werte fehlen')}${esc(ov)}</span>
+        <span class="s">${esc(zeile)}</span>
       </span></button>`;
   });
   return out;
@@ -8235,7 +8316,7 @@ function renderProbe(){
   $('#probeKopf').textContent = l && l.ok && !l.laeuft ? samAbgleichText(l, P).trim() : '';
   const rs = l && l.ok && !l.laeuft ? l.reihen : [];
   const f = (txt, zw) => txt ? `<span class="${zw ? 'zw' : ''}">${esc(txt)}</span>` : '';
-  $('#probeListe').innerHTML = rs.map(z => `<div class="list-item sam-zeile ${samZweifelt(z) ? 'state-yellow' : ''}">
+  $('#probeListe').innerHTML = rs.map(z => `<div class="list-item sam-zeile ${samZweifelt(z) ? 'z-ask' : 'z-plain'}">${samZweifelt(z) ? ZST : ''}
       <span class="no">${f(z.nr || '–', z.zweifel.nr)}</span>
       <span class="body"><span class="t">${f(z.bez || '—', z.zweifel.bez)}</span><span class="s">${f(z.ort, z.zweifel.ort)}</span>
         ${z.hinweis ? `<span class="s hw">${esc(z.hinweis)}</span>` : ''}</span>
@@ -9097,7 +9178,7 @@ function renderSamListe(){
         <span class="no">${esc(z.nr || '–')}</span>
         <span class="body"><span class="t">${esc(z.bez || '—')}</span><span class="s">${esc(z.ort)}</span></span>
         <span class="geraet">übernommen</span></div>`;
-    const kopf = `<button class="list-item sam-zeile ${samZweifelt(z) ? 'state-yellow' : ''}" data-i="${i}" type="button">
+    const kopf = `<button class="list-item sam-zeile ${samZweifelt(z) ? 'z-ask' : 'z-plain'}" data-i="${i}" type="button">${samZweifelt(z) ? ZST : ''}
         <span class="no">${f(z.nr || '–', z.zweifel.nr)}</span>
         <span class="body"><span class="t">${f(z.bez || '—', z.zweifel.bez)}</span>
           <span class="s">${f(z.ort, z.zweifel.ort)}</span>${z.hinweis ? `<span class="s hw">${esc(z.hinweis)}</span>` : ''}</span>
@@ -9622,6 +9703,14 @@ function chkWert(it){
    kommt dort später ein Überspannungsableiter dazu, springt sie von "n.z." auf
    "i.O.". Wer bewusst etwas anderes wählt, legt einen eigenen Wert ab und bleibt
    davon unberührt. Das Bestätigen der Angaben schreibt am Ende alles fest. */
+/* v1.162: Zustand mit Zeichen. Ein leeres freiwilliges Textfeld ist "offen",
+   nicht "bitte ansehen". */
+function chkZustand(it){
+  const st = chkStatus(it);
+  if(st === 'red') return 'z-bad';
+  if(st === 'green') return 'z-ok';
+  return it.text ? 'z-open' : 'z-ask';
+}
 function chkStatus(it){
   if(it.text){
     const t = String((PROJ.checks || {})[it.k] || '').trim();
@@ -9650,8 +9739,8 @@ function renderChecks(){
     items.forEach(it => {
       if(it.text){
         const t = esc(String((PROJ.checks || {})[it.k] || ''));
-        h += `<div class="chk-item state-${chkStatus(it)}">
-          <div class="t">${esc(it.label)}</div>` +
+        h += `<div class="chk-item ${chkZustand(it)}">
+          <div class="t">${ZST}${esc(it.label)}</div>` +
           (it.mehrzeilig
             ? `<textarea data-chktext="${it.k}" rows="3">${t}</textarea>`
             : `<span class="unit"><input data-chktext="${it.k}" inputmode="decimal" value="${t}"><em>${esc(it.unit || '')}</em></span>`) +
@@ -9661,8 +9750,9 @@ function renderChecks(){
       const opts = it.opts || IO_OPTS;
       const {v}  = chkWert(it);
       const cls  = 'seg' + (it.stack ? ' stack' : (it.wrap ? ' wrap' : ''));
-      h += `<div class="chk-item state-${chkStatus(it)}">
-        <div class="t">${esc(it.label)}</div>
+      const zz = chkZustand(it);
+      h += `<div class="chk-item ${zz}">
+        <div class="t">${ZST}<span>${esc(it.label)}</span>${zz === 'z-ask' ? '<span class="vs">Vorschlag</span>' : ''}</div>
         <div class="${cls}" data-chk="${it.k}">` +
         opts.map(([val, txt]) => {
           const an = Array.isArray(v) ? v.includes(val) : v === val;
@@ -9680,7 +9770,7 @@ function renderChecks(){
 
   const offen = chkOffen();
   $('#checkCount').innerHTML = offen
-    ? `<div class="warn"><strong>${offen === 1 ? 'Ein Prüfpunkt fehlt' : offen + ' Prüfpunkte fehlen'}</strong>Die rot markierten Zeilen müssen gesetzt werden.</div>`
+    ? `<div class="warn"><strong>${offen === 1 ? 'Ein Prüfpunkt fehlt' : offen + ' Prüfpunkte fehlen'}</strong>Die rot markierten Zeilen (!) müssen gesetzt werden. Bernstein (?) ist ein Vorschlag und wird beim Bestätigen übernommen.</div>`
     : `<div class="warn ok"><strong>Vollständig</strong>Liste durchgehen und unten bestätigen.</div>`;
   $('#checkFoot').innerHTML = `<div class="eyebrow">Abschluss</div>` + (offen
     ? `<button class="btn" disabled>Noch ${offen} offen</button>`
@@ -11588,7 +11678,8 @@ function renderLager(){
     if(off)      s.push('bestellt ' + off);
     if(a.stamm && !lagerImStamm(a.name)) s.push('nicht in den Bauteilen');
     if(istFaellig.has(a.id)) s.push('Inventur fällig');
-    return `<button class="list-item${z === 'rot' ? ' state-red' : z === 'gelb' ? ' state-yellow' : ''}" data-la="${esc(a.id)}">
+    const zk = z === 'rot' ? 'z-bad' : z === 'gelb' ? 'z-liefer' : istFaellig.has(a.id) ? 'z-ask' : 'z-plain';
+    return `<button class="list-item ${zk}" data-la="${esc(a.id)}">${zk === 'z-plain' ? '' : ZST}
       <div class="body"><div class="t">${esc(a.name)}</div><div class="s">${esc(s.join(' · ') || 'ohne Meldegrenze')}</div></div>
       <div class="lg-menge">${LAGER_STAND[a.id] || 0}<em>${esc(lagerEinheit(a))}</em></div>
     </button>`;
@@ -11745,7 +11836,7 @@ function lagerArtAuffrischen(){
   if(+a.soll) info.push('Sollbestand ' + a.soll);
   if(off)     info.push('bestellt ' + off);
   const kopf = $('#lgKopf');
-  kopf.className = 'card lg-kopf' + (z === 'rot' ? ' state-red' : z === 'gelb' ? ' state-yellow' : '');
+  kopf.className = 'card lg-kopf' + (z === 'rot' ? ' state-red' : z === 'gelb' ? ' state-grau' : '');
   kopf.innerHTML = `<div class="lg-name">${esc(a.name)}</div>
     <div class="muted small">${a.stamm ? 'Aus den Bauteilen' : 'Verbrauchsmaterial'}${a.artnr ? ' · Art.-Nr. ' + esc(a.artnr) : ''}</div>
     <div class="lg-bestand">${LAGER_STAND[a.id] || 0}<em>${esc(lagerEinheit(a))}</em></div>
