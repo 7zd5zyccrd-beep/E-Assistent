@@ -10,6 +10,24 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.160 08.10.2026 Bedienkonzept, Etappe 2: die Startseite zeigt die offenen
+                    Projekte direkt - eigene zuerst (fuenf, "Alle offenen"
+                    klappt den Rest auf), darunter die der Kollegen (ab drei
+                    eingeklappt). Jede Karte nennt Art (WDH/NEU), Adresse,
+                    Bereich und "x von y erledigt" mit Balken, dazu "sitzt
+                    gerade daran". Ein Tipp oeffnet das Projekt; bisher waren es
+                    drei ueber "Auswahl" und "Fortsetzen" (beide entfallen).
+                    Darunter "+ Wiederholungspruefung", "+ Neuinstallation",
+                    Lager und Ablage. Das Zahnrad steht rechts oben statt auf
+                    dem Platz des Zurueck-Pfeils, links steht auf der
+                    Startseite das Logo. Neu rechts in der Kopfleiste: die
+                    Wolke fuer den Abgleich (gruen mit Haken verbunden,
+                    bernstein durchgestrichen ohne Netz; antippen nennt den
+                    Stand und wartende Fotos) - bisher faerbte sich das Logo.
+                    "Projekt loeschen" steht am Ende des Verteilers,
+                    "Projektdatei einlesen" in den Einstellungen unter Daten.
+                    SAM laedt jetzt beim Antippen von "+ Wiederholungs-
+                    pruefung" (die Zwischenseite gibt es nicht mehr).
   v1.159 08.10.2026 Bedienkonzept, Etappe 1: nichts geht mehr still verloren.
                     Der Zurueck-Pfeil fragt in Stromkreis, Zuleitung, Material,
                     Artikel, Einstellungen und "Aktuelles Projekt", wenn etwas
@@ -1272,6 +1290,18 @@ header .back:disabled{visibility:hidden}   /* Platz bleibt, damit die Kopfzeile 
 /* Punktraster wie im Logo: 2 Reihen à 4 Feldern, gefüllt / offen / leer */
 .dots{display:grid;grid-template-columns:repeat(4,6px);gap:3px;justify-content:end}
 header .dots{flex:0 0 34px}   /* gleiche Breite wie die Schaltfläche links -> Kopfzeile symmetrisch */
+/* v1.160: Symbole rechts in der Kopfleiste – die Wolke für den Abgleich überall,
+   auf der Startseite daneben das Zahnrad. Grün mit Haken heißt verbunden,
+   Bernstein durchgestrichen heißt ohne Netz (vorher färbte sich das Logo). */
+header .kopf-ico{width:34px;height:34px;flex:0 0 34px;padding:0;border:0;background:none;
+  display:flex;align-items:center;justify-content:center;color:#C9D2BD;position:relative}
+header .kopf-ico::before{content:"";position:absolute;inset:-6px}
+#btnWolke{color:var(--brand)}
+#btnWolke .ab{display:none}
+body[data-netz="ab"] #btnWolke{color:var(--signal)}
+body[data-netz="ab"] #btnWolke .an{display:none}
+body[data-netz="ab"] #btnWolke .ab{display:inline}
+header.start h1{margin-left:44px}           /* Titel mittig trotz zweier Symbole rechts */
 .dots i{width:6px;height:6px;border-radius:50%;box-sizing:border-box}
 .dots i.f{background:var(--brand)}
 .dots i.o{border:1.5px solid var(--brand)}
@@ -1561,6 +1591,18 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
 .btn.accent{background:var(--brand);border-color:var(--brand-dark);color:#1A1F16;font-weight:700}
 .btn.ghost{border-color:var(--rail-dark);color:var(--ink-soft);background:transparent}
 .btn.danger{border-color:var(--fault);color:var(--fault);background:var(--surface)}
+/* v1.160: Karten der offenen Projekte auf der Startseite */
+.list-item.projekt-karte{border-left:1px solid var(--line)}
+.list-item.projekt-karte .t{white-space:normal}
+.list-item.projekt-karte .s{font-family:var(--f-body);font-size:13px;white-space:normal}
+.list-item.projekt-karte .s.kollege{color:var(--signal);font-weight:600}
+.art-chip{display:inline-block;font-family:var(--f-label);font-weight:700;font-size:12px;letter-spacing:.08em;
+  line-height:18px;padding:0 6px;border-radius:4px;background:var(--ink);color:var(--enclosure);
+  margin-right:7px;vertical-align:1px}
+.art-chip.neu{background:var(--brand);color:#1A1F16}
+.fortschritt{display:block;height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin-top:3px}
+.fortschritt i{display:block;height:100%;background:var(--pe)}
+#view-home [data-neu]{justify-content:flex-start}
 .loeschzeile{display:block;margin:22px auto 6px;padding:12px 18px;background:none;border:0;
   color:var(--fault);font-size:15px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .btn.softred{border-color:var(--fault);color:var(--fault);background:var(--warn-bg);font-weight:600}
@@ -2054,8 +2096,6 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
    beim Gang durchs Haus kein Geflacker geben. */
 .modus::after{ background:var(--brand); }
 body[data-netz="ab"] .modus::after{ background:var(--signal); }
-body[data-netz="ab"] #kopfPunkte i.f{ background:var(--signal); }
-body[data-netz="ab"] #kopfPunkte i.o{ border-color:var(--signal); }
 
 /* Das Merkmal am Grundgerüst steht nur, solange der Modus in der jeweiligen
    Ansicht auch gilt – gesetzt wird es in modusZeigen. Die Regeln hier brauchen
@@ -2118,7 +2158,7 @@ body[data-modus="mess"] .linkbtn{color:#2E6DA8}
 #view-circuit,#view-feed,#view-settings{container:formular / inline-size}
 #view-board,#view-checks,#view-material{container:liste / inline-size}
 #view-lager,#view-lagerart,#view-lagerbest,#view-lagerein,
-#view-archive,#view-resume{container:liste / inline-size}
+#view-archive{container:liste / inline-size}
 
 @container formular (min-width:700px){
   .panes{display:grid;grid-template-columns:1fr 1fr;column-gap:22px;align-items:start}
@@ -2516,28 +2556,37 @@ function nameGross(s){
 <div class="app">
   <header>
     <button class="back" id="btnBack" aria-label="Zurück">&#8592;</button>
-    <h1 id="title">E-Assistent</h1>
+    <!-- v1.160: das Logo steht nur auf der Startseite, links an der Stelle des
+         Zurück-Pfeils; die Einstellungen haben ihr eigenes Zahnrad rechts -->
     <span class="dots" id="kopfPunkte" aria-hidden="true">
       <i></i><i class="f"></i><i class="f"></i><i class="o"></i>
       <i class="f"></i><i class="o"></i><i></i><i class="f"></i>
     </span>
+    <h1 id="title">E-Assistent</h1>
     <button class="modus" id="btnModus" hidden aria-pressed="false"
             aria-label="Messen-Modus einschalten"></button>
     <span class="tag" id="tag" hidden></span>
     <button class="sam-stand" id="samStand" type="button" hidden></button>
+    <button class="kopf-ico" id="btnWolke" type="button" aria-label="Abgleich">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M7 18.5h10a4.2 4.2 0 0 0 .6-8.4A5.6 5.6 0 0 0 6.8 9.6 4.5 4.5 0 0 0 7 18.5z"/>
+        <path class="an" d="M9.5 14l2 2 3.8-3.8"/><path class="ab" d="M4 4l16 16"/></svg></button>
+    <button class="kopf-ico" id="btnZahnrad" type="button" aria-label="Einstellungen" hidden></button>
   </header>
 
   <main>
     <!-- ========== START ========== -->
     <section class="view active" id="view-home">
-      <div class="eyebrow">Was steht an?</div>
       <div id="homeMain"></div>
-      <div class="eyebrow">Lager</div>
-      <button class="btn ghost" id="btnLager">Lager</button>
-      <div class="eyebrow">Ablage</div>
-      <button class="btn ghost" data-go="archive">Ablage</button>
-      <button class="btn ghost" id="btnImport">Projekt aus Datei übernehmen</button>
-      <input type="file" id="importFile" accept=".json,application/json" hidden>
+      <div class="eyebrow">Neu beginnen</div>
+      <button class="btn" data-neu="wdh"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Wiederholungsprüfung</button>
+      <button class="btn" data-neu="neu"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Neuinstallation</button>
+      <div class="eyebrow">Betrieb</div>
+      <div class="btn-row">
+        <button class="btn ghost" id="btnLager">Lager</button>
+        <button class="btn ghost" data-go="archive">Ablage</button>
+      </div>
       <p class="muted small" id="storeHint" style="margin-top:22px"></p>
       <p class="muted small" id="buildTag" style="margin-top:4px;opacity:.7"></p>
       <div class="signature" role="img" aria-label="BDS"></div>
@@ -2678,6 +2727,7 @@ function nameGross(s){
       <div class="eyebrow" id="boardDocTitle">Dokumente</div>
       <div class="chk-grid" id="boardDocOpts"></div>
       <div id="boardDocActions" style="margin-top:10px"></div>
+      <button class="loeschzeile" id="btnProjWeg" type="button">Projekt löschen</button>
       <div class="actionbar"><div class="inner">
         <button class="btn accent" id="btnAddCircuit">Stromkreis hinzufügen</button>
         <button class="btn primary" id="btnToFinish" style="margin-top:10px">Prüfpunkte</button>
@@ -2888,12 +2938,6 @@ function nameGross(s){
       </div></div>
     </section>
 
-    <!-- ========== UNTERMENÜ ========== -->
-    <section class="view" id="view-mode"><div id="modeBody"></div></section>
-
-    <!-- ========== FORTSETZEN ========== -->
-    <section class="view" id="view-resume"><div id="resumeBody"></div></section>
-
     <!-- ========== ARCHIV ========== -->
     <section class="view" id="view-archive">
       <p class="muted small" id="archHint"></p>
@@ -2984,6 +3028,10 @@ function nameGross(s){
             <button class="btn ghost" id="btnLock">Abmelden</button>
             <button class="btn ghost" id="btnReload">App neu laden</button>
           </div>
+          <div class="eyebrow">Daten</div>
+          <p class="muted small">Weitergabe-Dateien aus der Zeit vor dem Abgleich lassen sich hier noch einlesen.</p>
+          <button class="btn ghost" id="btnImport" style="margin-bottom:14px">Projektdatei einlesen</button>
+          <input type="file" id="importFile" accept=".json,application/json" hidden>
         </div>
       </div>
 
@@ -3180,7 +3228,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.159';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.160';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 08.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -3874,7 +3922,6 @@ function modusZeigen(name){
   const wo = name === 'board' || name === 'circuit' || name === 'feed';
   const an = wo && messModus();
   $('#btnModus').hidden   = !(wo && PROJ);
-  $('#kopfPunkte').hidden = wo && !!PROJ;      // das Logo weicht dem Schalter
   $('#btnModus').setAttribute('aria-pressed', String(an));
   $('#btnModus').setAttribute('aria-label',
     an ? 'Messen-Modus ausschalten' : 'Messen-Modus einschalten');
@@ -3913,21 +3960,21 @@ function go(name, push = true){
      hineingeschrieben – sie warten, bis der Kreis verlassen ist. */
   if(name !== 'circuit' && name !== 'feed') fbNachtragAnwenden();
   praesenzSetzen(PROJ && !archOffen && PROJECT_VIEWS.includes(name) ? PROJ.id : null);
-  resumeTickerSetzen(name === 'resume');
+  homeTickerSetzen(name === 'home');
   $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
   leistenPlatz();                                  // v1.124: Platz unter der festen Leiste
   modusZeigen(name);
   $('#title').textContent = TITLES[name] || 'E-Assistent';
-  if(name === 'mode'   && MODES[homeMode])   $('#title').textContent = MODES[homeMode].label;
-  if(name === 'resume' && MODES[resumeMode]) $('#title').textContent = MODES[resumeMode].weiter;
   if(name === 'new' && projEdit) $('#title').textContent = 'Aktuelles Projekt';
   if(name === 'circuit'){ kachelnBegrenzen($('#nameSug')); kachelnBegrenzen($('#roomOpts')); }
   if($('#toast').classList.contains('show')) toastSetzen();   // neue Ansicht, neue Leistenhöhe
   const startseite = name === 'home';
   const bb = $('#btnBack');
-  bb.innerHTML = startseite ? GEAR_SVG : '&#8592;';
-  bb.setAttribute('aria-label', startseite ? 'Einstellungen' : 'Zurück');
-  bb.disabled = !startseite && stack.length === 0;
+  bb.hidden = startseite;                          // v1.160: links nie etwas anderes als Zurück
+  bb.disabled = stack.length === 0;
+  $('#kopfPunkte').hidden = !startseite;
+  $('#btnZahnrad').hidden = !startseite;
+  $('header').classList.toggle('start', startseite);
   const tag = $('#tag');
   if(archOffen && PROJECT_VIEWS.includes(name)){
     tag.hidden = false; tag.textContent = 'Ablage';
@@ -3942,8 +3989,6 @@ function go(name, push = true){
   if(name === 'kamprobe') kpStarten();
   if(name === 'material'){ materialInit(); renderMaterial(); }
   if(name === 'finish')   renderFinish();
-  if(name === 'mode')     renderModeMenu();
-  if(name === 'resume')   renderResume();
   if(name === 'checks')   renderChecks();
   if(name === 'sheets'){ sheetFit = true; renderSheets(); }   // v1.129: beim Öffnen eingepasst
   if(name === 'archive')  renderArchive();
@@ -3956,8 +4001,17 @@ function go(name, push = true){
   keepAwake(PROJECT_VIEWS.includes(name));
   schutzMerken(name);                              // v1.159: Stand für die Rückfrage beim Verlassen
 }
+$('#btnZahnrad').innerHTML = GEAR_SVG;
+$('#btnZahnrad').onclick = () => go('settings');
+$('#btnWolke').onclick = () => {
+  const warten = qVor.length + qOrig.length;
+  showDialog({title:'Abgleich', body: fbStatusText()
+    + (warten ? ` ${warten === 1 ? 'Ein Foto wartet' : warten + ' Fotos warten'} auf die Übertragung.` : ''),
+    ok:'OK'});
+  $('#modalBack').hidden = true;
+};
 $('#btnBack').onclick = () => {
-  if(current === 'home'){ go('settings'); return; }      // auf dem Startbildschirm: Einstellungen
+  if(current === 'home'){ go('settings'); return; }
   vorVerlassen(() => { const p = stack.pop(); if(p) go(p, false); });
 };
 
@@ -4028,18 +4082,67 @@ const MODES = {
   neu: {label:'Neuinstallation',      neu:'Neues Projekt', weiter:'Projekt fortsetzen',
         docs:{protokoll:true, beschriftung:false, material:false, fotos:false}}
 };
-let homeMode = null;
-
+/* ---------- Startseite (v1.160, Bedienkonzept E1) ----------
+   Die offenen Projekte stehen gleich hier, eigene zuerst, dann die der
+   Kollegen. Bis v1.159 führte der Weg über "Wiederholungsprüfung" und
+   "Prüfung fortsetzen" zur Liste – drei Tipps bis zum Projekt, jetzt einer.
+   Gelöscht wird im Projekt selbst, nicht auf der Startseite: hier tippt man
+   am schnellsten und am häufigsten. */
+let homeAlle = false, homeKollegen = false;
+const HOME_EIGENE = 5, HOME_KOLLEGEN = 3;
+/* Fortschritt einer Prüfung: Zuleitung und alle Kreise mit Messung; erledigt
+   ist, was gemessen oder bewusst ohne Messung ist und keinen Grenzwert reißt. */
+function projektStand(p){
+  const zu = [p.feed || blankFeed(), ...(p.items || []).filter(c => c.kind === 'circuit' && !isSpecial(c))];
+  const fertig = zu.filter((o, i) => tileState(o, i === 0) !== 'state-red').length;
+  const bereich = p.checksDone ? 'Abschluss' : p.modus === 'mess' ? 'Messen' : 'Erfassen';
+  return {fertig, gesamt: zu.length, bereich};
+}
+const tagKurz = ts => {                         // "heute", "gestern", sonst das Datum
+  const d = new Date(ts), h = new Date(); h.setHours(0, 0, 0, 0);
+  const t = Math.round((h - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+  return t === 0 ? 'heute' : t === 1 ? 'gestern' : dstr(ts);
+};
+function projektKarte(p){
+  const st = projektStand(p);
+  const wer = !p.owner ? '' : eigenes(p) ? '' : (esc(nameGross(p.ownerName) || 'Kollege') + ' · ');
+  const f = fremdeArbeit(p.id);
+  const anteil = st.gesamt ? Math.round(st.fertig / st.gesamt * 100) : 0;
+  return `<button class="list-item projekt-karte" data-open="${esc(p.id)}">
+    <span class="body">
+      <span class="t"><span class="art-chip${p.mode === 'neu' ? ' neu' : ''}">${p.mode === 'neu' ? 'NEU' : 'WDH'}</span>${
+        esc((p.address || '').split('\n')[0] || 'Ohne Adresse')}${p.flat ? ' · ' + esc(flatLabel(p.flat)) : ''}</span>
+      <span class="s">${wer}${tagKurz(p.updatedAt || p.startedAt)} ${tstr(p.updatedAt || p.startedAt)} · ${st.bereich} · ${
+        st.fertig} von ${st.gesamt} erledigt</span>
+      <span class="fortschritt"><i style="width:${anteil}%"></i></span>
+      ${f ? `<span class="s kollege">${esc(nameGross(f.name) || 'Ein Kollege')} sitzt gerade daran</span>` : ''}
+    </span></button>`;
+}
 function renderHome(){
-  $('#homeMain').innerHTML = Object.entries(MODES).map(([k, m], i) => {
-    const offen = openProjects(k).length;
-    return `<button class="btn ${i === 0 ? 'accent' : ''}" data-mode="${k}" style="${i ? 'margin-top:10px' : ''}">
-        ${esc(m.label)}${offen ? ` · ${offen} offen` : ''}</button>`;
-  }).join('');
-  $$('#homeMain [data-mode]').forEach(b => b.onclick = () => { homeMode = b.dataset.mode; go('mode'); });
+  const alle = PROJECTS.slice().sort((a, b) => (b.updatedAt || b.startedAt) - (a.updatedAt || a.startedAt));
+  const meine = alle.filter(eigenes), andere = alle.filter(p => !eigenes(p));
+  let h = '';
+  if(meine.length){
+    h += `<div class="eyebrow">Offen</div>` + (homeAlle ? meine : meine.slice(0, HOME_EIGENE)).map(projektKarte).join('');
+    if(meine.length > HOME_EIGENE) h += `<button class="btn ghost" id="homeAlleKnopf">${
+      homeAlle ? 'Weniger zeigen' : `Alle offenen (${meine.length})`}</button>`;
+  }
+  if(andere.length){
+    h += `<div class="eyebrow">Offen · Kollegen</div>`;
+    if(andere.length <= HOME_KOLLEGEN || homeKollegen) h += andere.map(projektKarte).join('');
+    if(andere.length > HOME_KOLLEGEN) h += `<button class="btn ghost" id="homeKollegenKnopf">${
+      homeKollegen ? 'Kollegen einklappen' : `Projekte der Kollegen (${andere.length})`}</button>`;
+  }
+  if(!alle.length) h += `<div class="rail-empty">Nichts Offenes. Unten ein neues Projekt beginnen.</div>`;
+  $('#homeMain').innerHTML = h;
+  $$('#homeMain [data-open]').forEach(b => b.onclick = () =>
+    projektOeffnen(PROJECTS.find(p => p.id === b.dataset.open)));
+  const ak = $('#homeAlleKnopf');     if(ak) ak.onclick = () => { homeAlle = !homeAlle; renderHome(); };
+  const kk = $('#homeKollegenKnopf'); if(kk) kk.onclick = () => { homeKollegen = !homeKollegen; renderHome(); };
+  $$('#view-home [data-neu]').forEach(b => b.onclick = () => startProject(b.dataset.neu));
 
   $('#buildTag').textContent = BUILD;
-  lagerKnopf();                                  // Warnring am Materialbestand
+  lagerKnopf();                                  // Warnring am Lager
   /* Im Normalfall steht hier nichts: dass die Daten „lokal auf diesem Gerät"
      liegen, stimmt seit dem Abgleich nicht mehr. Die Warnung bleibt – trifft
      sie zu, gehen vor allem die Fotos beim Schließen verloren, denn die liegen
@@ -4048,77 +4151,34 @@ function renderHome(){
     : 'Achtung: Dieser Browser speichert nichts dauerhaft – Fotos und offene Eingaben gehen beim Schließen verloren. Über die richtige Adresse aufgerufen funktioniert die Sicherung.';
 }
 
-/* --- Untermenü je Hauptoption --- */
-function renderModeMenu(){
-  const m = MODES[homeMode];
-  if(!m){ go('home', false); return; }
-  const offen = openProjects(homeMode).length;
-  $('#title').textContent = m.label;
-  $('#modeBody').innerHTML = `
-    <button class="btn accent" id="btnModeNew">${esc(m.neu)}</button>
-    <button class="btn" id="btnModeResume" style="margin-top:10px"${offen ? '' : ' disabled'}>
-      ${esc(m.weiter)}${offen ? ` (${offen})` : ''}</button>
-    ${offen ? '' : `<p class="muted small" style="margin-top:12px">Derzeit nichts Offenes zum Fortsetzen.</p>`}`;
-  $('#btnModeNew').onclick    = () => startProject(homeMode);
-  $('#btnModeResume').onclick = () => { resumeMode = homeMode; go('resume'); };
-  if(homeMode === 'wdh') samVorladen();            // v1.126: SAM lädt schon hier
-}
-
-/* Ein Vermerk kann auch durch bloßen Zeitablauf verfallen – dabei ändert sich
-   in der Datenbank nichts, es kommt also kein Ereignis. Solange die Liste offen
-   steht, baut sie sich deshalb selbst nach. */
-let resumeTicker = null;
-function resumeTickerSetzen(an){
-  if(an && !resumeTicker) resumeTicker = setInterval(() => {
-    if(current === 'resume') renderResume(); else resumeTickerSetzen(false);
+/* Ein Vermerk "sitzt gerade daran" kann auch durch bloßen Zeitablauf
+   verfallen – dabei ändert sich in der Datenbank nichts, es kommt also kein
+   Ereignis. Solange die Startseite offen steht, baut sie sich deshalb selbst
+   nach. */
+let homeTicker = null;
+function homeTickerSetzen(an){
+  if(an && !homeTicker) homeTicker = setInterval(() => {
+    if(current === 'home') renderHome(); else homeTickerSetzen(false);
   }, 20000);
-  else if(!an && resumeTicker){ clearInterval(resumeTicker); resumeTicker = null; }
+  else if(!an && homeTicker){ clearInterval(homeTicker); homeTicker = null; }
 }
 
-/* --- offene Prüfungen: nach Adresse benannt, zuletzt bearbeitete zuerst --- */
-let resumeMode = 'wdh';
+/* Löschen eines offenen Projekts – seit v1.160 im Projekt selbst. */
+function projektLoeschen(p){
+  if(!p) return;
+  showDialog({title:'Projekt löschen',
+    body:`„${(p.address || '').split('\n')[0] || 'Ohne Adresse'}" wird endgültig entfernt`
+      + (eigenes(p) ? ' – auf allen Geräten, samt Fotos.' : ` – auch bei ${nameGross(p.ownerName) || 'dem Kollegen'}, dem es gehört.`),
+    ok:'Löschen', danger:true,
+    onOk:() => {
+      PROJECTS = PROJECTS.filter(x => x.id !== p.id); saveProjects();
+      fbProjWeg(p.id, true);                // gilt für alle Geräte, Fotos mit
+      PROJ = null; stack = []; go('home', false);
+      toast('Gelöscht');
+    }});
+}
+
 let newMode = 'wdh';
-function renderResume(){
-  $('#title').textContent = (MODES[resumeMode] || MODES.wdh).weiter;
-  const list = openProjects(resumeMode);
-  $('#resumeBody').innerHTML = list.length ? list.map(p => {
-    const n = (p.items || []).length;
-    /* Wer hat es angelegt, wer zuletzt angefasst? Ohne Kennung stammt der
-       Eintrag aus der Zeit vor dem Abgleich – dann steht nur das Datum da. */
-    const wer = !p.owner ? ''
-      : (eigenes(p) ? 'Von dir' : `Von ${esc(nameGross(p.ownerName) || 'jemand anderem')}`)
-        + (p.lastBy && p.lastBy !== p.owner ? `, zuletzt ${p.lastBy === FB.uid ? 'von dir' : 'von ' + esc(nameGross(p.lastByName) || 'jemand anderem')}` : '')
-        + ' · ';
-    const f = fremdeArbeit(p.id);
-    return `<div class="card">
-      <div><strong>${esc((p.address || '').split('\n')[0] || 'Ohne Adresse')}${p.flat ? ' · ' + esc(flatLabel(p.flat)) : ''}</strong></div>
-      <div class="muted small">${wer}${dstr(p.updatedAt || p.startedAt)} ${tstr(p.updatedAt || p.startedAt)} · ${n} Kreis${n===1?'':'e'}</div>
-      ${f ? `<div class="small" style="color:var(--signal);margin-top:4px">${esc(nameGross(f.name) || 'Ein Kollege')} sitzt gerade daran</div>` : ''}
-      <div class="btn-row" style="margin-top:10px">
-        <button class="btn primary" data-open="${esc(p.id)}">Fortsetzen</button>
-        <button class="btn danger" data-del="${esc(p.id)}">Löschen</button>
-      </div></div>`;
-  }).join('') : `<div class="rail-empty">Keine offenen ${resumeMode === 'neu' ? 'Projekte' : 'Prüfungen'}.</div>`;
-  $$('#resumeBody [data-open]').forEach(b => b.onclick = () => {
-    projektOeffnen(PROJECTS.find(p => p.id === b.dataset.open));
-  });
-  $$('#resumeBody [data-del]').forEach(b => b.onclick = () => {
-    const p = PROJECTS.find(x => x.id === b.dataset.del); if(!p) return;
-    showDialog({title:'Löschen',
-      body:`„${(p.address || '').split('\n')[0] || 'Ohne Adresse'}" wird endgültig entfernt`
-        + (eigenes(p) ? '.' : ` – auch bei ${nameGross(p.ownerName) || 'dem Kollegen'}, dem es gehört.`),
-      ok:'Löschen', danger:true,
-      onOk:() => {
-        PROJECTS = PROJECTS.filter(x => x.id !== p.id); saveProjects();
-        fbProjWeg(p.id, true);                // gilt für alle Geräte, Fotos mit
-        /* War es der letzte Eintrag, bleibt hier nichts mehr zu tun –
-           statt einer leeren Liste geht es eine Ebene zurück. */
-        if(!openProjects(resumeMode).length){ go(stack.pop() || 'mode', false); return; }
-        renderResume();
-      }});
-  });
-}
-
 /* ---------- Neues Projekt ---------- */
 function fillSelect(sel, arr, val){
   sel.innerHTML = arr.map(o => `<option${o === val ? ' selected' : ''}>${esc(o)}</option>`).join('');
@@ -4509,6 +4569,8 @@ function renderBoard(){
     Beginn ${dstr(PROJ.startedAt)} ${tstr(PROJ.startedAt)} · ${n} Stromkreis${n===1?'':'e'}
     · <button class="linkbtn" id="btnProjEdit">ändern</button></div>`;
   $('#btnProjEdit').onclick = projektAendern;
+  $('#btnProjWeg').hidden = !!archOffen;           // Abgelegtes löscht die Ablage
+  $('#btnProjWeg').onclick = () => projektLoeschen(PROJ);
   $('#boardBody').innerHTML = n === 0
     ? `<div class="rail-empty">Noch kein Stromkreis erfasst.<br>Unten beginnen.</div>`
     : listHtml();
@@ -10304,7 +10366,7 @@ function archiveNow(){
   PROJECTS = PROJECTS.filter(p => p.id !== PROJ.id); saveProjects();
   fbProjWeg(weg, false); // sonst käme die abgeschlossene Prüfung als offene zurück; Fotos bleiben
   PROJ = null;
-  stack = []; homeMode = null; go('home', false);
+  stack = []; go('home', false);
 }
 
 /* ============================================================
@@ -10616,15 +10678,17 @@ function netzSetzen(an){
    Verzögerung einmal ab und die Anzeige geht von selbst auf Bernstein. */
 netzSetzen(false);
 
+function fbStatusText(){
+  if(fbEin && netzAn) return fbFremd
+    ? `Verbunden als ${FB.konto}. Ein Kollege hat Einstellungen geändert – sichtbar, sobald du die Einstellungen verlässt.`
+    : `Verbunden als ${FB.konto}, Abgleich läuft.`;
+  if(fbEin) return `Angemeldet als ${FB.konto}, zurzeit keine Verbindung. Änderungen gehen hinaus, sobald wieder Netz da ist.`;
+  if(FB.lage === 'offline') return 'Kein Netz – es wird nur auf diesem Gerät gearbeitet. Der Abgleich holt später auf.';
+  return 'Abgleich noch nicht verbunden – es wird auf diesem Gerät gearbeitet.';
+}
 function fbStatusZeigen(){
   const p = $('#fbStatus');
-  if(!p) return;
-  if(fbEin && netzAn) p.textContent = fbFremd
-    ? `Verbunden als ${FB.konto}. Ein Kollege hat Einstellungen geändert – sichtbar, sobald du diese Ansicht verlässt.`
-    : `Verbunden als ${FB.konto}, Abgleich läuft.`;
-  else if(fbEin) p.textContent = `Angemeldet als ${FB.konto}, zurzeit keine Verbindung. Änderungen gehen hinaus, sobald wieder Netz da ist.`;
-  else if(FB.lage === 'offline') p.textContent = 'Kein Netz – es wird nur auf diesem Gerät gearbeitet. Der Abgleich holt später auf.';
-  else p.textContent = 'Abgleich noch nicht verbunden – es wird auf diesem Gerät gearbeitet.';
+  if(p) p.textContent = fbStatusText();
 }
 
 /* Eigene Einstellungen hinaufschieben. Wird beim Speichern gerufen und beim
@@ -10706,7 +10770,7 @@ FB.bereit.then(() => {
     const roh = s.val() || {}, neu = {};
     Object.keys(roh).forEach(id => { try { neu[id] = JSON.parse(roh[id]); } catch(e){} });
     fbArbeit = neu;
-    if(current === 'resume') renderResume();
+    if(current === 'home') renderHome();
   }); } catch(e){}
   if(praesenzId) praesenzSchreiben();      // Projekt war schon offen, als die Verbindung kam
   archLadenP.then(() => {
@@ -10842,7 +10906,6 @@ function projAnwenden(id, kopfText, kreiseRoh){
   saveProjects();
   if(PROJ && PROJ.id === id && current === 'board') renderBoard();
   if(PROJ && PROJ.id === id && (current === 'board' || current === 'finish')) renderPhotos();
-  if(current === 'resume') renderResume();
   if(current === 'home')   renderHome();
 }
 
@@ -10883,7 +10946,6 @@ function fbProjekteRein(alle){
     PROJECTS = PROJECTS.filter(p => !ids.includes(p.id));
     ids.forEach(id => delete fbSchatten[id]);
     saveProjects();
-    if(current === 'resume') renderResume();
     if(current === 'home')   renderHome();
   }
 }
