@@ -104,6 +104,16 @@ GitHub Pages aus `main` ausgeliefert. Nutzer ist Jean, Elektriker, kein Entwickl
   Kamera (getUserMedia) hat Jean abgelehnt.
 - Trainingsordner und Probelauf: Einstellungen › SAM › „Trainingsordner
   öffnen“, Foto antippen, „Durchspielen“ (v1.121).
+- Verknüpfung mit dem Verteiler (v1.134–v1.155): `samAusrichten` ordnet die
+  Einträge den Geräten zu (Aufdruck, Nummern vom Streifen der Abdeckung,
+  −4 für eine Streifennummer, die einem anderen sicheren Eintrag gehört);
+  `samStreifenAbgleich` ersetzt oder markiert fragliche Nummern (bernstein,
+  „Nr. vom Verteiler (Blatt: …)“), gesichert ohne Bernstein, wenn die
+  Nachbarn passen. Relais/Eltako → Stromstoßschalter, „16 A“ allein ist kein
+  B16, Gerät nur mit Marke → „LS~“. Warnung `#samKlein` bei zu kleiner Schrift.
+  Prüfstand und offene Punkte in `sam-werkstatt/docs/SAM-STAND.md`, Abschnitt 13.
+- Kamera (v1.157): zwischen den Fotos das Video nur `visibility:hidden`, nie
+  `hidden` – iOS behielt sonst die alte, kleine Größe für das zweite Foto.
 
 ## Testen
 
