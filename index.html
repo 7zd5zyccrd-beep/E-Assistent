@@ -10,6 +10,20 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.159 08.10.2026 Bedienkonzept, Etappe 1: nichts geht mehr still verloren.
+                    Der Zurueck-Pfeil fragt in Stromkreis, Zuleitung, Material,
+                    Artikel, Einstellungen und "Aktuelles Projekt", wenn etwas
+                    geaendert und nicht gespeichert ist (Speichern, Verwerfen,
+                    Weiter bearbeiten) - bisher war es ohne Rueckfrage weg.
+                    Ebenso im Zweispalten-Layout beim Wechsel auf einen anderen
+                    Kreis. "Loeschen" steht nicht mehr in der Fussleiste neben
+                    den Speicherknoepfen, sondern als "Stromkreis loeschen" am
+                    Ende des Formulars. Ein Wort fuer eine Sache: "Naechster
+                    Kreis", "Weiter", "Fertig" statt "Speichern & ...";
+                    Pruefpunkte statt Angaben, Vorschau statt Ansicht/Blaetter,
+                    "Ausgeben und ablegen", "Vorab ausgeben", "Erneut ausgeben",
+                    Lager statt Materialbestand, Bauteile statt Material-Stamm,
+                    "Abmelden" statt "Geraet sperren".
   v1.158 04.10.2026 SAM (Beta): Werkstatt-Stand v0.54 (mit v0.53). Warnung, wenn
                     die Beschreibung im Foto sehr klein ist; Firmenkopf ueber
                     der Tabelle faellt auch weg, wenn das Blatt mitten im Foto
@@ -1547,6 +1561,8 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
 .btn.accent{background:var(--brand);border-color:var(--brand-dark);color:#1A1F16;font-weight:700}
 .btn.ghost{border-color:var(--rail-dark);color:var(--ink-soft);background:transparent}
 .btn.danger{border-color:var(--fault);color:var(--fault);background:var(--surface)}
+.loeschzeile{display:block;margin:22px auto 6px;padding:12px 18px;background:none;border:0;
+  color:var(--fault);font-size:15px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .btn.softred{border-color:var(--fault);color:var(--fault);background:var(--warn-bg);font-weight:600}
 .btn + .btn{margin-top:10px}
 /* unauffälliger Textknopf, sieht aus wie ein Link im Fließtext */
@@ -2517,7 +2533,7 @@ function nameGross(s){
       <div class="eyebrow">Was steht an?</div>
       <div id="homeMain"></div>
       <div class="eyebrow">Lager</div>
-      <button class="btn ghost" id="btnLager">Materialbestand</button>
+      <button class="btn ghost" id="btnLager">Lager</button>
       <div class="eyebrow">Ablage</div>
       <button class="btn ghost" data-go="archive">Ablage</button>
       <button class="btn ghost" id="btnImport">Projekt aus Datei übernehmen</button>
@@ -2663,8 +2679,8 @@ function nameGross(s){
       <div class="chk-grid" id="boardDocOpts"></div>
       <div id="boardDocActions" style="margin-top:10px"></div>
       <div class="actionbar"><div class="inner">
-        <button class="btn accent" id="btnAddCircuit">Hinzufügen</button>
-        <button class="btn primary" id="btnToFinish" style="margin-top:10px">Abschluss</button>
+        <button class="btn accent" id="btnAddCircuit">Stromkreis hinzufügen</button>
+        <button class="btn primary" id="btnToFinish" style="margin-top:10px">Prüfpunkte</button>
       </div></div>
     </section>
 
@@ -2752,11 +2768,12 @@ function nameGross(s){
         </div>
       </div>
 
+      <!-- v1.159: Löschen nicht mehr in der Fußleiste neben den Speicherknöpfen -->
+      <button class="loeschzeile" id="btnDelCircuit" type="button">Stromkreis löschen</button>
       <div class="actionbar"><div class="inner">
-        <button class="btn primary" id="btnSaveCircuit">Speichern &amp; nächster Kreis</button>
-        <div class="btn-row" style="margin-top:10px">
-          <button class="btn ghost" id="btnSaveOnly">Nur speichern</button>
-          <button class="btn danger" id="btnDelCircuit">Löschen</button>
+        <div class="btn-row">
+          <button class="btn ghost" id="btnSaveOnly" style="flex:0 0 34%">Fertig</button>
+          <button class="btn primary" id="btnSaveCircuit">Nächster Kreis</button>
         </div>
       </div></div>
     </section>
@@ -2801,8 +2818,8 @@ function nameGross(s){
       </div>
 
       <div class="actionbar"><div class="inner">
-        <button class="btn primary" id="btnSaveFeedNext" hidden>Speichern &amp; weiter</button>
-        <button class="btn primary" id="btnSaveFeed">Speichern</button>
+        <button class="btn primary" id="btnSaveFeedNext" hidden>Weiter</button>
+        <button class="btn primary" id="btnSaveFeed">Fertig</button>
       </div></div>
     </section>
 
@@ -2847,8 +2864,8 @@ function nameGross(s){
         </div>
       </div>
       <div class="eyebrow">Ausgabe und Projekt abschließen</div>
-      <button class="btn ghost" id="btnSheets">Ansicht</button>
-      <button class="btn accent" id="btnExportDocs">Dokumente exportieren</button>
+      <button class="btn ghost" id="btnSheets">Vorschau</button>
+      <button class="btn accent" id="btnExportDocs">Ausgeben und ablegen</button>
       <p class="muted small" id="agZeile"></p>
     </section>
 
@@ -2951,20 +2968,20 @@ function nameGross(s){
           <label class="field" style="margin-bottom:4px"><span>Sonstige Geräte</span><textarea id="setSpecials"></textarea></label>
           <p class="muted small" style="margin:0 0 14px">Feste TE-Breite optional mit Komma anhängen, z.B. „Hauptschalter, 3".</p>
           <label class="field"><span>Kabelarten</span><textarea id="setCables"></textarea></label>
-          <label class="field"><span>Material-Stamm</span><textarea id="setMaterial" style="min-height:200px"></textarea></label>
-          <div class="eyebrow">Materialbestand</div>
+          <label class="field"><span>Bauteile</span><textarea id="setMaterial" style="min-height:200px"></textarea></label>
+          <div class="eyebrow">Lager</div>
           <label class="chk" style="margin-bottom:8px">
             <input type="checkbox" id="setInvHinweis"><span>An die Inventur erinnern</span></label>
           <label class="field"><span>Zeitspanne (Monate)</span>
             <input id="setInvMonate" type="number" min="1" max="120" step="1" inputmode="numeric"></label>
-          <p class="muted small" style="margin:-8px 0 14px">Der Hinweis erscheint im Materialbestand,
+          <p class="muted small" style="margin:-8px 0 14px">Der Hinweis erscheint im Lager,
             sobald eine Position länger nicht gezählt wurde. Die betroffenen Artikel tragen in der
             Liste den Vermerk „Inventur fällig“.</p>
           <div class="eyebrow">Zugang und Abgleich</div>
           <p class="muted small" id="fbStatus" style="margin-bottom:6px"></p>
-          <p class="muted small">„Gerät sperren“ meldet dieses Gerät ab; beim nächsten Öffnen werden Name und Passwort wieder abgefragt. Die Projekte auf dem Gerät bleiben erhalten. „App neu laden“ holt die Datei frisch vom Server, ohne die Daten anzurühren.</p>
+          <p class="muted small">„Abmelden“ meldet dieses Gerät ab; beim nächsten Öffnen werden Name und Passwort wieder abgefragt. Die Projekte auf dem Gerät bleiben erhalten. „App neu laden“ holt die Datei frisch vom Server, ohne die Daten anzurühren.</p>
           <div class="row" style="margin-bottom:14px">
-            <button class="btn ghost" id="btnLock">Gerät sperren</button>
+            <button class="btn ghost" id="btnLock">Abmelden</button>
             <button class="btn ghost" id="btnReload">App neu laden</button>
           </div>
         </div>
@@ -3163,8 +3180,8 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.158';                    // siehe Änderungsliste im Dateikopf
-const BUILD        = VERSION + ' · 03.10.2026';
+const VERSION      = 'v1.159';                    // siehe Änderungsliste im Dateikopf
+const BUILD        = VERSION + ' · 08.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
 const DAUER_WARN   = 100;                        // zu lang: unplausibel im Protokoll
@@ -3820,8 +3837,8 @@ const TITLES = {
   home:'E-Assistent', new:'Neues Projekt', board:'Verteiler', circuit:'Stromkreis',
   feed:'Zuleitung', material:'Material', finish:'Abschluss',
   mode:'Auswahl', resume:'Fortsetzen', archive:'Ablage', settings:'Einstellungen',
-  sheets:'Blätter', checks:'Angaben', sam:'SAM · Beta', samliste:'SAM · Prüfen', training:'Trainingsordner', samprobe:'SAM · Probelauf', kamprobe:'Kamera-Probe',
-  lager:'Materialbestand', lagerart:'Artikel', lagerbest:'Bestellliste', lagerein:'Lieferung'
+  sheets:'Vorschau', checks:'Prüfpunkte', sam:'SAM · Beta', samliste:'SAM · Prüfen', training:'Trainingsordner', samprobe:'SAM · Probelauf', kamprobe:'Kamera-Probe',
+  lager:'Lager', lagerart:'Artikel', lagerbest:'Bestellliste', lagerein:'Lieferung'
 };
 const PROJECT_VIEWS = ['board','circuit','feed','material','finish','sheets','checks','sam','samliste'];
 /* Die Ansicht "Neues Projekt" dient auch zum Nachbessern eines laufenden
@@ -3937,11 +3954,67 @@ function go(name, push = true){
   if(name === 'lagerein')  renderLagerEin();
   syncSplit();
   keepAwake(PROJECT_VIEWS.includes(name));
+  schutzMerken(name);                              // v1.159: Stand für die Rückfrage beim Verlassen
 }
 $('#btnBack').onclick = () => {
   if(current === 'home'){ go('settings'); return; }      // auf dem Startbildschirm: Einstellungen
-  const p = stack.pop(); if(p) go(p, false);
+  vorVerlassen(() => { const p = stack.pop(); if(p) go(p, false); });
 };
+
+/* ---------- Nichts geht still verloren (v1.159, Bedienkonzept E6) ----------
+   Bis v1.158 verwarf der Zurück-Pfeil in Stromkreis, Zuleitung, Material,
+   Artikel, Einstellungen und "Aktuelles Projekt" jede Eingabe ohne Rückfrage –
+   wer statt "Speichern" den Pfeil traf, verlor seine Messwerte. Beim Betreten
+   dieser Ansichten wird ihr Stand gemerkt; wer sie mit Änderungen verlässt,
+   wird gefragt. Bewusst kein stilles Speichern: erst beim Speichern laufen
+   Grenzwert-, Nummern- und FI-Prüfung, und ein halber Kreis soll nicht sofort
+   an die Kollegen gehen. */
+const feldStand = sel => [...document.querySelectorAll(sel + ' input, ' + sel + ' select, ' + sel + ' textarea')]
+  .map(i => i.type === 'checkbox' ? String(i.checked) : i.value).join('\u0001');
+const SCHUTZ = {
+  circuit:  {stand: () => JSON.stringify(collectCircuit()), speichern: weiter => saveCircuitThen(weiter)},
+  feed:     {stand: () => JSON.stringify(collectFeed()),    speichern: weiter => saveFeedThen(weiter)},
+  material: {stand: () => JSON.stringify(matDraft || {}),
+             speichern: weiter => { PROJ.material = matDraft; saveProj(); toast('Gespeichert'); weiter(); }},
+  lagerart: {stand: () => ['#lgName','#lgStamm','#lgEinheit','#lgMelde','#lgSoll','#lgVpe','#lgArtnr','#lgStart']
+               .map(id => { const e = $(id); return e ? e.value : ''; }).join('\u0001'),
+             speichern: () => $('#btnLagerArtSave').click()},
+  settings: {stand: () => feldStand('#view-settings'), speichern: () => $('#btnSaveSettings').click()},
+  new:      {stand: () => projEdit ? feldStand('#view-new') : '', speichern: () => $('#btnCreate').click()}
+};
+let schutzStart = null;                          // {view, stand} beim Betreten
+function schutzMerken(name){
+  const s = SCHUTZ[name];
+  try { schutzStart = s ? {view:name, stand:s.stand()} : null; } catch(e){ schutzStart = null; }
+}
+function schutzGeaendert(){
+  if(!schutzStart || schutzStart.view !== current) return false;
+  try { return SCHUTZ[current].stand() !== schutzStart.stand; } catch(e){ return false; }
+}
+/* Auswahl mit mehreren Wegen hinaus, als Knöpfe im Fenster – wie bei der
+   Übersicherung. wahl: [{t, cls, fn}] – fn null schließt nur. */
+function waehlDialog(titel, text, wahl){
+  resetModal(false);
+  $('#modalTitle').textContent = titel;
+  $('#modalBody').innerHTML = (text ? `<div>${esc(text)}</div>` : '') + '<div style="margin-top:14px">'
+    + wahl.map((w, i) => `<button class="btn ${w.cls || 'ghost'}" data-wahl="${i}"${i ? ' style="margin-top:10px"' : ''}>${esc(w.t)}</button>`).join('')
+    + '</div>';
+  $('#modalOk').hidden = true; $('#modalBack').hidden = true;
+  $$('#modalBody [data-wahl]').forEach(b => b.onclick = () => {
+    $('#modal').hidden = true; pendingAck = null;
+    const f = wahl[+b.dataset.wahl].fn; if(f) f();
+  });
+  $('#modal').hidden = false;
+}
+function vorVerlassen(weiter){
+  if(!schutzGeaendert()){ weiter(); return; }
+  const s = SCHUTZ[current];
+  waehlDialog('Änderungen speichern?', 'Hier ist etwas geändert und noch nicht gespeichert.', [
+    {t:'Speichern', cls:'primary', fn:() => s.speichern(weiter)},
+    {t:'Verwerfen', cls:'danger',  fn:() => { schutzStart = null; if(current === 'new') projEdit = false; weiter(); }},
+    {t:'Weiter bearbeiten', cls:'ghost', fn:null}
+  ]);
+}
 
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-go]'); if(!b) return;
@@ -4439,7 +4512,7 @@ function renderBoard(){
   $('#boardBody').innerHTML = n === 0
     ? `<div class="rail-empty">Noch kein Stromkreis erfasst.<br>Unten beginnen.</div>`
     : listHtml();
-  $$('#boardBody [data-idx]').forEach(el => el.onclick = () => openCircuit(+el.dataset.idx));
+  $$('#boardBody [data-idx]').forEach(el => el.onclick = () => vorVerlassen(() => openCircuit(+el.dataset.idx)));
   /* Zweispaltig: der gerade rechts bearbeitete Eintrag wird links markiert */
   if(splitAktiv()){
     if(current === 'feed') btn.classList.add('picked');
@@ -4742,7 +4815,7 @@ messfeldLogik('#fIso', '#fZs', '#fIsoSug');
   const el = $(sel);
   el.oninput = () => { if(nachkomma(el.value) >= 1) messWeiter(el); };
 });
-$('#btnAddCircuit').onclick = () => openCircuit(null);
+$('#btnAddCircuit').onclick = () => vorVerlassen(() => openCircuit(null));
 
 /* --- Nr.-Feld zeigt bei mehr als 1 TE den belegten Bereich --- */
 function noStart(){
@@ -4985,7 +5058,8 @@ $('#fCable').onchange = () => {
   feedAndere();
 };
 let feedDraft = null;   // Entwurf, damit "Zurück zur Eingabe" wirklich nichts speichert
-$('#btnFeed').onclick = () => {
+$('#btnFeed').onclick = () => vorVerlassen(feedOeffnen);
+function feedOeffnen(){
   feedDraft = JSON.parse(JSON.stringify(PROJ.feed));
   feedDraft.m = feedDraft.m || {}; feedDraft.extras = feedDraft.extras || [];
   const f = feedDraft;
@@ -5000,7 +5074,7 @@ $('#btnFeed').onclick = () => {
   $('#fReason').value = f.reason || 'inaccessible';
   setSeg('#segFeedStatus', normStatus(f.status) || 'measured');
   syncFeedUi(); feedModus(); go('feed');
-};
+}
 $$('#segFeedStatus button').forEach(b => b.onclick = () => {
   /* Die Kabelart bleibt beim Statuswechsel stehen: sie ist meist auch ohne
      Messung im Verteiler ablesbar, wie bei den Stromkreisen auch. */
@@ -5062,7 +5136,7 @@ function feedModus(){
   /* Im Messen-Modus führt die Zuleitung direkt zum ersten offenen Kreis weiter;
      der schlichte Knopf tritt dann zurück. */
   $('#btnSaveFeedNext').hidden  = !mess;
-  $('#btnSaveFeed').textContent = mess ? 'Nur speichern' : 'Speichern';
+  $('#btnSaveFeed').textContent = 'Fertig';
   $('#btnSaveFeed').className   = 'btn ' + (mess ? 'ghost' : 'primary');
 }
 /* SAM: im Messen-Modus stehen Kabelart und Absicherung der Zuleitung als
@@ -5397,7 +5471,7 @@ function syncCircuitUi(){
   messKopfSetzen(mess && !samAendern);
   samKabelZeigen(mess && !samAendern && samKabelWahl !== null && !sp && dev !== 'rcd');
   $('#btnDelCircuit').hidden = mess || editIdx == null;
-  $('#btnSaveCircuit').textContent = mess ? 'Speichern & weiter' : 'Speichern & nächster Kreis';
+  $('#btnSaveCircuit').textContent = mess ? 'Weiter' : 'Nächster Kreis';
   $('#fldDevSeg').hidden = sp;              // Gerätewahl gilt dann nicht
   $('#fldChar').hidden   = sp || dev === 'rcd';      // gilt jetzt auch für FI/LS
   $('#fldPoles').hidden  = sp || (dev !== 'rcbo' && dev !== 'ls');
@@ -6418,7 +6492,7 @@ function renderBoardDocs(){
   renderDocGroup('#boardDocOpts', '#boardDocActions', liste, true);
   if(!liste.length) return;
   $('#boardDocActions').insertAdjacentHTML('beforeend',
-    `<button class="btn ghost" id="btnBoardExport" style="margin-top:10px">Dokumente ausgeben</button>`);
+    `<button class="btn ghost" id="btnBoardExport" style="margin-top:10px">Vorab ausgeben</button>`);
   $('#btnBoardExport').onclick = boardExportFragen;
 }
 /* Auswahlfenster zum Zwischenexport. Vorgewählt ist, was noch nicht hinausging –
@@ -6435,7 +6509,7 @@ function boardExportFragen(){
   ];
   if(fotos) zeilen.push({k:'fotos', label:`Fotos (${fotos})`, an: fotos > (e.fotos || 0)});
   resetModal(false);
-  $('#modalTitle').textContent = 'Dokumente ausgeben';
+  $('#modalTitle').textContent = 'Vorab ausgeben';
   $('#modalBody').innerHTML =
     `<div class="muted small">Geht über den Kurzbefehl hinaus wie im Abschluss. Das Projekt bleibt `
     + `offen; es wird nichts abgelegt und kein Material gebucht.</div>`
@@ -9366,12 +9440,12 @@ function renderChecks(){
 
   const offen = chkOffen();
   $('#checkCount').innerHTML = offen
-    ? `<div class="warn"><strong>${offen === 1 ? 'Eine Angabe fehlt' : offen + ' Angaben fehlen'}</strong>Die rot markierten Zeilen müssen gesetzt werden.</div>`
+    ? `<div class="warn"><strong>${offen === 1 ? 'Ein Prüfpunkt fehlt' : offen + ' Prüfpunkte fehlen'}</strong>Die rot markierten Zeilen müssen gesetzt werden.</div>`
     : `<div class="warn ok"><strong>Vollständig</strong>Liste durchgehen und unten bestätigen.</div>`;
   $('#checkFoot').innerHTML = `<div class="eyebrow">Abschluss</div>` + (offen
     ? `<button class="btn" disabled>Noch ${offen} offen</button>`
-    : `<button class="btn primary" data-chkgo="1">Angaben bestätigen</button>`) +
-    `<p class="muted small">Die Angaben werden so in das Protokoll übernommen, wie sie hier stehen.</p>`;
+    : `<button class="btn primary" data-chkgo="1">Prüfpunkte bestätigen</button>`) +
+    `<p class="muted small">Die Prüfpunkte werden so in das Protokoll übernommen, wie sie hier stehen.</p>`;
   bildNach(scroll);
 }
 
@@ -10336,7 +10410,7 @@ function renderArchive(){
         fotos ? ' · ' + fotos + ' Foto' + (fotos === 1 ? '' : 's') : ''}</div>
       ${(!archStand(e) && !e.hoch) ? '<div class="muted small" style="margin-top:4px">Alter Eintrag – nur als Datei zu sichern</div>' : ''}
       <div class="btn-row" style="margin-top:10px">
-        <button class="btn ghost" data-arch="${i}">Erneut sichern</button>
+        <button class="btn ghost" data-arch="${i}">Erneut ausgeben</button>
         <button class="btn ghost" data-asee="${i}">Ansehen</button>
         <button class="btn danger" data-adel="${i}">Löschen</button>
       </div>
@@ -10414,7 +10488,7 @@ async function erneutSichern(e, knopf){
        immer mit – dafür ist die Sicherung da. */
     await ablegen({projekt:true, protokoll:true, beschriftung:!!d.beschriftung,
                    material:!!d.material, fotos:!!d.fotos}, true);
-  } catch(x){ toast('Sichern nicht möglich'); }
+  } catch(x){ toast('Ausgeben nicht möglich'); }
   finally {
     PROJ = merk;
     if(knopf){ knopf.textContent = text; knopf.disabled = false; }
@@ -11018,7 +11092,7 @@ function lagerKnopf(){
   });
   k.classList.toggle('ring-rot', rot > 0);
   k.classList.toggle('ring-gelb', !rot && gelb > 0);
-  k.textContent = 'Materialbestand' + (rot ? ` · ${rot} knapp` : gelb ? ' · bestellt' : '');
+  k.textContent = 'Lager' + (rot ? ` · ${rot} knapp` : gelb ? ' · bestellt' : '');
 }
 /* Reihenfolge: Artikel aus dem Material-Stamm in dessen Reihenfolge, danach das
    Verbrauchsmaterial nach dem Alphabet. */
@@ -11249,7 +11323,7 @@ function renderLager(){
     if(+a.melde) s.push('Melden ab ' + a.melde);
     if(+a.soll)  s.push('Soll ' + a.soll);
     if(off)      s.push('bestellt ' + off);
-    if(a.stamm && !lagerImStamm(a.name)) s.push('nicht im Material-Stamm');
+    if(a.stamm && !lagerImStamm(a.name)) s.push('nicht in den Bauteilen');
     if(istFaellig.has(a.id)) s.push('Inventur fällig');
     return `<button class="list-item${z === 'rot' ? ' state-red' : z === 'gelb' ? ' state-yellow' : ''}" data-la="${esc(a.id)}">
       <div class="body"><div class="t">${esc(a.name)}</div><div class="s">${esc(s.join(' · ') || 'ohne Meldegrenze')}</div></div>
@@ -11264,7 +11338,7 @@ function renderLager(){
   if(stamm.length) h += `<div class="eyebrow">Aus der Materialliste</div>` + stamm.map(zeile).join('');
   if(frei.length)  h += `<div class="eyebrow">Verbrauchsmaterial</div>` + frei.map(zeile).join('');
   if(!arts.length) h += `<div class="rail-empty">Noch keine Artikel im Lager. Lege an, was geführt werden
-    soll – aus dem Material-Stamm oder als Verbrauchsmaterial.</div>`;
+    soll – aus den Bauteilen oder als Verbrauchsmaterial.</div>`;
   h += `<button class="btn ghost" id="btnLagerNeu" style="margin-top:14px">Artikel hinzufügen</button>`;
   $('#lagerBody').innerHTML = h;
 
@@ -11317,7 +11391,7 @@ function renderLagerArt(){
   h += `<div class="eyebrow">${neu ? 'Artikel' : 'Angaben'}</div>`;
   if(neu){
     const frei = CFG.material.filter(n => !lagerArtikelZuName(n));
-    h += `<label class="field"><span>Aus dem Material-Stamm</span><select id="lgStamm">
+    h += `<label class="field"><span>Aus den Bauteilen</span><select id="lgStamm">
         <option value="">Eigener Name (Verbrauchsmaterial)</option>
         ${frei.map(n => `<option>${esc(n)}</option>`).join('')}
       </select></label>`;
@@ -11410,11 +11484,11 @@ function lagerArtAuffrischen(){
   const kopf = $('#lgKopf');
   kopf.className = 'card lg-kopf' + (z === 'rot' ? ' state-red' : z === 'gelb' ? ' state-yellow' : '');
   kopf.innerHTML = `<div class="lg-name">${esc(a.name)}</div>
-    <div class="muted small">${a.stamm ? 'Aus dem Material-Stamm' : 'Verbrauchsmaterial'}${a.artnr ? ' · Art.-Nr. ' + esc(a.artnr) : ''}</div>
+    <div class="muted small">${a.stamm ? 'Aus den Bauteilen' : 'Verbrauchsmaterial'}${a.artnr ? ' · Art.-Nr. ' + esc(a.artnr) : ''}</div>
     <div class="lg-bestand">${LAGER_STAND[a.id] || 0}<em>${esc(lagerEinheit(a))}</em></div>
     <div class="muted small">${esc(info.join(' · '))}</div>
-    ${a.stamm && !lagerImStamm(a.name) ? `<div class="warn info" style="margin:10px 0 0">Steht nicht mehr im
-      Material-Stamm. Projekte buchen nur noch ab, was ihre Materialliste unter genau diesem Namen führt.</div>` : ''}`;
+    ${a.stamm && !lagerImStamm(a.name) ? `<div class="warn info" style="margin:10px 0 0">Steht nicht mehr in
+      den Bauteilen. Projekte buchen nur noch ab, was ihre Materialliste unter genau diesem Namen führt.</div>` : ''}`;
 
   const alle = Object.values(LAGER.buchungen).filter(b => b.a === a.id)
                      .sort((x, y) => (y.t || 0) - (x.t || 0));
