@@ -10,6 +10,25 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.161 08.10.2026 Bedienkonzept, Etappe 3: Bereichsleiste im Projekt. Unter
+                    der Kopfleiste stehen Erfassen - Messen - Pruefpunkte -
+                    Abschluss, jederzeit erreichbar, mit Zaehler (gemessen von
+                    gesamt, offene Pruefpunkte). Sie ersetzt den kleinen
+                    Messen-Schalter und den Knopf "Abschluss", der zu den
+                    Angaben fuehrte. Im Bereich Messen steht die Liste in der
+                    Messfolge, unten "Weiter messen" mit dem Kreis, zu dem es
+                    geht. Der Titel nennt Adresse und Wohnung (antippen:
+                    Projektdaten); die Karte oben im Verteiler entfaellt.
+                    Seltenes liegt unter "..." oben rechts: Projektdaten, SAM,
+                    Vorab ausgeben (Neuinstallation), Projekt loeschen.
+                    Abschluss: Dokumente mit Vorschau, Auftraggeber, Unter-
+                    schrift ohne Schalter Sofort/Spaeter - "Unterschreiben
+                    lassen" oeffnet ein Vollbild fuer den Kunden (Feld 3:1 wie
+                    bisher). Unten "Ausgeben und ablegen", davor ein Blatt, das
+                    nennt, was hinausgeht und was danach passiert (Ablage,
+                    Lagerbuchung). Ausgegeben wird erst nach bestaetigten
+                    Pruefpunkten. Rueckfragen erscheinen auf dem iPhone als
+                    Blatt von unten.
   v1.160 08.10.2026 Bedienkonzept, Etappe 2: die Startseite zeigt die offenen
                     Projekte direkt - eigene zuerst (fuenf, "Alle offenen"
                     klappt den Rest auf), darunter die der Kollegen (ab drei
@@ -1603,6 +1622,43 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
 .fortschritt{display:block;height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin-top:3px}
 .fortschritt i{display:block;height:100%;background:var(--pe)}
 #view-home [data-neu]{justify-content:flex-start}
+/* v1.161: Bereichsleiste im Projekt. Steht unter der Kopfleiste und scrollt
+   nicht mit; der Bereich Messen trägt sein Blau auch in der Unterstreichung. */
+.bereiche{flex:0 0 auto;display:grid;grid-template-columns:repeat(4,1fr);background:var(--bar);
+  border-top:1px solid #2C3327;position:relative;z-index:39}
+.bereiche[hidden]{display:none}
+.bereiche button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  min-height:46px;padding:4px 0 5px;border:0;border-bottom:3px solid transparent;background:none;color:#96A088;
+  font-family:var(--f-label);font-weight:600;font-size:12.5px;letter-spacing:.07em;text-transform:uppercase}
+.bereiche button.an{color:#fff;border-bottom-color:var(--brand)}
+.bereiche button.an[data-b="messen"]{border-bottom-color:#7FB2E4}
+.bereiche em{position:absolute;top:2px;left:calc(50% + 10px);min-width:17px;height:16px;padding:0 4px;border-radius:8px;
+  font:600 10px/16px var(--f-data);font-style:normal;letter-spacing:0;text-align:center;background:#5C6355;color:#fff}
+.bereiche em.rot{background:var(--fault)}
+.bereiche em.ok{background:var(--pe)}
+@media (max-width:359px){ .bereiche button{font-size:11px;letter-spacing:.03em} }
+header h1 small{display:block;font-family:var(--f-body);font-size:11px;font-weight:500;letter-spacing:0;
+  text-transform:none;color:#96A088;margin-top:1px;overflow:hidden;text-overflow:ellipsis}
+header h1.tippbar{cursor:pointer}
+/* Unterschrift im Vollbild (v1.161) */
+#sigView{position:fixed;inset:0;z-index:4550;background:#0D100B;color:#fff;display:flex;flex-direction:column;
+  padding:calc(14px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+#sigView[hidden]{display:none}
+#sigView .sv-kopf{font-family:var(--f-label);font-weight:600;font-size:22px;letter-spacing:.06em;text-transform:uppercase}
+#sigView .sv-kopf small{display:block;font-family:var(--f-body);font-size:13px;letter-spacing:0;text-transform:none;color:#B9C2AE;font-weight:500;margin-top:2px}
+#sigView .sv-text{font-size:14px;color:#B9C2AE;margin:10px 0 14px;line-height:1.45}
+#sigView .sv-feld{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:0}
+#sigView .sigwrap{width:100%;max-width:900px}
+#sigView #sigpad{max-width:none;border-color:#5C6355}
+#sigView .sv-quer{font-size:13px;color:#96A088;margin-top:10px;text-align:center}
+@media (orientation:landscape){ #sigView .sv-quer{display:none} #sigView .sv-text{margin:4px 0 8px} }
+#sigView .sv-fuss{display:flex;gap:10px;margin-top:14px}
+#sigView .sv-fuss .btn{flex:1;margin-top:0}
+#sigView .btn.ghost{color:#C9D2BD;border-color:#5C6355}
+.sig-vorschau{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:6px;margin-bottom:10px}
+.sig-vorschau img{display:block;width:100%;max-width:420px;aspect-ratio:3/1;margin:0 auto}
+.btn.zweizeilig{flex-direction:column;gap:0;line-height:1.2}
+.btn.zweizeilig small{font-size:13px;font-weight:500;opacity:.8;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .loeschzeile{display:block;margin:22px auto 6px;padding:12px 18px;background:none;border:0;
   color:var(--fault);font-size:15px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .btn.softred{border-color:var(--fault);color:var(--fault);background:var(--warn-bg);font-weight:600}
@@ -1888,6 +1944,14 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
 .modal-box{border-color:var(--field-border)}
 .modal-box.alert{border-color:var(--fault)}
 .modal-box.alert h2{color:var(--fault)}
+/* Rückfragen kommen auf dem iPhone als Blatt von unten (v1.161) – im Bereich
+   des Daumens statt mitten im Bild. */
+@media (max-width:700px){
+  #modal{align-items:flex-end;padding:0}
+  .modal-box{max-width:none;border-radius:18px 18px 0 0;border-width:2px 0 0;max-height:88vh;
+    padding-bottom:max(18px, env(safe-area-inset-bottom))}
+}
+
 #modalBody div{margin-bottom:8px;font-size:15px}
 
 /* ---------- Druckblätter: Aussehen für Vorschau und Ausdruck ---------- */
@@ -2573,7 +2637,15 @@ function nameGross(s){
         <path d="M7 18.5h10a4.2 4.2 0 0 0 .6-8.4A5.6 5.6 0 0 0 6.8 9.6 4.5 4.5 0 0 0 7 18.5z"/>
         <path class="an" d="M9.5 14l2 2 3.8-3.8"/><path class="ab" d="M4 4l16 16"/></svg></button>
     <button class="kopf-ico" id="btnZahnrad" type="button" aria-label="Einstellungen" hidden></button>
+    <button class="kopf-ico" id="btnMehr" type="button" aria-label="Mehr" hidden><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12h.1M12 12h.1M18 12h.1" stroke-width="3"/></svg></button>
   </header>
+  <!-- v1.161: die vier Bereiche eines Projekts (Bedienkonzept E2) -->
+  <nav class="bereiche" id="bereiche" hidden>
+    <button type="button" data-b="erfassen"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.1M4.5 12h.1M4.5 18h.1" stroke-width="2.8"/></svg><span>Erfassen</span><em hidden></em></button>
+    <button type="button" data-b="messen"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M7.5 12.5a4.5 4.5 0 0 1 9 0M12 12.5l2.6-3M8.5 16.8h7"/></svg><span>Messen</span><em hidden></em></button>
+    <button type="button" data-b="pruefpunkte"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.5h6v3H9z"/><path d="M9 5H6.5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H15M9 13.5l2 2 4-4"/></svg><span>Prüfpunkte</span><em hidden></em></button>
+    <button type="button" data-b="abschluss"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 21V3.5"/><path d="M5.5 4h12l-2.3 3.6 2.3 3.6h-12"/></svg><span>Abschluss</span><em hidden></em></button>
+  </nav>
 
   <main>
     <!-- ========== START ========== -->
@@ -2714,8 +2786,7 @@ function nameGross(s){
 
     <!-- ========== VERTEILER ========== -->
     <section class="view" id="view-board">
-      <div class="card" id="boardMeta"></div>
-      <button class="btn ghost" id="btnSamBoard" type="button" hidden style="margin-bottom:12px">SAM · Fotos und Liste</button>
+      <button class="btn ghost" id="btnSamBoard" type="button" hidden style="margin-bottom:12px">SAM: Fotos und Einträge</button>
       <div class="eyebrow">Zuleitung</div>
       <button class="list-item" id="btnFeed" style="width:100%"></button>
       <div class="eyebrow">Stromkreise</div>
@@ -2727,10 +2798,9 @@ function nameGross(s){
       <div class="eyebrow" id="boardDocTitle">Dokumente</div>
       <div class="chk-grid" id="boardDocOpts"></div>
       <div id="boardDocActions" style="margin-top:10px"></div>
-      <button class="loeschzeile" id="btnProjWeg" type="button">Projekt löschen</button>
       <div class="actionbar"><div class="inner">
-        <button class="btn accent" id="btnAddCircuit">Stromkreis hinzufügen</button>
-        <button class="btn primary" id="btnToFinish" style="margin-top:10px">Prüfpunkte</button>
+        <button class="btn primary" id="btnAddCircuit">Stromkreis hinzufügen</button>
+        <button class="btn primary zweizeilig" id="btnWeiterMessen" hidden></button>
       </div></div>
     </section>
 
@@ -2894,29 +2964,23 @@ function nameGross(s){
     <!-- ========== ABSCHLUSS ========== -->
     <section class="view" id="view-finish">
       <div id="plausiOut"></div>
-      <div class="eyebrow">Zu erstellende Dokumente</div>
+      <div class="eyebrow">Dokumente</div>
       <div class="chk-grid" id="docOpts"></div>
       <div id="docActions" style="margin-top:10px"></div>
+      <button class="btn ghost" id="btnSheets" style="margin-top:10px">Vorschau</button>
       <!-- Der Verteiler wird oft erst nach Messung und Prüfung im fertigen
            Zustand dokumentiert – die Fotos entstehen dann hier. -->
       <div id="finishPhotos" style="margin-top:10px"></div>
       <button class="btn ghost" id="btnPhotoFinish" style="margin-top:10px">Foto aufnehmen</button>
+      <div class="eyebrow">Auftraggeber</div>
+      <p class="muted small" id="agZeile" style="margin-top:0"></p>
+      <!-- v1.161: ohne Schalter Sofort/Später – nicht unterschrieben heißt später -->
       <div class="eyebrow">Unterschrift</div>
-      <div class="seg" id="segSig" style="margin-bottom:12px">
-        <button data-v="now" aria-pressed="false">Sofort</button>
-        <button data-v="later" aria-pressed="true">Später</button>
-      </div>
-      <div id="sigBlock" style="display:none">
-        <div class="sigwrap"><canvas id="sigpad"></canvas><div class="siglock" id="sigLock" hidden></div></div>
-        <div class="btn-row" style="margin-top:10px">
-          <button class="btn softred" id="btnSigClear">Löschen</button>
-          <button class="btn" id="btnSigSave">Übernehmen</button>
-        </div>
-      </div>
-      <div class="eyebrow">Ausgabe und Projekt abschließen</div>
-      <button class="btn ghost" id="btnSheets">Vorschau</button>
-      <button class="btn accent" id="btnExportDocs">Ausgeben und ablegen</button>
-      <p class="muted small" id="agZeile"></p>
+      <div id="sigVorschau"></div>
+      <button class="btn" id="btnSigOeffnen" type="button">Unterschreiben lassen</button>
+      <div class="actionbar"><div class="inner">
+        <button class="btn primary" id="btnExportDocs">Ausgeben und ablegen</button>
+      </div></div>
     </section>
 
     <!-- ========== ANGABEN ========== -->
@@ -3074,6 +3138,21 @@ function nameGross(s){
   </div>
 </div>
 
+<!-- v1.161: Unterschrift im Vollbild – nichts scrollt, nichts anderes lässt sich antippen -->
+<div id="sigView" hidden>
+  <div class="sv-kopf">Unterschrift<small>Auftraggeber / Anlagenbetreiber</small></div>
+  <p class="sv-text" id="sigText"></p>
+  <div class="sv-feld">
+    <div class="sigwrap"><canvas id="sigpad"></canvas></div>
+    <p class="sv-quer">Für mehr Platz das Gerät quer halten.</p>
+  </div>
+  <div class="sv-fuss">
+    <button class="btn ghost" id="btnSigAbbr" type="button">Abbrechen</button>
+    <button class="btn ghost" id="btnSigClear" type="button">Löschen</button>
+    <button class="btn" id="btnSigSave" type="button" style="background:var(--brand);border-color:var(--brand);color:#1A1F16">Fertig</button>
+  </div>
+</div>
+
 <div id="fotoView" hidden>
   <div class="fv-kopf">
     <span class="fv-zaehler" id="fvZaehler"></span>
@@ -3228,7 +3307,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.160';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.161';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 08.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -3885,7 +3964,7 @@ const TITLES = {
   home:'E-Assistent', new:'Neues Projekt', board:'Verteiler', circuit:'Stromkreis',
   feed:'Zuleitung', material:'Material', finish:'Abschluss',
   mode:'Auswahl', resume:'Fortsetzen', archive:'Ablage', settings:'Einstellungen',
-  sheets:'Vorschau', checks:'Prüfpunkte', sam:'SAM · Beta', samliste:'SAM · Prüfen', training:'Trainingsordner', samprobe:'SAM · Probelauf', kamprobe:'Kamera-Probe',
+  sheets:'Vorschau', checks:'Prüfpunkte', sam:'SAM: Fotos', samliste:'SAM: Einträge prüfen', training:'Trainingsordner', samprobe:'SAM · Probelauf', kamprobe:'Kamera-Probe',
   lager:'Lager', lagerart:'Artikel', lagerbest:'Bestellliste', lagerein:'Lieferung'
 };
 const PROJECT_VIEWS = ['board','circuit','feed','material','finish','sheets','checks','sam','samliste'];
@@ -3921,7 +4000,7 @@ const messModus = () => !!PROJ && PROJ.modus === 'mess';
 function modusZeigen(name){
   const wo = name === 'board' || name === 'circuit' || name === 'feed';
   const an = wo && messModus();
-  $('#btnModus').hidden   = !(wo && PROJ);
+  $('#btnModus').hidden   = true;                  // v1.161: ersetzt durch die Bereichsleiste
   $('#btnModus').setAttribute('aria-pressed', String(an));
   $('#btnModus').setAttribute('aria-label',
     an ? 'Messen-Modus ausschalten' : 'Messen-Modus einschalten');
@@ -3937,6 +4016,75 @@ $('#btnModus').onclick = () => {
   else if(current === 'circuit') syncCircuitUi();    // Eingabeteil kommt oder geht
   else if(current === 'feed')    feedModus();        // Eingabeteil und Knopf kommen oder gehen
   toast(messModus() ? 'Messen-Modus' : 'Bearbeiten-Modus');
+};
+
+/* ---------- Bereiche eines Projekts (v1.161, Bedienkonzept E2) ----------
+   Erfassen · Messen · Prüfpunkte · Abschluss. Erfassen und Messen sind dieselbe
+   Verteileransicht im jeweiligen Modus (PROJ.modus), so wie bisher mit dem
+   Schalter in der Kopfzeile. Alle vier sind jederzeit erreichbar: im Alltag
+   wird ein Kreis oft erfasst und gleich gemessen. Bis v1.160 führte der Knopf
+   "Abschluss" zur Ansicht "Angaben" – Name und Ziel passten nicht. */
+const BEREICH_VIEWS = ['board','circuit','feed','material','checks','finish'];
+function bereichVon(name){
+  if(['board','circuit','feed'].includes(name)) return messModus() ? 'messen' : 'erfassen';
+  if(name === 'material') return stack[stack.length - 1] === 'finish' ? 'abschluss' : 'erfassen';
+  if(name === 'checks') return 'pruefpunkte';
+  if(name === 'finish') return 'abschluss';
+  return null;
+}
+function bereicheZeigen(name){
+  const nav = $('#bereiche');
+  const b = PROJ && BEREICH_VIEWS.includes(name) ? bereichVon(name) : null;
+  nav.hidden = !b;
+  if(!b) return;
+  $$('#bereiche button').forEach(k => k.classList.toggle('an', k.dataset.b === b));
+  const st = projektStand(PROJ);
+  const zm = $('#bereiche [data-b="messen"] em');
+  zm.hidden = !st.gesamt;
+  zm.className = st.fertig === st.gesamt ? 'ok' : '';
+  zm.textContent = st.fertig === st.gesamt ? '✓' : `${st.fertig}/${st.gesamt}`;
+  const zp = $('#bereiche [data-b="pruefpunkte"] em'), off = chkOffen();
+  zp.hidden = !off && !PROJ.checksDone;
+  zp.className = off ? 'rot' : 'ok';
+  zp.textContent = off ? String(off) : '✓';
+}
+function bereichWechseln(b){
+  if(!PROJ) return;
+  const basis = archOffen ? ['home', 'archive'] : ['home'];
+  if(b === 'erfassen' || b === 'messen'){
+    const m = b === 'messen' ? 'mess' : 'edit';
+    if(PROJ.modus !== m){ PROJ.modus = m; saveProj(); }
+    stack = basis; go('board', false); return;
+  }
+  stack = basis; go(b === 'pruefpunkte' ? 'checks' : 'finish', false);
+}
+$$('#bereiche button').forEach(k => k.onclick = () => vorVerlassen(() => bereichWechseln(k.dataset.b)));
+
+/* Titel im Projekt: Adresse und Wohnung, darunter die Art. Antippen öffnet die
+   Projektdaten. */
+function projektTitel(){
+  const t = $('#title');
+  const kurz = ((PROJ.address || '').split('\n')[0] || 'Ohne Adresse').replace(/straße\b/i, 'str.')
+    + (PROJ.flat ? ' · ' + flatLabel(PROJ.flat).replace(/^Whg\. /, '') : '');
+  t.innerHTML = `${esc(kurz)}<small>${esc(MODES[PROJ.mode || 'wdh'].label)}${archOffen ? ' · Ablage' : ''}</small>`;
+  t.classList.add('tippbar');
+}
+$('#title').onclick = () => {
+  if($('#title').classList.contains('tippbar') && PROJ && !archOffen) vorVerlassen(projektAendern);
+};
+
+/* "…" oben rechts: Seltenes, das nicht in den Weg gehört (v1.161). */
+$('#btnMehr').onclick = () => {
+  if(!PROJ) return;
+  const n = circuits().length, wahl = [];
+  if(!archOffen) wahl.push({t:'Projektdaten ändern', fn:() => vorVerlassen(projektAendern)});
+  if(PROJ.sam)   wahl.push({t:'SAM: Fotos und Einträge', fn:() => vorVerlassen(() => go('sam'))});
+  if(!archOffen && (PROJ.mode || 'wdh') === 'neu') wahl.push({t:'Vorab ausgeben', fn:boardExportFragen});
+  if(!archOffen) wahl.push({t:'Projekt löschen', cls:'danger', fn:() => projektLoeschen(PROJ)});
+  wahl.push({t:'Schließen', cls:'ghost', fn:null});
+  waehlDialog(MODES[PROJ.mode || 'wdh'].label,
+    `${PROJ.tester || 'Ohne Prüfer'} · ${PROJ.device} · Beginn ${dstr(PROJ.startedAt)} ${tstr(PROJ.startedAt)} · `
+    + `${n} Stromkreis${n === 1 ? '' : 'e'}${PROJ.abwNr ? ' · Abweichende Nummerierung' : ''}`, wahl);
 };
 
 function go(name, push = true){
@@ -3966,6 +4114,9 @@ function go(name, push = true){
   modusZeigen(name);
   $('#title').textContent = TITLES[name] || 'E-Assistent';
   if(name === 'new' && projEdit) $('#title').textContent = 'Aktuelles Projekt';
+  $('#title').classList.remove('tippbar');
+  if(PROJ && ['board','checks','finish'].includes(name)) projektTitel();
+  $('#btnMehr').hidden = !(PROJ && ['board','checks','finish'].includes(name));
   if(name === 'circuit'){ kachelnBegrenzen($('#nameSug')); kachelnBegrenzen($('#roomOpts')); }
   if($('#toast').classList.contains('show')) toastSetzen();   // neue Ansicht, neue Leistenhöhe
   const startseite = name === 'home';
@@ -3976,7 +4127,7 @@ function go(name, push = true){
   $('#btnZahnrad').hidden = !startseite;
   $('header').classList.toggle('start', startseite);
   const tag = $('#tag');
-  if(archOffen && PROJECT_VIEWS.includes(name)){
+  if(archOffen && PROJECT_VIEWS.includes(name) && !['board','checks','finish'].includes(name)){
     tag.hidden = false; tag.textContent = 'Ablage';
   } else tag.hidden = true;
   bildNach(0);                                     // v1.128: Bildlauf in <main>
@@ -3999,6 +4150,7 @@ function go(name, push = true){
   if(name === 'lagerein')  renderLagerEin();
   syncSplit();
   keepAwake(PROJECT_VIEWS.includes(name));
+  bereicheZeigen(name);                            // v1.161
   schutzMerken(name);                              // v1.159: Stand für die Rückfrage beim Verlassen
 }
 $('#btnZahnrad').innerHTML = GEAR_SVG;
@@ -4561,16 +4713,7 @@ function renderBoard(){
         <span class="s">Noch nicht erfasst</span>
       </span>`;
   const n = circuits().length;
-  $('#boardMeta').innerHTML = `
-    <div><strong>${esc(PROJ.address.split('\n')[0] || 'Ohne Adresse')}${
-      PROJ.flat ? ' · ' + esc(flatLabel(PROJ.flat)) : ''}</strong></div>
-    <div class="muted small">${esc(PROJ.tester || 'Ohne Prüfer')} · ${esc(PROJ.device)}${
-      PROJ.abwNr ? ' · Abweichende Nummerierung' : ''}<br>
-    Beginn ${dstr(PROJ.startedAt)} ${tstr(PROJ.startedAt)} · ${n} Stromkreis${n===1?'':'e'}
-    · <button class="linkbtn" id="btnProjEdit">ändern</button></div>`;
-  $('#btnProjEdit').onclick = projektAendern;
-  $('#btnProjWeg').hidden = !!archOffen;           // Abgelegtes löscht die Ablage
-  $('#btnProjWeg').onclick = () => projektLoeschen(PROJ);
+  weiterMessenKnopf();                               // v1.161
   $('#boardBody').innerHTML = n === 0
     ? `<div class="rail-empty">Noch kein Stromkreis erfasst.<br>Unten beginnen.</div>`
     : listHtml();
@@ -4611,13 +4754,20 @@ function listHtml(){
   /* Sonst ordnet die Nummer die Anzeige. Weicht sie ab, bleibt die Reihenfolge
      der Erfassung stehen, und Reihen gibt es nicht – ohne Positionen ließe sich
      nicht sagen, wo eine Reihe endet. */
-  if(!abwNr()) entries.sort((a, b) => {
+  /* Im Bereich Messen (v1.161) steht die Liste in der Messfolge – dieselbe,
+     der "Weiter" folgt –, ohne Reihen und ohne sonstige Geräte, an denen
+     nichts zu messen ist. */
+  const mess = messModus();
+  if(mess){
+    const folge = messFolge();
+    entries.splice(0, entries.length, ...folge.map(it => ({it, idx: PROJ.items.indexOf(it)})));
+  } else if(!abwNr()) entries.sort((a, b) => {
     const na = parseInt(a.it.no, 10), nb = parseInt(b.it.no, 10);
     return (isFinite(na) ? na : Infinity) - (isFinite(nb) ? nb : Infinity);
   });
   let out = '', lastRow = null;
   entries.forEach(({it, idx}) => {
-    if(!abwNr()){
+    if(!abwNr() && !mess){
       const r = rowOf(it);
       if(r !== lastRow){ out += `<div class="row-head">Reihe ${r}</div>`; lastRow = r; }
     }
@@ -4645,7 +4795,29 @@ function listHtml(){
   return out;
 }
 
-$('#btnToFinish').onclick = () => go('checks');
+/* Bereich Messen: die Hauptaktion nennt den Kreis, zu dem sie springt
+   (v1.161). Ist alles gemessen, führt sie zu den Prüfpunkten. */
+function weiterMessenZiel(){
+  const f = PROJ.feed || blankFeed();
+  if(f.cable == null || missingValues(f)) return {feed:true, text:'Zuleitung'};
+  const i = naechsterOffenerKreis({});
+  if(i < 0) return null;
+  const c = PROJ.items[i];
+  return {idx:i, text:[circuitLabel(c), c.name, c.room].filter(x => String(x || '').trim()).join(' · ')};
+}
+function weiterMessenKnopf(){
+  const k = $('#btnWeiterMessen');
+  k.hidden = !messModus();
+  if(k.hidden) return;
+  const z = weiterMessenZiel();
+  k.innerHTML = z ? `<span>Weiter messen →</span><small>${esc(z.text)}</small>`
+                  : `<span>Alles gemessen · Prüfpunkte →</span>`;
+  k.onclick = () => {
+    const ziel = weiterMessenZiel();
+    if(!ziel){ bereichWechseln('pruefpunkte'); return; }
+    if(ziel.feed) feedOeffnen(); else openCircuit(ziel.idx);
+  };
+}
 
 /* ============================================================
    STROMKREIS — Eingabemaske
@@ -6551,11 +6723,9 @@ function renderBoardDocs(){
      gehen dort oft vorab hinaus, lange bevor der Abschluss ansteht. */
   const liste = imVerteiler() ? DOCS.filter(d => d.board) : [];
   $('#boardDocTitle').hidden = !liste.length;      // ohne Inhalt auch keine Überschrift
+  $('#boardDocTitle').textContent = 'Material';
   renderDocGroup('#boardDocOpts', '#boardDocActions', liste, true);
-  if(!liste.length) return;
-  $('#boardDocActions').insertAdjacentHTML('beforeend',
-    `<button class="btn ghost" id="btnBoardExport" style="margin-top:10px">Vorab ausgeben</button>`);
-  $('#btnBoardExport').onclick = boardExportFragen;
+  /* "Vorab ausgeben" steht seit v1.161 unter "…" und im Abschluss. */
 }
 /* Auswahlfenster zum Zwischenexport. Vorgewählt ist, was noch nicht hinausging –
    dieselbe Rechnung wie im Abschluss; bei den Fotos zählt die Anzahl. Die Zeile
@@ -6604,29 +6774,45 @@ function renderFinish(){
     noVals.map(c => `<div>${c.no ? 'Kreis ' + esc(circuitLabel(c)) + ' · ' : ''}${esc(c.name || 'ohne Bezeichnung')}</div>`).join('') + `</div>`;
   if(overLim.length) h += `<div class="warn info"><strong>Grenzwert-Hinweise</strong>` +
     overLim.map(c => `<div>${c.no ? 'Kreis ' + esc(circuitLabel(c)) + ' · ' : ''}${esc(c.name || 'ohne Bezeichnung')}</div>`).join('') + `</div>`;
-  if(!h) h = `<div class="warn ok"><strong>Vollständig</strong>Keine offenen Punkte.</div>`;
+  /* v1.161: der Abschluss ist jederzeit erreichbar. Ausgegeben wird aber
+     erst nach bestätigten Prüfpunkten – damit steht das Ende der Prüfung fest. */
+  if(!PROJ.checksDone) h = `<div class="warn gelb"><strong>Prüfpunkte noch nicht bestätigt</strong>`
+    + `Erst danach lässt sich ausgeben. <button class="linkbtn" id="finZuPruef">Zu den Prüfpunkten</button></div>` + h;
+  if(!h) h = `<div class="warn ok"><strong>Bereit zur Ausgabe</strong>${PROJ.finishedAt
+    ? `Ende ${tstr(PROJ.finishedAt)} · Dauer ${Math.max(0, Math.round((PROJ.finishedAt - PROJ.startedAt) / 60000))} min` : 'Keine offenen Punkte.'}</div>`;
   $('#plausiOut').innerHTML = h;
+  const zp = $('#finZuPruef'); if(zp) zp.onclick = () => bereichWechseln('pruefpunkte');
   docsVorwahl(); renderDocs(); renderPhotos();   // der Streifen steht auch hier
   renderAuftraggeber();
-  if(PROJ.signature) sigMode = PROJ.signature.mode === 'now' ? 'now' : 'later';
-  setSeg('#segSig', sigMode);
-  $('#sigBlock').style.display = sigMode === 'now' ? '' : 'none';
-  if(sigMode === 'now') initPad();
-  setSigLock(!!(PROJ.signature && PROJ.signature.data));
+  const sig = PROJ.signature && PROJ.signature.data;
+  $('#sigVorschau').innerHTML = sig ? `<div class="sig-vorschau"><img src="${sig}" alt="Unterschrift"></div>` : '';
+  $('#btnSigOeffnen').textContent = sig ? 'Unterschrift ändern' : 'Unterschreiben lassen';
+  const ex = $('#btnExportDocs');
+  ex.textContent = archOffen ? 'Erneut ausgeben' : 'Ausgeben und ablegen';
+  ex.disabled = !PROJ.checksDone;
 }
-$$('#segSig button').forEach(b => b.onclick = () => {
-  sigMode = b.dataset.v; setSeg('#segSig', sigMode);
-  $('#sigBlock').style.display = sigMode === 'now' ? '' : 'none';
-  if(sigMode === 'now'){
-    /* leeren Später-Vermerk wegräumen, sonst schaltet die Ansicht beim nächsten
-       Aufruf wieder auf „Später“ zurück */
-    if(PROJ.signature && !PROJ.signature.data){ PROJ.signature = null; saveProj(); }
-    initPad();
-  }else{
-    setSigLock(false);
-    PROJ.signature = {mode:'later', at:null, data:null}; saveProj(); toast('Wird später unterschrieben');
-  }
-});
+
+/* --- Unterschrift im Vollbild (v1.161) ---
+   Der Kunde bekommt einen eigenen Bildschirm: oben in einem Satz, wofür er
+   unterschreibt, darunter das Feld über die ganze Breite (3:1 wie bisher, damit
+   die Unterschrift im Protokoll nicht gestaucht wird). Abbrechen lässt alles,
+   wie es war; Löschen leert das Feld; Fertig übernimmt. */
+let sigGezeichnet = false, sigGeleert = false;
+function sigOeffnen(){
+  if(!PROJ) return;
+  const b = chkItem('bewertung'), w = b ? chkWert(b).v : null;
+  const erg = w ? ((b.opts.find(o => o[0] === w) || [])[1] || '') : '';
+  $('#sigText').textContent = `Prüfprotokoll ${((PROJ.address || '').split('\n')[0] || '')}${PROJ.flat ? ', ' + flatLabel(PROJ.flat) : ''}`
+    + ` · Prüfung vom ${dstr(PROJ.startedAt)}${erg ? ' · ' + erg : ''}`;
+  sigGezeichnet = false; sigGeleert = false;
+  sigMode = 'now';
+  $('#sigView').hidden = false;
+  requestAnimationFrame(() => initPad());
+}
+function sigSchliessen(){ $('#sigView').hidden = true; drawing = false; if(current === 'finish') renderFinish(); }
+$('#btnSigOeffnen').onclick = sigOeffnen;
+$('#btnSigAbbr').onclick = sigSchliessen;
+window.addEventListener('resize', () => { if(!$('#sigView').hidden && !sigGezeichnet) initPad(); });
 
 /* --- Auftraggeber für den Einzelfall ---
    Normalerweise steht er in den Einstellungen und gilt für alle Prüfungen.
@@ -6684,7 +6870,7 @@ function initPad(){
 (function bindPad(){
   const cv = $('#sigpad');
   const xy = p => { const r = cv.getBoundingClientRect(); return [p.clientX - r.left, p.clientY - r.top]; };
-  const start = p => { if(!padCtx) return; drawing = true; const [x,y] = xy(p); padCtx.beginPath(); padCtx.moveTo(x,y); };
+  const start = p => { if(!padCtx) return; drawing = true; sigGezeichnet = true; const [x,y] = xy(p); padCtx.beginPath(); padCtx.moveTo(x,y); };
   const move  = p => { if(!drawing || !padCtx) return; const [x,y] = xy(p); padCtx.lineTo(x,y); padCtx.stroke(); };
   const end   = () => { drawing = false; };
 
@@ -6700,24 +6886,16 @@ function initPad(){
 })();
 $('#btnSigClear').onclick = () => {
   const cv = $('#sigpad'); if(padCtx) padCtx.clearRect(0, 0, cv.width, cv.height);
-  /* auch die übernommene Unterschrift verwerfen, sonst stünde in den Projekt-
-     daten noch die alte, während das Feld schon leer ist */
-  if(PROJ.signature && PROJ.signature.data){ PROJ.signature = null; saveProj(); }
-  setSigLock(false);
+  sigGezeichnet = false; sigGeleert = true;
 };
-
-/* Übernommene Unterschrift liegt hinter einem Grauschleier und ist gesperrt.
-   Derselbe Knopf hebt die Sperre wieder auf. */
-let sigLocked = false;
-function setSigLock(an){
-  sigLocked = an;
-  $('#sigLock').hidden = !an;
-  $('#btnSigSave').textContent = an ? 'Bearbeiten' : 'Übernehmen';
-}
 $('#btnSigSave').onclick = () => {
-  if(sigLocked){ setSigLock(false); return; }
-  PROJ.signature = {mode:'now', at: Date.now(), data: $('#sigpad').toDataURL('image/png')};
-  saveProj(); setSigLock(true); toast('Unterschrift übernommen');
+  if(sigGezeichnet){
+    PROJ.signature = {mode:'now', at: Date.now(), data: $('#sigpad').toDataURL('image/png')};
+    saveProj(); toast('Unterschrift übernommen');
+  } else if(sigGeleert && PROJ.signature){
+    PROJ.signature = null; saveProj(); toast('Unterschrift entfernt');
+  }
+  sigSchliessen();
 };
 
 /* --- Export --- */
@@ -9527,8 +9705,8 @@ $('#view-checks').addEventListener('click', e => {
       PROJ.checksOk = {};
     }
     PROJ.checksDone = true;
-    if(PROJ.finishedAt){ saveProj(); go('finish'); return; }   // schon festgeschrieben
-    zeitPruefen(ts => { PROJ.finishedAt = ts; saveProj(); go('finish'); });
+    if(PROJ.finishedAt){ saveProj(); bereichWechseln('abschluss'); return; }   // schon festgeschrieben
+    zeitPruefen(ts => { PROJ.finishedAt = ts; saveProj(); bereichWechseln('abschluss'); });
     return;
   }
   const b = e.target.closest('.seg button'); if(!b) return;
@@ -10293,9 +10471,32 @@ async function ablegen(wahl, nochmal, zwischen){
 /* Im Abschluss ist die Auswahl schon in der Ansicht getroffen – der Export
    nimmt sie unverändert und legt die Projektdaten immer mit dazu. */
 $('#btnExportDocs').onclick = () => {
-  if(!PROJ) return;
+  if(!PROJ || !PROJ.checksDone) return;
   saveProj();
   const d = PROJ.docs || {};
+  /* v1.161: vorher sagt ein Blatt, was hinausgeht und was danach passiert –
+     das Ablegen lässt sich nicht zurücknehmen (Bedienkonzept L5). */
+  const geht = [d.protokoll ? 'Prüfprotokoll' + (PROJ.signature && PROJ.signature.data ? ', unterschrieben' : ', ohne Unterschrift') : null,
+    d.beschriftung ? 'Verteilerbeschreibung' : null, d.material ? 'Materialaufwand' : null,
+    d.fotos && (PROJ.photos || []).length ? `${(PROJ.photos || []).length} Foto${(PROJ.photos || []).length === 1 ? '' : 's'}` : null,
+    'Projektdatei (Sicherung)'].filter(Boolean);
+  let buchen = 0;
+  try { const pl = !archOffen && lagerProjektPlan(PROJ); buchen = pl ? pl.buchungen.length : 0; } catch(e){}
+  const danach = archOffen ? ['Der Eintrag bleibt in der Ablage.']
+    : ['Das Projekt wandert in die Ablage und verschwindet aus „Offen“ – auf allen Geräten.',
+       buchen ? `Im Lager werden ${buchen} Position${buchen === 1 ? '' : 'en'} abgebucht.` : 'Im Lager wird nichts gebucht.'];
+  resetModal(false);
+  $('#modalTitle').textContent = archOffen ? 'Erneut ausgeben' : 'Ausgeben und ablegen';
+  $('#modalBody').innerHTML = `<div class="small" style="font-weight:600">Geht hinaus</div>`
+    + geht.map(t => `<div>✓ ${esc(t)}</div>`).join('')
+    + `<div class="small" style="font-weight:600;margin-top:10px">Danach</div>`
+    + danach.map(t => `<div class="muted">${esc(t)}</div>`).join('');
+  $('#modalOk').textContent = 'Zum Kurzbefehl';
+  $('#modalBack').textContent = 'Abbrechen';
+  pendingAck = () => ausgebenJetzt(d);
+  $('#modal').hidden = false;
+};
+function ausgebenJetzt(d){
   /* Aus der Ablage heraus wird nur exportiert, nicht noch einmal abgelegt –
      der Eintrag liegt schon dort. Zurück geht es dann in die Ablage statt auf
      den Startbildschirm, denn dort kam man her. */
@@ -10303,7 +10504,7 @@ $('#btnExportDocs').onclick = () => {
   ablegen({projekt:true, protokoll:!!d.protokoll, beschriftung:!!d.beschriftung,
            material:!!d.material, fotos:!!d.fotos}, ausAblage)
     .then(() => { if(ausAblage){ stack = ['home']; go('archive', false); } });
-};
+}
 
 /* --- In die Ablage legen ---
    Die Ablage ist das Sicherheitsnetz: geht beim Export etwas schief und fällt
