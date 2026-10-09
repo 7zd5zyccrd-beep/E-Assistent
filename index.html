@@ -10,6 +10,21 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.167 09.10.2026 Qualitaetskontrolle, Paket 1b: Datenwege. iPad: Nach
+                    "Speichern" in der Rueckfrage oeffnet sich der angetippte
+                    Kreis, nicht der, der nach dem Umsortieren an seinem Platz
+                    steht. "Weiter messen", "SAM: Fotos und Eintraege" und
+                    "Material bearbeiten" fragen vor dem Verlassen wie ueberall;
+                    links verschwindet "Weiter messen", solange rechts ein Kreis
+                    offen ist, und rechts nennt "Weiter -> 8" das Ziel. Das
+                    Messgeraet in den Einstellungen ist jetzt wirklich nur fuer
+                    dieses Geraet (vorher aenderte es die Vorauswahl fuer alle).
+                    Ein sonstiges Geraet oeffnet mit "Sonstiges". Neues Projekt
+                    und "Neuer Eintrag" einer Liste fragen beim Zurueck. Eine
+                    Aenderung in den Einstellungen schickt nur diesen Wert in den
+                    Abgleich; kommt eine Aenderung von Kollegen, springt die Seite
+                    nicht nach oben. Erneutes Ausgeben nennt die Lagerbuchung.
+                    "Fertig" auf einem leeren neuen Kreis legt nichts an.
   v1.166 09.10.2026 Qualitaetskontrolle, Paket 1a: Unterschrift und Abschluss.
                     Drehen des Geraets beim Unterschreiben leert das Feld nicht
                     mehr (ein alter Waechter baute es neu auf, "Fertig" sicherte
@@ -3508,7 +3523,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.166';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.167';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4365,7 +4380,7 @@ $('#btnWolke').onclick = () => {
 };
 $('#btnBack').onclick = () => {
   if(current === 'home'){ go('settings'); return; }
-  if(settingsZurueck()) return;                    // v1.164: Unterseiten der Einstellungen
+  if(current === 'settings' && setSeite !== 'start'){ vorVerlassen(settingsZurueck); return; }   // v1.164, Rückfrage v1.167
   vorVerlassen(() => { const p = stack.pop(); if(p) go(p, false); });
 };
 
@@ -4387,7 +4402,14 @@ const SCHUTZ = {
   lagerart: {stand: () => ['#lgName','#lgStamm','#lgEinheit','#lgMelde','#lgSoll','#lgVpe','#lgArtnr','#lgStart']
                .map(id => { const e = $(id); return e ? e.value : ''; }).join('\u0001'),
              speichern: () => $('#btnLagerArtSave').click()},
-  new:      {stand: () => projEdit ? feldStand('#view-new') : '', speichern: () => $('#btnCreate').click()}
+  /* v1.167: auch beim Anlegen; mit SAM legt "Speichern" ohne Fotos an,
+     damit nicht still die Kamera aufgeht. */
+  new:      {stand: () => feldStand('#view-new'), knopf: () => projEdit ? 'Speichern' : 'Projekt anlegen',
+             speichern: () => projEdit || $('#btnCreateOhne').hidden ? $('#btnCreate').click() : $('#btnCreateOhne').click()},
+  settings: {stand: () => setSeite === 'liste' ? $('#listeNeu').value.trim() + '\u0001' + $('#listeNeuTe').value.trim() : '',
+             knopf: () => 'Hinzufügen',
+             speichern: weiter => { $('#btnListeNeu').click(); weiter(); },
+             verwerfen: () => { $('#listeNeu').value = ''; $('#listeNeuTe').value = ''; }}
 };
 let schutzStart = null;                          // {view, stand} beim Betreten
 function schutzMerken(name){
@@ -4417,15 +4439,15 @@ function vorVerlassen(weiter){
   if(!schutzGeaendert()){ weiter(); return; }
   const s = SCHUTZ[current];
   waehlDialog('Änderungen speichern?', 'Hier ist etwas geändert und noch nicht gespeichert.', [
-    {t:'Speichern', cls:'primary', fn:() => s.speichern(weiter)},
-    {t:'Verwerfen', cls:'danger',  fn:() => { schutzStart = null; if(current === 'new') projEdit = false; weiter(); }},
+    {t:s.knopf ? s.knopf() : 'Speichern', cls:'primary', fn:() => s.speichern(weiter)},
+    {t:'Verwerfen', cls:'danger',  fn:() => { if(s.verwerfen) s.verwerfen(); else schutzStart = null; if(current === 'new') projEdit = false; weiter(); }},
     {t:'Weiter bearbeiten', cls:'ghost', fn:null}
   ]);
 }
 
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-go]'); if(!b) return;
-  if(b.dataset.start) startProject(); else go(b.dataset.go);
+  vorVerlassen(() => { if(b.dataset.start) startProject(); else go(b.dataset.go); });   // v1.167
 });
 
 /* ---------- Startseite ---------- */
@@ -4548,7 +4570,7 @@ function startProject(mode){
   $('#npFlat').value    = '';
   renderFlatSug();
   $('#npTester').value  = CFG.tester || '';
-  fillSelect($('#npDevice'), CFG.devices, CFG.devices[0]);
+  fillSelect($('#npDevice'), CFG.devices, meinGeraet());
   $('#npAbwNr').checked = false;
   abwNrFeld(mode);
   /* v1.164: die abweichende Nummerierung gehört zum Verteiler – sie steht in den
@@ -4983,7 +5005,12 @@ function renderBoard(){
   $('#boardBody').innerHTML = n === 0
     ? `<div class="rail-empty">Noch kein Stromkreis erfasst.<br>Unten beginnen.</div>`
     : listHtml();
-  $$('#boardBody [data-idx]').forEach(el => el.onclick = () => vorVerlassen(() => openCircuit(+el.dataset.idx)));
+  /* v1.167: an der Kennung merken – "Speichern" in der Rückfrage sortiert die
+     Liste um, der Platz zeigte danach auf einen anderen Kreis. */
+  $$('#boardBody [data-idx]').forEach(el => el.onclick = () => {
+    const cid = kreisKennung(+el.dataset.idx);
+    vorVerlassen(() => { const i = kreisNachKennung(cid); if(i >= 0) openCircuit(i); });
+  });
   /* Zweispaltig: der gerade rechts bearbeitete Eintrag wird links markiert */
   if(splitAktiv()){
     if(current === 'feed') btn.classList.add('picked');
@@ -5068,6 +5095,12 @@ function listHtml(){
   return out;
 }
 
+function kreisKennung(idx){
+  const c = PROJ.items[idx]; if(!c) return null;
+  if(!c.cid) c.cid = neueKennung('K');
+  return c.cid;
+}
+const kreisNachKennung = cid => PROJ.items.findIndex(c => c.cid === cid);
 /* Bereich Messen: die Hauptaktion nennt den Kreis, zu dem sie springt
    (v1.161). Ist alles gemessen, führt sie zu den Prüfpunkten. */
 function weiterMessenZiel(){
@@ -5080,16 +5113,17 @@ function weiterMessenZiel(){
 }
 function weiterMessenKnopf(){
   const k = $('#btnWeiterMessen');
-  k.hidden = !messModus();
+  /* v1.167: im Zweispalten-Layout nicht neben dem rechten "Weiter" */
+  k.hidden = !messModus() || (splitAktiv() && current !== 'board');
   if(k.hidden) return;
   const z = weiterMessenZiel();
   k.innerHTML = z ? `<span>Weiter messen →</span><small>${esc(z.text)}</small>`
                   : `<span>Alles gemessen · Prüfpunkte →</span>`;
-  k.onclick = () => {
+  k.onclick = () => vorVerlassen(() => {          // v1.167: Ziel erst nach dem Speichern bestimmen
     const ziel = weiterMessenZiel();
     if(!ziel){ bereichWechseln('pruefpunkte'); return; }
     if(ziel.feed) feedOeffnen(); else openCircuit(ziel.idx);
-  };
+  });
 }
 
 /* ============================================================
@@ -5239,7 +5273,7 @@ function openCircuit(idx){
   fillSelect($('#cTe'),    TE_OPTIONS, String(draft.te || '1'));
   paintCableList(draft.cable, true);                 // v1.127: nach Polen und TE, Gespeichertes bleibt
   fillSelect($('#cSpecial'), ['—', ...specialNames()], draft.special || '—');
-  setSeg('#segDevice', draft.device); setSeg('#segStatus', draft.status);
+  setSeg('#segDevice', draft.special ? 'other' : draft.device); setSeg('#segStatus', draft.status);   // v1.167: Sonstiges
   paintTypeList(); paintCharList();
   $('#cName').value = draft.name; $('#cRoom').value = draft.room;
   sugPath = []; roomFilter = null; $('#nameSug').hidden = true;
@@ -5644,6 +5678,8 @@ function feedModus(){
   /* Im Messen-Modus führt die Zuleitung direkt zum ersten offenen Kreis weiter;
      der schlichte Knopf tritt dann zurück. */
   $('#btnSaveFeedNext').hidden  = !mess;
+  const zf = mess ? naechsterOffenerKreis('0') : -1;  // v1.167
+  $('#btnSaveFeedNext').textContent = zf >= 0 ? 'Weiter → ' + (circuitLabel(PROJ.items[zf]) || '–') : 'Weiter';
   $('#btnSaveFeed').textContent = 'Fertig';
   $('#btnSaveFeed').className   = 'btn ' + (mess ? 'ghost' : 'primary');
 }
@@ -6055,7 +6091,9 @@ function syncCircuitUi(){
   messKopfSetzen(mess && !samAendern);
   samKabelZeigen(mess && !samAendern && samKabelWahl !== null && !sp && dev !== 'rcd');
   $('#btnDelCircuit').hidden = mess || editIdx == null;
-  $('#btnSaveCircuit').textContent = mess ? 'Weiter' : 'Nächster Kreis';
+  /* v1.167: "Weiter" nennt den Kreis, zu dem es geht */
+  const zi = mess ? naechsterOffenerKreis(editIdx != null ? PROJ.items[editIdx] : {}) : -1;
+  $('#btnSaveCircuit').textContent = mess ? (zi >= 0 ? 'Weiter → ' + (circuitLabel(PROJ.items[zi]) || '–') : 'Weiter') : 'Nächster Kreis';
   $('#fldDevSeg').hidden = false;           // v1.163: „Sonstiges“ ist Teil der Geräteart
   $('#fldAbs').hidden    = sp || dev === 'rcd';
   $('#fldChar').hidden   = sp || dev === 'rcd' || !absAndere;   // Listen nur über „Andere …“
@@ -6503,7 +6541,11 @@ function saveCircuitThen(next){
   };
   if(w.length) showWarnModal(w, done); else done();
 }
-$('#btnSaveOnly').onclick    = () => saveCircuitThen(backToBoard);
+/* v1.167: "Fertig" auf einem neuen, unberührten Kreis legt nichts an */
+$('#btnSaveOnly').onclick    = () => {
+  if(editIdx == null && !schutzGeaendert()){ backToBoard(); toast('Kein Kreis angelegt'); return; }
+  saveCircuitThen(backToBoard);
+};
 $('#btnSaveCircuit').onclick = () => {
   const c = draft;                                 // dasselbe Objekt landet in der Liste
   saveCircuitThen(() => messModus() ? weiterZumKreis(c) : openCircuit(null));
@@ -6900,10 +6942,10 @@ function renderMaterial(){
         const sel = window.getSelection();     // eine begonnene Markierung wieder aufheben
         if(sel) sel.removeAllRanges();
         const n = b.dataset.m;
-        showDialog({title:'Aus der Liste entfernen?', body:esc(n), ok:'Entfernen', danger:true,
+        showDialog({title:'Aus der Liste entfernen?', body:n, ok:'Entfernen', danger:true,   // v1.167: showDialog maskiert selbst
           onOk:() => {
             CFG.material = CFG.material.filter(x => x !== n);   // bleibt gestrichen, auch künftig
-            saveCfg(); fbHoch();
+            saveCfg(); fbHoch('material');
             delete matDraft[n];
             renderMaterial();
           }});
@@ -8123,7 +8165,7 @@ SAM_ARTEN.forEach(art => {
   $('#samB_' + art).onclick = () => samFoto(art);
   $('#samM_' + art).onclick = () => samFoto(art, true);
 });
-$('#btnSamBoard').onclick = () => go('sam');
+$('#btnSamBoard').onclick = () => vorVerlassen(() => go('sam'));   // v1.167
 $('#samOhne').onclick = () => {
   const l = PROJ && PROJ.samLesung;
   if(l && l.ok && !l.laeuft && !samOffenZahl(l)){ go('samliste'); return; }   // nur ansehen
@@ -10965,8 +11007,10 @@ $('#btnExportDocs').onclick = () => {
     d.fotos && (PROJ.photos || []).length ? `${(PROJ.photos || []).length} Foto${(PROJ.photos || []).length === 1 ? '' : 's'}` : null,
     'Projektdatei (Sicherung)'].filter(Boolean);
   let buchen = 0;
-  try { const pl = !archOffen && lagerProjektPlan(PROJ); buchen = pl ? pl.buchungen.length : 0; } catch(e){}
-  const danach = archOffen ? ['Der Eintrag bleibt in der Ablage.']
+  try { const pl = lagerProjektPlan(PROJ); buchen = pl ? pl.buchungen.length : 0; } catch(e){}
+  /* v1.167: auch beim erneuten Ausgeben wird das Lager nachgebucht – sagen */
+  const danach = archOffen ? ['Der Eintrag bleibt in der Ablage.',
+      buchen ? `Im Lager werden ${buchen} Position${buchen === 1 ? '' : 'en'} nachgebucht.` : 'Im Lager wird nichts gebucht.']
     : ['Das Projekt wandert in die Ablage und verschwindet aus „Offen“ – auf allen Geräten.',
        buchen ? `Im Lager werden ${buchen} Position${buchen === 1 ? '' : 'en'} abgebucht.` : 'Im Lager wird nichts gebucht.'];
   resetModal(false);
@@ -11284,12 +11328,12 @@ const LISTEN = [
   {k:'cables',   t:'Kabelarten',        hw:'Der erste Eintrag ist die Vorauswahl.'},
   {k:'material', t:'Bauteile',          hw:'Die Bauteile für Materialliste und Lager. Wird ein Bauteil umbenannt, das im Lager geführt wird, fragt die App, ob der Lagerartikel mitgeht.', text:true}
 ];
-function renderSettings(){
+function renderSettings(still){
   $('#setTester').value = CFG.tester || '';
   $('#setMessfolge').value = CFG.messfolge === 'weg' ? 'weg' : 'nr';
   $('#setAuftraggeber').value  = CFG.auftraggeber  || '';
   $('#setAuftragnehmer').value = CFG.auftragnehmer || '';
-  fillSelect($('#setDevice'), CFG.devices, CFG.devices[0]);
+  fillSelect($('#setDevice'), CFG.devices, meinGeraet());
   $('#setInvHinweis').checked = invAn();
   $('#setInvMonate').value    = invMonate(CFG.invMonate);
   $('#setSam').checked = !!CFG.sam;
@@ -11307,15 +11351,15 @@ function renderSettings(){
   samTrainStatus();
   fbFremd = false;
   fbStatusZeigen();
-  seiteZeigen(setSeite);
+  seiteZeigen(setSeite, still);
 }
-function seiteZeigen(seite){
+function seiteZeigen(seite, still){
   setSeite = seite;
   $$('#view-settings .set-seite').forEach(d => d.hidden = d.dataset.seite !== seite);
   const l = LISTEN.find(x => x.k === setListe);
   $('#title').textContent = seite === 'liste' && l ? l.t : (SET_TITEL[seite] || 'Einstellungen');
   if(seite === 'liste') renderListe();
-  bildNach(0);
+  if(!still) bildNach(0);
 }
 $$('#view-settings [data-seite]').forEach(b => { if(b.tagName === 'BUTTON') b.onclick = () => seiteZeigen(b.dataset.seite); });
 /* Zurück innerhalb der Einstellungen: von der Liste zu den Listen, sonst zur Übersicht. */
@@ -11325,24 +11369,26 @@ function settingsZurueck(){
   return true;
 }
 
+const meinGeraet = () => CFG.devices.includes(CFG.meinGeraet) ? CFG.meinGeraet : CFG.devices[0];
 /* Je Feld genau dessen Wert übernehmen. */
 const adrText = el => el.value.split('\n').map(z => z.trim()).join('\n').replace(/\n{2,}/g, '\n').trim();
 const SET_FELD = {
   setTester:        () => { CFG.tester = $('#setTester').value.trim(); return 'name'; },
-  setDevice:        () => { const v = $('#setDevice').value;
-                            if(v && CFG.devices.includes(v)) CFG.devices = [v, ...CFG.devices.filter(d => d !== v)]; return 'fb'; },
+  /* v1.167: persönlich wie der Name – vorher rückte die Wahl die gemeinsame
+     Liste um und wurde so bei allen Kollegen Vorauswahl. */
+  setDevice:        () => { CFG.meinGeraet = $('#setDevice').value; },
   setMessfolge:     () => { CFG.messfolge = $('#setMessfolge').value === 'weg' ? 'weg' : 'nr'; },
   setEigeneKamera:  () => { CFG.eigeneKamera = $('#setEigeneKamera').checked; },
-  setAuftraggeber:  () => { CFG.auftraggeber  = adrText($('#setAuftraggeber'));  return 'fb'; },
-  setAuftragnehmer: () => { CFG.auftragnehmer = adrText($('#setAuftragnehmer')); return 'fb'; },
-  setInvHinweis:    () => { CFG.invHinweis = $('#setInvHinweis').checked; return 'fb'; },
-  setInvMonate:     () => { CFG.invMonate  = invMonate($('#setInvMonate').value); return 'fb'; },
+  setAuftraggeber:  () => { CFG.auftraggeber  = adrText($('#setAuftraggeber'));  return 'fb:auftraggeber'; },
+  setAuftragnehmer: () => { CFG.auftragnehmer = adrText($('#setAuftragnehmer')); return 'fb:auftragnehmer'; },
+  setInvHinweis:    () => { CFG.invHinweis = $('#setInvHinweis').checked; return 'fb:invHinweis'; },
+  setInvMonate:     () => { CFG.invMonate  = invMonate($('#setInvMonate').value); return 'fb:invMonate'; },
   setSam:           () => { CFG.sam     = $('#setSam').checked; },      // persönlich, geht nicht hinauf
   setSamTest:       () => { CFG.samTest = $('#setSamTest').checked; }   // v1.138, ebenso
 };
 function cfgSichern(art){
   saveCfg();
-  if(art === 'fb') fbHoch();
+  if(art && art.startsWith('fb:')) fbHoch(art.slice(3));   // v1.167: nur dieser Wert
   if(art === 'name') fbNameHoch();
 }
 $('#view-settings').addEventListener('change', e => {
@@ -11370,7 +11416,7 @@ function renderListe(){
         : `<button type="button" data-hoch="${i}" aria-label="nach oben"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>`}
       <button type="button" class="weg" data-weg="${i}" aria-label="entfernen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button></div>`;
   }).join('') : '<div class="le-zeile"><span class="muted">Noch leer.</span></div>';
-  const sichern = () => { saveCfg(); fbHoch(); };
+  const sichern = () => { saveCfg(); fbHoch(l.k); };
   $$('#listeEditor input[data-i], #listeEditor input[data-te]').forEach(inp => inp.onchange = () => {
     const i = +(inp.dataset.i ?? inp.dataset.te);
     const name = $(`#listeEditor input[data-i="${i}"]`).value.trim();
@@ -11402,7 +11448,7 @@ $('#btnListeNeu').onclick = () => {
   CFG[l.k] = CFG[l.k] || [];
   CFG[l.k].push(te ? `${name}, ${te}` : name);
   $('#listeNeu').value = ''; $('#listeNeuTe').value = '';
-  saveCfg(); fbHoch(); renderListe(); toast('Hinzugefügt');
+  saveCfg(); fbHoch(l.k); renderListe(); toast('Hinzugefügt');
 };
 $('#btnListeText').onclick = () => {
   $('#setMaterial').value = (CFG.material || []).join('\n');
@@ -11410,7 +11456,7 @@ $('#btnListeText').onclick = () => {
 };
 $('#btnListeTextOk').onclick = () => {
   CFG.material = $('#setMaterial').value.split('\n').map(z => z.trim()).filter(Boolean);
-  saveCfg(); fbHoch(); renderListe(); toast('Übernommen');
+  saveCfg(); fbHoch('material'); renderListe(); toast('Übernommen');
 };
 /* Ein Bauteil, das im Lager geführt wird, hängt dort am Namen. Beim Umbenennen
    wird gefragt, ob der Lagerartikel mitgeht – sonst verlöre er die Verbindung
@@ -11510,10 +11556,13 @@ function fbStatusZeigen(){
 
 /* Eigene Einstellungen hinaufschieben. Wird beim Speichern gerufen und beim
    allerersten Mal, solange der Ast "betrieb/" noch leer ist. */
-function fbHoch(){
+/* v1.167: mit Schlüssel nur dieser eine Wert. Alle auf einmal nur bei der
+   ersten Inbetriebnahme – sonst überschrieb ein Gerät mit altem Stand bei
+   jeder Änderung die neueren Listen der Kollegen. */
+function fbHoch(nur){
   if(!fbEin || fbEmpfang) return;
   const {ref, set} = FB.fn;
-  FB_ALLE.forEach(k => { try { set(ref(FB.db, 'betrieb/' + k), fbWert(k)); } catch(e){} });
+  (nur ? [nur].filter(k => FB_ALLE.includes(k)) : FB_ALLE).forEach(k => { try { set(ref(FB.db, 'betrieb/' + k), fbWert(k)); } catch(e){} });
 }
 /* v1.84: die umgestellte Materialliste muss einmal hinauf, bevor von dort
    gelesen wird – sonst käme der alte Stand zurück und die Umbenennung wäre
@@ -11575,9 +11624,12 @@ FB.bereit.then(() => {
          aufgebaut – das würde eine begonnene Eingabe wegwischen. */
       if(current === 'settings'){
         /* v1.164: steht gerade kein Feld im Fokus, wird die Seite neu aufgebaut. */
-        if($('#view-settings').contains(document.activeElement) && document.activeElement.matches('input, textarea, select')){
+        /* v1.167: offenes Textfeld der Materialliste wie ein Fokus behandeln,
+           und beim Neuaufbau nicht nach oben springen. */
+        if(($('#view-settings').contains(document.activeElement) && document.activeElement.matches('input, textarea, select'))
+           || !$('#listeTextFeld').hidden){
           fbFremd = true; fbStatusZeigen();
-        } else renderSettings();
+        } else { const y = bildY(); renderSettings(true); bildNach(y); }
       }
     }));
     fbStatusZeigen();
