@@ -10,6 +10,15 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.173 09.10.2026 Qualitaetskontrolle, Paket 3a: abgelegte Pruefungen. "Ansehen"
+                    oeffnet im Abschluss und nur zum Lesen; ein Streifen oben nennt
+                    das Datum. Aendern erst nach "Nachbessern": bei einem
+                    unterschriebenen Protokoll faellt die Unterschrift weg, das
+                    Protokoll traegt "Nachtrag vom ...", und der Eintrag vermerkt,
+                    wer wann nachgebessert hat (auch auf der Karte). Vorher aenderte
+                    jeder Tipp ein unterschriebenes Protokoll spurlos. Loeschen aus
+                    der Ablage steht jetzt im Eintrag unter "..." statt unter jeder
+                    Karte. Im Unterschriftsfeld heisst "Loeschen" jetzt "Neu".
   v1.172 09.10.2026 Qualitaetskontrolle, Paket 2c: Abschluss und Pflichtangaben.
                     Neue Einstellungsseite "Pruefung" (fuer alle): Prueffrist
                     (Vorgabe 4 Jahre) und "kalibriert bis" je Messgeraet; beides
@@ -1794,6 +1803,9 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
 #view-home [data-neu]{justify-content:flex-start}
 /* v1.161: Bereichsleiste im Projekt. Steht unter der Kopfleiste und scrollt
    nicht mit; der Bereich Messen trägt sein Blau auch in der Unterstreichung. */
+.ablage-streifen{flex:0 0 auto;display:flex;gap:10px;align-items:center;justify-content:space-between;
+  padding:8px 16px;background:var(--sig-bg);color:var(--ink);font-size:14px;border-bottom:1px solid var(--signal)}
+.ablage-streifen[hidden]{display:none}
 .bereiche{flex:0 0 auto;display:grid;grid-template-columns:repeat(4,1fr);background:var(--bar);
   border-top:1px solid #2C3327;position:relative;z-index:39}
 .bereiche[hidden]{display:none}
@@ -2907,6 +2919,8 @@ function nameGross(s){
     <button type="button" data-b="abschluss"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 21V3.5"/><path d="M5.5 4h12l-2.3 3.6 2.3 3.6h-12"/></svg><span>Abschluss</span><em hidden></em></button>
   </nav>
 
+  <!-- v1.173: abgelegte Prüfung – Datum, Lesemodus, Nachbessern -->
+  <div class="ablage-streifen" id="ablageStreifen" hidden></div>
   <main>
     <!-- ========== START ========== -->
     <section class="view active" id="view-home">
@@ -3623,7 +3637,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.172';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.173';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4012,8 +4026,25 @@ function neueKennung(v){ return v + Date.now().toString(36) + Math.random().toSt
    Liste der offenen Projekte – sonst stünde die Prüfung plötzlich wieder als
    unerledigt da, auch bei den Kollegen. */
 let archOffen = null;
+let archLesen = false;          // v1.173: abgelegt und noch nicht zum Nachbessern freigegeben
 const saveProj = () => {
   if(!PROJ) return true;
+  /* v1.173: Im Lesemodus wird nichts geändert. Was doch geändert wurde, fällt
+     auf den abgelegten Stand zurück – nur Bereich und Dokumentwahl bleiben, sie
+     sind Ansicht, nicht Inhalt. */
+  if(archOffen && archLesen){
+    const e = ARCH.find(x => x.id === archOffen);
+    if(e && e.stand){
+      const ohne = o => JSON.stringify(Object.assign({}, o, {modus:0, docs:0, updatedAt:0}));
+      if(ohne(PROJ) !== ohne(e.stand)){
+        const m = PROJ.modus, d = PROJ.docs;
+        PROJ = JSON.parse(JSON.stringify(e.stand)); PROJ.modus = m; if(d) PROJ.docs = d;
+        toast('Nur ansehen – zum Ändern oben „Nachbessern“');
+        setTimeout(() => { if(PROJ && archOffen) go(current, false); });
+      }
+    }
+    return true;
+  }
   PROJ.updatedAt = Date.now();
   if(archOffen){
     const e = ARCH.find(x => x.id === archOffen);
@@ -4348,7 +4379,35 @@ function bereichVon(name){
   if(name === 'finish') return 'abschluss';
   return null;
 }
+function ablageStreifen(name){
+  const st = $('#ablageStreifen');
+  st.hidden = !(PROJ && archOffen && BEREICH_VIEWS.includes(name));
+  if(st.hidden) return;
+  const e = ARCH.find(x => x.id === archOffen);
+  const am = dstr((e && archDatum(e)) || PROJ.finishedAt || PROJ.startedAt);
+  st.innerHTML = archLesen
+    ? `<span>Abgelegte Prüfung vom ${esc(am)} · nur ansehen</span><button class="linkbtn" id="btnNachbessern">Nachbessern</button>`
+    : `<span>Abgelegte Prüfung vom ${esc(am)} · wird nachgebessert</span>`;
+  const k = $('#btnNachbessern'); if(k) k.onclick = nachbessern;
+}
+/* v1.173: bewusst freigeben. Die Unterschrift gilt für den abgelegten Stand –
+   nach einer Änderung nicht mehr; das Protokoll trägt dann "Nachtrag vom". */
+function nachbessern(){
+  const los = () => {
+    archLesen = false;
+    PROJ.nachbesserungen = PROJ.nachbesserungen || [];
+    PROJ.nachbesserungen.push({am: Date.now(), von: CFG.tester || FB.konto || ''});
+    if(PROJ.signature && PROJ.signature.data){ PROJ.signature = null; PROJ.nachtrag = Date.now(); }
+    saveProj(); go(current, false); toast('Nachbessern freigegeben');
+  };
+  if(PROJ.signature && PROJ.signature.data){
+    showDialog({title:'Unterschriebenes Protokoll nachbessern?', ok:'Nachbessern', danger:true,
+      body:'Die Unterschrift gilt für den abgelegten Stand. Beim Nachbessern fällt sie weg; das Protokoll trägt „Nachtrag vom …“ und muss neu unterschrieben werden.',
+      onOk:los});
+  } else los();
+}
 function bereicheZeigen(name){
+  ablageStreifen(name);
   const nav = $('#bereiche');
   const b = PROJ && BEREICH_VIEWS.includes(name) ? bereichVon(name) : null;
   nav.hidden = !b;
@@ -4397,6 +4456,8 @@ $('#btnMehr').onclick = () => {
   if(PROJ.sam)   wahl.push({t:'SAM: Fotos und Einträge', fn:() => vorVerlassen(() => go('sam'))});
   if(!archOffen && (PROJ.mode || 'wdh') === 'neu') wahl.push({t:'Vorab ausgeben', fn:boardExportFragen});
   if(!archOffen) wahl.push({t:'Projekt löschen', cls:'danger', fn:() => projektLoeschen(PROJ)});
+  if(archOffen){ const e = ARCH.find(x => x.id === archOffen);       // v1.173
+    if(e) wahl.push({t:'Aus der Ablage löschen', cls:'danger', fn:() => ablageLoeschen(e, () => { archOffen = null; archLesen = false; PROJ = null; stack = ['home']; go('archive', false); })}); }
   wahl.push({t:'Schließen', cls:'ghost', fn:null});
   waehlDialog(MODES[PROJ.mode || 'wdh'].label,
     `${PROJ.tester || 'Ohne Prüfer'} · ${PROJ.device} · Beginn ${dstr(PROJ.startedAt)} ${tstr(PROJ.startedAt)} · `
@@ -4419,7 +4480,7 @@ function go(name, push = true){
   if(name !== 'sam') samNaechstZeigen(false);      // v1.125
   /* Ein zum Ansehen geöffneter Ablage-Eintrag wird beim Verlassen der
      Projektansichten wieder zugemacht. */
-  if(archOffen && !PROJECT_VIEWS.includes(name)){ archOffen = null; PROJ = null; }
+  if(archOffen && !PROJECT_VIEWS.includes(name)){ archOffen = null; archLesen = false; PROJ = null; }
   /* Änderungen von anderen Geräten werden nicht mitten in eine Eingabe
      hineingeschrieben – sie warten, bis der Kreis verlassen ist. */
   if(name !== 'circuit' && name !== 'feed') fbNachtragAnwenden();
@@ -7312,6 +7373,9 @@ function boardExportFragen(){
 /* v1.166: Was die Ausgabe sperrt – Prüfpunkte mit Prüfzeit, Prüfer und
    Adresse, offene Übersicherung, eine Bewertung, die nicht mehr passt. */
 function ausgabeSperre(){
+  /* v1.173: ein unveränderter abgelegter Stand wird so wiederholt, wie er
+     damals hinausging – auch wenn heute strengere Regeln gelten */
+  if(archOffen && archLesen) return '';
   if(!PROJ.checksDone || !PROJ.finishedAt) return 'pruefpunkte';
   /* v1.171 (Jean, QK-Frage F4): keine Lücken im Protokoll */
   const f = PROJ.feed || blankFeed();
@@ -7369,9 +7433,10 @@ function renderFinish(){
         : `<button class="linkbtn" id="finZuPruef">Zu den Prüfpunkten</button>`) + `</div>` + h;
   }
   if(!h && !ov.length) h = `<div class="warn ok"><strong>Bereit zur Ausgabe</strong>Keine offenen Punkte.</div>`;   // v1.172: Zeit steht darunter
+  if(archOffen && archLesen) h = '';                // v1.173: abgelegt – nichts zu entscheiden
   $('#plausiOut').innerHTML = h;
   /* Offene Übersicherungen (v1.163): hier entscheiden, ausgegeben wird erst danach. */
-  if(ov.length) $('#plausiOut').insertAdjacentHTML('afterbegin', `<div class="warn"><strong>Übersicherung zu entscheiden</strong>`
+  if(ov.length && !(archOffen && archLesen)) $('#plausiOut').insertAdjacentHTML('afterbegin', `<div class="warn"><strong>Übersicherung zu entscheiden</strong>`
     + ov.map((o, i) => `<div style="margin-top:6px">${esc(uebersicherungText(o.fi, o.u).kopf)} · `
       + `<button class="linkbtn" data-ov="${i}">Entscheiden</button></div>`).join('') + `</div>`);
   $$('#plausiOut [data-ov]').forEach(b => b.onclick = () => {
@@ -7400,6 +7465,7 @@ function renderFinish(){
   const sig = PROJ.signature && PROJ.signature.data;
   $('#sigVorschau').innerHTML = sig ? `<div class="sig-vorschau"><img src="${sig}" alt="Unterschrift"></div>` : '';
   $('#btnSigOeffnen').textContent = sig ? 'Unterschrift ändern' : 'Unterschreiben';
+  $('#btnSigOeffnen').hidden = !!(archOffen && archLesen);   // v1.173: erst nachbessern
   const ex = $('#btnExportDocs');
   ex.textContent = archOffen ? 'Erneut ausgeben' : 'Ausgeben und ablegen';
   ex.disabled = !!ausgabeSperre();
@@ -7513,6 +7579,7 @@ function initPad(){
   window.addEventListener('mousemove', move);
   window.addEventListener('mouseup', end);
 })();
+$('#btnSigClear').textContent = 'Neu';                // v1.173: leert nur das Feld
 $('#btnSigClear').onclick = () => {
   const cv = $('#sigpad'); if(padCtx) padCtx.clearRect(0, 0, cv.width, cv.height);
   sigGezeichnet = false; sigGeleert = true;
@@ -10618,6 +10685,10 @@ function protokollBlatt(){
     maengel.push('Kein Überspannungsschutz (SPD) im Wohnungsverteiler. Empfehlung: Nachrüstung nach DIN VDE 0100-443/-534.');
   const frei = String((P.checks || {}).bemerkung || '').trim();
   if(frei) maengel.push(frei.replace(/\s*\n\s*/g, ' '));   // eigener Text zuletzt
+  if(P.nachtrag){                                            // v1.173
+    const nb = (P.nachbesserungen || []).slice(-1)[0];
+    maengel.push(`Nachtrag vom ${dstr(P.nachtrag)}${nb && nb.von ? ' (' + nameGross(nb.von) + ')' : ''}: Protokoll nach der Ablage geändert.`);
+  }
   const maengelText = maengel.length
     ? maengel.map((m, i) => `${i + 1}. ${esc(m)}`).join('<br>')
     : '';
@@ -11209,7 +11280,9 @@ async function ablegen(wahl, nochmal, zwischen){
   }
   if(lagerPlan){
     try { lagerProjektBuchen(p, lagerPlan.buchungen); } catch(e){}
-    if(nochmal) saveProj();              // "Ansehen": Vermerk in den Ablage-Eintrag
+    /* "Ansehen": Vermerk in den Ablage-Eintrag – auch im Lesemodus (v1.173),
+       sonst würde beim nächsten Ausgeben doppelt gebucht */
+    if(nochmal){ const l = archLesen; archLesen = false; saveProj(); archLesen = l; }
   }
   /* Beim Wiederholen aus der Ablage heraus wird nichts erneut abgelegt – das
      Projekt ist längst abgeschlossen. Der Zwischenexport legt ebenfalls nichts
@@ -11466,17 +11539,19 @@ function renderArchive(){
         fotos ? ' · ' + fotos + ' Foto' + (fotos === 1 ? '' : 's') : ''}</div>
       ${bew && BEWERTUNG_KURZ[bew] ? `<div class="arch-bew b-${bew}">${bew === 'mit' ? '<b>!</b> ' : ''}${BEWERTUNG_KURZ[bew]}</div>` : ''}
       ${(!archStand(e) && !e.hoch) ? '<div class="muted small" style="margin-top:4px">Alter Eintrag – nur als Datei zu sichern</div>' : ''}
+      ${(nb => nb ? `<div class="muted small">nachgebessert ${dstr(nb.am)}${nb.von ? ' von ' + esc(nameGross(nb.von)) : ''}</div>` : '')(((archStand(e) || {}).nachbesserungen || []).slice(-1)[0])}
       <div class="btn-row" style="margin-top:10px">
         <button class="btn ghost" data-asee="${i}">Ansehen</button>
         <button class="btn" data-arch="${i}">Erneut ausgeben</button>
       </div>
-      <button class="loeschzeile klein" data-adel="${i}">Löschen</button>
     </div>`;
   }).join('');
   $$('[data-arch]').forEach(b => b.onclick = () => erneutSichern(ARCH[+b.dataset.arch], b));
   $$('[data-asee]').forEach(b => b.onclick = () => archAnsehen(ARCH[+b.dataset.asee], b));
-  $$('[data-adel]').forEach(b => b.onclick = () => {
-    const e = ARCH[+b.dataset.adel];
+}
+/* v1.173: Löschen aus der Ablage steht im Eintrag unter "…", nicht mehr unter
+   jeder Karte (dort lag es direkt über "Ansehen" der nächsten). */
+function ablageLoeschen(e, fertig){
     /* v1.169: die Frage nennt, welche Prüfung – unter einer Adresse liegen oft
        zwanzig Wohnungen. */
     const bw = (archStand(e) && archStand(e).checks ? archStand(e).checks.bewertung : null) || e.bewertung;
@@ -11490,9 +11565,9 @@ function renderArchive(){
           if(f && f.fid){ Bilder.weg(f.fid).catch(() => {}); Bilder.weg(VOR(f.fid)).catch(() => {}); }
         });
         ablageWeg(e.id);
-        ARCH.splice(+b.dataset.adel, 1); saveArch(); renderArchive();
+        ARCH = ARCH.filter(x => x !== e); saveArch();
+        if(fertig) fertig();
       }});
-  });
 }
 
 /* "Erneut sichern" nimmt denselben Weg wie der Export im Abschluss: dieselben
@@ -11514,10 +11589,11 @@ async function archAnsehen(e, knopf){
     if(!st){ toast(e.hoch ? 'Der Stand ließ sich nicht holen' : 'Alter Eintrag ohne Projektstand'); return; }
     migrateProject(st);
     archOffen = e.id;
-    PROJ = st;
+    archLesen = true;                  // v1.173: erst "Nachbessern" gibt frei
+    PROJ = JSON.parse(JSON.stringify(st));
     sigMode = 'later';
     stack = ['home', 'archive'];       // Zurück führt in die Ablage, von dort weiter nach Hause
-    go('board', false);
+    go('finish', false);               // v1.173: im Abschluss – dort liegen Vorschau und Ausgabe
   } catch(x){ toast('Öffnen nicht möglich'); }
   finally { if(knopf){ knopf.textContent = text; knopf.disabled = false; } }
 }
