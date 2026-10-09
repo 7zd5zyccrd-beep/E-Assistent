@@ -150,6 +150,11 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **Schrift:** Barlow Condensed eingebettet (`<style id="schriftEingebettet">`,
   Familie `BarlowC`); Google lädt nur noch Inter und IBM Plex Mono.
 - **Rückfrage** `SCHUTZ[...].titel/knopf/verwerfen`; auch Neues Projekt und Listen.
+- **Verworfen (Jean, 09.10.2026):** alles zur Nachbarwohnung („Nächste Wohnung“,
+  Adress-Kacheln, Verteiler übernehmen; v1.176 gebaut, v1.179 wieder entfernt) und
+  der Rest aus Paket 6 (Hausübersicht, Rollen Monteur/Meister, RCD-Typ als Kachel,
+  Mängelliste je Haus). Nicht wieder vorschlagen. Ebenso kein Feld für den
+  Netzinnenwiderstand.
 
 ## SAM (Beta)
 
