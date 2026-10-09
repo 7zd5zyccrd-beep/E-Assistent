@@ -10,6 +10,20 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.170 09.10.2026 Qualitaetskontrolle, Paket 2a: Pruefpunkte. Die vier
+                    Erprobungen gelten erst nach einem bewussten Tipp - ein Knopf
+                    "Erprobt: alles i.O." ueber dem Abschnitt, danach jede Zeile
+                    einzeln aenderbar (Jean, Frage F5). Die Bewertung zeigt ihren
+                    Vorschlag als Text und wird mit einem Tipp gesetzt. Vorschlaege
+                    stehen ruhig auf weisser Karte, nur Fehlendes ist rot; der
+                    Knopf "Pruefpunkte bestaetigen" steht unten in der Leiste.
+                    FI-Pflicht im Bestand (Frage F3): Steckdosenkreise im Bad oder
+                    aussen und Kreise, die nur Bad, Dusche oder aussen versorgen;
+                    ein Sammel-Lichtkreis mit Bad ist eine Empfehlung. Zusaetzlicher
+                    Schutzpotentialausgleich: ohne Bad entfaellt die Zeile, mit Bad
+                    waehlt der Pruefer, bei "vorhanden" mit Wert R. SPD: bei
+                    Neuinstallation ohne Ableiter kein Vorschlag, bei
+                    Wiederholungspruefung "n.z." mit Empfehlung zur Nachruestung.
   v1.169 09.10.2026 Qualitaetskontrolle, Paket 1d: Ablage. Bewertung und Art
                     kommen jetzt auch bei Kollegen und im Buero an; die Karte
                     zeigt "Mangel mit unmittelbarer Gefahr" rot mit "!", "ohne"
@@ -1811,6 +1825,8 @@ header h1.tippbar{cursor:pointer}
 .list-item.z-bad,.chk-item.z-bad{border-left-color:var(--fault);background:var(--warn-bg)}
 .list-item.z-none,.list-item.z-liefer,.chk-item.z-none{border-left-color:var(--neutral);background:var(--neutral-bg)}
 .list-item.z-ask,.chk-item.z-ask{border-left-color:var(--signal);background:var(--sig-bg)}
+/* v1.170: Vorschläge der Prüfpunkte ruhig – weiße Karte, nur Zeichen und Wort bernstein */
+.chk-item.z-ask{border-left-color:var(--line);background:var(--surface)}
 .list-item.z-open,.chk-item.z-open,.list-item.z-plain{border-left-color:var(--line)}
 .chk-item .t{display:flex;gap:8px;align-items:flex-start}
 .chk-item .t .zst{width:18px;height:18px;flex-basis:18px;margin-top:1px}
@@ -3210,7 +3226,9 @@ function nameGross(s){
     <section class="view" id="view-checks">
       <div id="checkCount"></div>
       <div id="checkList"></div>
-      <div id="checkFoot"></div>
+      <p class="muted small">Die Prüfpunkte werden so in das Protokoll übernommen, wie sie hier stehen.</p>
+      <!-- v1.170: Bestätigen in der Fußleiste wie jede Hauptaktion -->
+      <div class="actionbar"><div class="inner" id="checkFoot"></div></div>
     </section>
 
     <!-- ========== BLÄTTER ========== -->
@@ -3559,7 +3577,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.169';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.170';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -9842,8 +9860,17 @@ function rcdSchutz(){
 /* Bad, Dusche und der Außenbereich: dort war der Zusatzschutz schon zur
    Errichtungszeit dieser Wohnungen gefordert. Balkon steht in der Raumauswahl,
    die übrigen Wörter fangen von Hand getippte Bezeichnungen mit ab. */
-const istRcdPflicht = c =>
-  /bad|dusche|balkon|terrasse|garten|außen|aussen/i.test(`${c.name || ''} ${c.room || ''}`);
+/* v1.170 (Jean, QK-Frage F3): pflichtig sind Steckdosenkreise in Bad oder
+   außen und Kreise, die nur Bad, Dusche oder außen versorgen. Ein Sammel-
+   Lichtkreis "Flur, Badezimmer, Küche" in einer Wohnung der 80er war so
+   errichtet – er landet bei der Empfehlung, der Prüfer kann hochstufen. */
+const RCD_ORT = /bad|dusche|balkon|terrasse|garten|außen|aussen/i;
+const istRcdPflicht = c => {
+  const orte = String(c.room || '').split(/\s*,\s*/).filter(Boolean);
+  if(/steckdose/i.test(c.name || '') && RCD_ORT.test(`${c.name || ''} ${c.room || ''}`)) return true;
+  if(orte.length) return orte.every(o => RCD_ORT.test(o));
+  return RCD_ORT.test(c.name || '');
+};
 /* Entspricht der Zusatzschutz dem Errichtungsstand, bleibt aber hinter dem
    heutigen zurück, gehört das als Empfehlung ins Protokoll – nicht als Mangel. */
 function rcdEmpfehlung(P){
@@ -10095,30 +10122,35 @@ const CHECKS = [
     {k:'schaltgeraete',    label:'Trenn- und Schaltgeräte, Überstrom-Schutzeinrichtungen',
      sug:() => uebersicherungMangel() ? 'nio' : 'io'},
     {k:'basisschutz',      label:'Basisschutz (Abdeckungen, Berührungsschutz)', sug:() => 'io'},
-    /* Kein Ableiter erfasst: bei einer Neuinstallation ist das ein Mangel,
-       bei einer Wiederholungsprüfung nicht zutreffend. */
+    /* Kein Ableiter erfasst: bei einer Wiederholungsprüfung nicht zutreffend
+       (mit Empfehlung im Protokoll). v1.170: bei einer Neuinstallation kein
+       Vorschlag mehr statt n.i.O. – im Mehrfamilienhaus sitzt der SPD oft im
+       Zählerplatz, außerhalb des Prüfumfangs. */
     {k:'spd',              label:'Überspannungsschutz (SPD) im Wohnungsverteiler',
-     sug:P => chkSpd() ? 'io' : (P.mode === 'neu' ? 'nio' : 'nz')}
+     sug:P => chkSpd() ? 'io' : (P.mode === 'neu' ? null : 'nz')}
   ]},
-  {sec:'2 · Erproben', items:[
-    {k:'funktion',  label:'Funktionsprüfung der Anlage', sug:() => 'io'},
+  {sec:'2 · Erproben', erproben:true, items:[
+    /* v1.170: Erprobungen sind Handlungen. Sie gelten erst nach einem Tipp –
+       einzeln oder über "Erprobt: alles i.O." (bewusst:true, Jean, QK-Frage F5). */
+    {k:'funktion',  label:'Funktionsprüfung der Anlage', sug:() => 'io', bewusst:true},
     {k:'einpolig',  label:'Einpolige Schalt- und Schutzgeräte im Außenleiter, Lampenfassungen',
-     sug:() => 'io'},
-    {k:'drehfeld',  label:'Drehfeld (nur bei Drehstromanschluss)',
+     sug:() => 'io', bewusst:true},
+    {k:'drehfeld',  label:'Drehfeld (nur bei Drehstromanschluss)', bewusst:true,
      sug:() => chkCee() ? null : 'nz'},
     /* Erproben und Messen sind getrennte Punkte: für die Prüftaste zählt nur,
        ob überhaupt ein FI oder FI/LS verbaut ist, nicht ob t_A gemessen wurde. */
-    {k:'rcdtaste',  label:'RCD: Auslösung über Prüftaste',
+    {k:'rcdtaste',  label:'RCD: Auslösung über Prüftaste', bewusst:true,
      sug:() => chkFis().length ? 'io' : 'nz'}
   ]},
   {sec:'3 · Messen', items:[
+    /* Bis v1.169 immer "nicht erforderlich" (Medien über die Haupterdungs-
+       schiene eingebunden). v1.170 (QK, Jean F3): ohne Bad entfällt die
+       Zeile, mit Bad wählt der Prüfer; bei "vorhanden" wird R gemessen. */
     {k:'spa', label:'Zus. Schutzpotentialausgleich Bad / Dusche', stack:true,
-     opts:[['vorhanden','vorhanden'],['nicht','nicht vorhanden'],['nichterf','nicht erforderlich']],
-     /* Immer "nicht erforderlich": Die ins Gebäude eintretenden Medien müssen
-        dort in den Schutzpotentialausgleich eingebunden sein, damit liegt der
-        Ausgleich über die Haupterdungsschiene vor – und nur daran hängt die
-        Norm die Entbehrlichkeit des zusätzlichen Potentialausgleichs. */
-     sug:() => 'nichterf'},
+     when:() => chkBad(),
+     opts:[['vorhanden','vorhanden'],['nicht','nicht vorhanden'],['nichterf','nicht erforderlich']]},
+    {k:'spaR', label:'Durchgängigkeit R messen und eintragen', text:true, unit:'Ω',
+     when:() => chkBad() && chkOn('spa', 'vorhanden')},
     /* v1.168: nur mit FI. Vorschlag bei IΔn (Jean, QK-Frage F2), danach die
        zuletzt bestätigte Wahl; der Grenzwert in checkCircuit folgt ihr. */
     {k:'ta', label:'t_A gemessen bei', opts:[['1','1 × IΔn'],['5','5 × IΔn']],
@@ -10126,7 +10158,7 @@ const CHECKS = [
      sug:() => CFG.taLetzt === '5' ? '5' : '1'}
   ]},
   {sec:'4 · Bewertung und Abschluss', items:[
-    {k:'bewertung', label:'Bewertung', stack:true,
+    {k:'bewertung', label:'Bewertung', stack:true, bewusst:true,
      opts:[['keine','Bei der Prüfung wurden keine Mängel festgestellt'],
            ['ohne','Mangel ohne unmittelbare Gefahr'],
            ['mit','Mangel mit unmittelbarer Gefahr']],
@@ -10174,6 +10206,8 @@ function chkWert(it){
   if(it.k === 'bewertung' && u === 'keine' && keineGesperrt()) return {v:null, user:false};
   const leer = u == null || (Array.isArray(u) && !u.length);
   if(!leer) return {v:u, user:true};
+  /* v1.170: bewusste Zeilen übernehmen den Vorschlag nicht von selbst */
+  if(it.bewusst && !(PROJ.checksOk || {})[it.k]) return {v:null, user:false};
   return {v: it.sug ? (it.sug(PROJ) || null) : null, user:false};
 }
 /* Eine Zeile, die nur mit dem Vorschlag bestätigt wurde, bekommt keinen eigenen
@@ -10216,6 +10250,9 @@ function renderChecks(){
     const items = g.items.filter(it => !it.when || it.when(PROJ));
     if(!items.length) return;
     h += `<div class="eyebrow">${esc(g.sec)}</div>`;
+    /* v1.170: ein Tipp für alle Erprobungen, danach jede einzeln änderbar */
+    if(g.erproben && items.some(it => it.bewusst && chkStatus(it) === 'red' && it.sug && it.sug(PROJ) != null))
+      h += `<button class="btn ghost" data-erprobt="1" style="margin:0 0 10px">Erprobt: alles i.O.</button>`;
     items.forEach(it => {
       if(it.text){
         const t = esc(String((PROJ.checks || {})[it.k] || ''));
@@ -10233,6 +10270,8 @@ function renderChecks(){
       const zz = chkZustand(it);
       h += `<div class="chk-item ${zz}">
         <div class="t">${ZST}<span>${esc(it.label)}</span>${zz === 'z-ask' ? '<span class="vs">Vorschlag</span>' : zz.includes('z-mangel') ? '<span class="vs mangel">Mangel</span>' : ''}</div>
+        ${it.k === 'bewertung' && v == null && it.sug && it.sug(PROJ)
+          ? `<div class="small" style="margin:-2px 0 8px"><span style="color:var(--signal-ink);font-weight:600">Vorschlag:</span> ${esc(((opts.find(o => o[0] === it.sug(PROJ)) || [])[1]) || '')}</div>` : ''}
         <div class="${cls}" data-chk="${it.k}">` +
         opts.map(([val, txt]) => {
           const an = Array.isArray(v) ? v.includes(val) : v === val;
@@ -10244,6 +10283,7 @@ function renderChecks(){
     });
   });
   $('#checkList').innerHTML = h;
+  if(current === 'checks') bereicheZeigen('checks');   // v1.170: Zähler oben mitführen
   /* Tippen speichert sofort, die Farbe wird erst beim Verlassen nachgezogen –
      ein Neuaufbau mitten im Schreiben nähme dem Feld den Fokus. */
   $$('#checkList [data-chktext]').forEach(el => {
@@ -10253,26 +10293,32 @@ function renderChecks(){
 
   const offen = chkOffen();
   $('#checkCount').innerHTML = offen
-    ? `<div class="warn"><strong>${offen === 1 ? 'Ein Prüfpunkt fehlt' : offen + ' Prüfpunkte fehlen'}</strong>Die rot markierten Zeilen (!) müssen gesetzt werden. Bernstein (?) ist ein Vorschlag und wird beim Bestätigen übernommen.</div>`
+    ? `<div class="warn"><strong>${offen === 1 ? 'Ein Prüfpunkt fehlt' : offen + ' Prüfpunkte fehlen'}</strong>Die rot markierten Zeilen (!) müssen gesetzt werden. Ein Vorschlag (?) wird beim Bestätigen übernommen; Erprobungen und Bewertung nur nach eigenem Tipp.</div>`
     : `<div class="warn ok"><strong>Vollständig</strong>Liste durchgehen und unten bestätigen.</div>`;
   /* v1.166: Ohne Überschrift "Abschluss" (so heißt der Bereich daneben); was
      fehlt, ist ein Knopf, der zur ersten roten Zeile rollt. */
   $('#checkFoot').innerHTML = (offen
     ? `<button class="btn" data-chkzu="1">Noch ${offen === 1 ? '1 Prüfpunkt fehlt' : offen + ' Prüfpunkte fehlen'} – zeigen</button>`
-    : `<button class="btn primary" data-chkgo="1">Prüfpunkte bestätigen</button>`) +
-    `<p class="muted small">Die Prüfpunkte werden so in das Protokoll übernommen, wie sie hier stehen.</p>`;
+    : `<button class="btn primary" data-chkgo="1">Prüfpunkte bestätigen</button>`);
   bildNach(scroll);
 }
 
 /* v1.166: zur ersten Zeile, die noch fehlt, und sie kurz hervorheben */
 function chkZumOffenen(){
   const el = $('#checkList .chk-item.z-bad:not(.z-mangel)'); if(!el) return;
-  imBild(el);
+  bildNach(imBild(el) - 90);
   el.classList.remove('hinweisen'); void el.offsetWidth; el.classList.add('hinweisen');
 }
 /* Tippen auf eine Auswahl */
 $('#view-checks').addEventListener('click', e => {
   if(e.target.closest('[data-chkzu]')){ chkZumOffenen(); return; }
+  if(e.target.closest('[data-erprobt]')){             // v1.170
+    const ok = PROJ.checksOk = PROJ.checksOk || {};
+    PROJ.checks = PROJ.checks || {};
+    chkItems().filter(it => it.bewusst && it.k !== 'bewertung' && PROJ.checks[it.k] == null && it.sug && it.sug(PROJ) != null)
+      .forEach(it => { ok[it.k] = true; });
+    saveProj(); renderChecks(); return;
+  }
   const go1 = e.target.closest('[data-chkgo]');
   /* Mit dem Bestätigen der Angaben ist die Beurteilung abgeschlossen – das gilt
      als Ende der Prüfung. Nur die erste Bestätigung zählt: ein späteres Nach-
@@ -10315,7 +10361,7 @@ $('#view-checks').addEventListener('click', e => {
     const ok  = PROJ.checksOk = PROJ.checksOk || {};
     const ist = PROJ.checks[k] != null ? PROJ.checks[k] : (ok[k] ? vor : null);
     if(ist === val){ PROJ.checks[k] = null; delete ok[k]; }   // nochmal tippen hebt auf
-    else if(val === vor){ PROJ.checks[k] = null; ok[k] = true; }   // Vorschlag bestätigt
+    else if(val === vor && k !== 'bewertung'){ PROJ.checks[k] = null; ok[k] = true; }   // Vorschlag bestätigt
     else { PROJ.checks[k] = val; delete ok[k]; }              // eigene Entscheidung
   }
   saveProj(); renderChecks();
@@ -10460,6 +10506,8 @@ function protokollBlatt(){
   uebersicherungTexte().forEach(t => maengel.push(t));
   const empf = rcdEmpfehlung(P);
   if(empf) maengel.push(empf);
+  if((P.mode || 'wdh') === 'wdh' && !chkSpd() && chkOn('spd', 'nz'))      // v1.170
+    maengel.push('Kein Überspannungsschutz (SPD) im Wohnungsverteiler. Empfehlung: Nachrüstung nach DIN VDE 0100-443/-534.');
   const frei = String((P.checks || {}).bemerkung || '').trim();
   if(frei) maengel.push(frei.replace(/\s*\n\s*/g, ' '));   // eigener Text zuletzt
   const maengelText = maengel.length
@@ -10650,7 +10698,9 @@ function protokollBlatt(){
             <td style="border:none; padding:0"><span class="nw">${CB('spa','vorhanden')}vorhanden</span></td>
             <td style="border:none; padding:0"><span class="nw">${CB('spa','nicht')}nicht vorhanden</span></td>
             <td style="border:none; padding:0"><span class="nw">${CB('spa','nichterf')}nicht erforderlich</span></td>
-            <td style="border:none; padding:0"><span class="rl">Durchgängigkeit R [Ω]:</span></td>
+            <td style="border:none; padding:0"><span class="rl">Durchgängigkeit R [Ω]:</span> ${chkBad()
+              ? (chkOn('spa', 'vorhanden') ? esc(String((P.checks || {}).spaR || '').trim()) : '')
+              : '<span class="sm">kein Bad / Dusche</span>'}</td>
           </tr>
         </table></td>
   </tr>
