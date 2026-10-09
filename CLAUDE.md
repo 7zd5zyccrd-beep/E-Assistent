@@ -118,6 +118,39 @@ Umgesetzt nach dem Bedienkonzept vom 08.10.2026 (Artifact „E-Assistent Bedienk
   SAM-Werkstatt nur bei freigegebenem SAM. Neues Projekt: „Mit/Ohne Fotos
   beginnen“ (`anlegen(mitFotos)`, `CFG.samLetzt`).
 
+## Qualitätskontrolle (v1.166–v1.178)
+
+Umgesetzt nach dem QK-Ergebnis vom 08.10.2026 mit Jeans Antworten (F1 c: der
+Prüfer unterschreibt jedes Mal selbst; F2 a: t_A bei IΔn; F3–F6 a; F8 wie bisher;
+F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
+- **Unterschrift:** Vollbild „Unterschrift Prüfer“ mit Namen; `initPad` nimmt beim
+  Drehen die Tinte mit, `sigHatTinte` – „Fertig“ ohne Strich sichert nichts.
+- **Ausgabe-Sperre** `ausgabeSperre()`: Prüfpunkte + Prüfzeit (`checksDone` erst im
+  Rückruf von `zeitPruefen`), Lücken (Zuleitung, `missingValues`, „Andere“ ohne
+  Grund = `grundFehlt`), Prüfer, Adresse, Übersicherung, `chkOffen()`. Im Abschluss
+  rote Karten mit Sprung (`zurStelle`); unveränderte Ablage-Stände sperren nie.
+- **Bewertung:** `keineGesperrt()` – „keine Mängel“ gilt nicht bei n.i.O., Messmangel,
+  Nullung, Übersicherung (`chkWert` liefert dann null). Vorschlag ohne Mangel.
+  `bewusst:true` (Erprobungen, Bewertung) übernehmen den Vorschlag nie von selbst;
+  Sammelknopf `[data-erprobt]`. Fußleiste der Prüfpunkte in `.actionbar`
+  (Container `liste` sitzt auf `#checkWrap`, nicht auf der Ansicht – sonst zeichnete
+  Chromium sie auf dem iPad leer).
+- **Fachregeln:** t_A-Grenze nach `ta` und Bauart (300/40, selektiv 500/150),
+  `CFG.taLetzt`; Zusatzschutz nur FI ≤ 30 mA (`rcdSchutz`), FI-Pflicht im Bestand
+  `istRcdPflicht` (F3a); `rcdTyp` aus dem Namen; gG-Richtwerte `GG_ZS`;
+  R_PE Pflicht bei Neuinstallation (`rpePflicht`); `KABEL_ALT` (2×1,5);
+  `kabelJeArt`. Zuleitung ohne Vorwahl, Kacheln (`feedKachelnMalen`).
+- **Ablage:** `archLesen` – „Ansehen“ nur lesen (saveProj fällt zurück), „Nachbessern“
+  mit `nachbesserungen`/`nachtrag`; Kurzangaben mit `bewertung`, `art`,
+  `geaendertAm`, `pruefer`, `ablegerUid`; Löschen unter „…“ (`ablageLoeschen`).
+  Papierkorb lokal 30 Tage (`Store 'papierkorb'`, `korbAufraeumen`).
+- **Einstellungen:** `CFG.meinGeraet` persönlich; `fbHoch(schlüssel)` schickt nur den
+  einen Wert; `prueffrist`, `kalibrierung` („Gerät|MM/JJJJ“) für alle; Listen mit
+  „Rückgängig“ (`toastAktion`), gerechnete Bauteile `matGerechnet` mit Schloss.
+- **Schrift:** Barlow Condensed eingebettet (`<style id="schriftEingebettet">`,
+  Familie `BarlowC`); Google lädt nur noch Inter und IBM Plex Mono.
+- **Rückfrage** `SCHUTZ[...].titel/knopf/verwerfen`; auch Neues Projekt und Listen.
+
 ## SAM (Beta)
 
 - Die Erkennung kommt aus dem privaten Repository `sam-werkstatt`
