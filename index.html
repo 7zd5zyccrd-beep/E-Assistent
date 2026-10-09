@@ -10,6 +10,20 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.171 09.10.2026 Qualitaetskontrolle, Paket 2b: Luecken und Messregeln.
+                    Ausgegeben wird erst, wenn die Zuleitung erfasst ist und jeder
+                    Kreis Werte oder "Keine Messung" mit Grund hat (Jean, F4);
+                    jede Sperre fuehrt per Tipp zur Stelle, sperrende Karten im
+                    Abschluss sind rot. "Andere" braucht eine Beschreibung (sonst
+                    rot "Grund fehlt") und gilt im Protokoll als Einschraenkung,
+                    nicht als nummerierter Mangel. Neuinstallation: R_PE ist je
+                    Kreis ein Pflichtfeld in der Messfolge (VDE-Pruefer: ein Wert
+                    je Verteiler genuegt nicht); 1 Ohm heisst "Richtwert".
+                    Uebersicherung als Rechnung formuliert, "Kein Mangel
+                    (Lastbetrachtung/Herstellerangabe)". Maengeltexte ohne
+                    doppelte Satzzeichen; Nullung hinter einem FI wird benannt;
+                    Ausloesestrom unter halbem Nennfehlerstrom gibt einen grauen
+                    Hinweis.
   v1.170 09.10.2026 Qualitaetskontrolle, Paket 2a: Pruefpunkte. Die vier
                     Erprobungen gelten erst nach einem bewussten Tipp - ein Knopf
                     "Erprobt: alles i.O." ueber dem Abschnitt, danach jede Zeile
@@ -1975,6 +1989,7 @@ input.schalter:checked::after{transform:translateX(20px)}
 .warn.info{border-left-color:#2E5C8A;background:var(--info-bg)}
 .warn.gelb{border-left-color:var(--signal);background:var(--sig-bg)}
 .warn.ok{border-left-color:var(--pe);background:var(--ok-bg)}
+.warn:not(.ok):not(.gelb):not(.info) > strong::before{content:"! ";color:var(--fault)}   /* v1.171 */
 .warn strong{display:block;font-family:var(--f-label);letter-spacing:.06em;text-transform:uppercase;font-size:14px}
 
 /* ---------- Fußleiste (Daumenreichweite) ---------- */
@@ -3116,6 +3131,7 @@ function nameGross(s){
               <label class="field"><span>Auslösestrom</span><span class="unit"><input id="mIdn" inputmode="decimal"><em>mA</em></span></label>
               <label class="field"><span>Auslösezeit</span><span class="unit"><input id="mT" inputmode="decimal"><em>ms</em></span></label>
             </div>
+            <p class="muted small" id="idnHinweis" hidden style="margin:-6px 0 12px">ⓘ Auslösestrom unter dem halben Nennfehlerstrom – Ableitströme prüfen.</p>
             <div id="rpeBlock" hidden>
               <button class="btn ghost" id="btnRpe" style="margin-bottom:12px">Schutzleiterwiderstand</button>
               <div id="fldRpeWrap" class="fld-x" hidden>
@@ -3577,7 +3593,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.170';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.171';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -5007,7 +5023,7 @@ function devOf(o){ return o.device || 'ls'; }   // Zuleitung verhält sich wie e
 function zustand(o, isFeed){
   if(isSpecial(o))                      return 'z-ok';
   if(isFeed && o.cable == null)         return 'z-open';
-  if(o.status !== 'measured')           return 'z-none';
+  if(o.status !== 'measured')           return grundFehlt(o) ? 'z-bad' : 'z-none';   // v1.171
   if(checkCircuit(o).length)            return 'z-bad';
   if(missingValues(o))                  return hasMeasure(o) ? 'z-bad' : 'z-open';
   return 'z-ok';
@@ -5027,7 +5043,9 @@ function mangelText(c){
   const m = c.m || {}, dev = devOf(c), leer = v => v == null || v === '';
   const f = [];
   if(c.sam && dev !== 'rcd' && !c.cable) f.push('Kabelart');
+  if(grundFehlt(c)) return 'Grund fehlt';           // v1.171
   if(c.status === 'measured'){
+    if(rpePflicht(c) && leer(m.rpe)) f.push('R_PE');
     if(dev !== 'rcd' && leer(m.iso)) f.push('ISO');
     if(dev !== 'rcd' && leer(m.zs))  f.push('Zs');
     if(dev !== 'ls'  && leer(m.idn)) f.push('IΔ');
@@ -5083,12 +5101,18 @@ function renderBoard(){
 }
 
 /* --- fehlende Pflichtwerte: Grundlage für die Rot-Markierung --- */
+/* v1.171: "Andere" ohne Beschreibung ist eine Lücke (Jean, QK-Frage F4). */
+const grundFehlt = c => c.status !== 'measured' && c.reason === 'other' && !String(c.note || '').trim();
+/* v1.171: Neuinstallation – R_PE je Kreis Pflicht (DIN VDE 0100-600, 6.4.3.2).
+   Die Zuleitung hat kein eigenes Feld dafür. */
+const rpePflicht = c => !!PROJ && PROJ.mode === 'neu' && c !== PROJ.feed && devOf(c) !== 'rcd';
 function missingValues(c){
   if(isSpecial(c)) return false;
   if(c.sam && devOf(c) !== 'rcd' && !c.cable) return true;   // SAM: Kabelart noch offen
-  if(c.status !== 'measured') return false;
+  if(c.status !== 'measured') return grundFehlt(c);
   const need = [];
   const dev = devOf(c);
+  if(rpePflicht(c)) need.push(c.m.rpe);
   if(dev !== 'rcd'){ need.push(c.m.iso, c.m.zs); }
   if(dev !== 'ls'){  need.push(c.m.idn, c.m.t); }
   return need.some(v => v == null || v === '');
@@ -5343,6 +5367,7 @@ function openCircuit(idx){
   $('#cReason').value = draft.reason; $('#cNote').value = draft.note || '';
   $('#mIso').value = draft.m.iso ?? ''; $('#mZs').value = draft.m.zs ?? '';
   $('#mIdn').value = draft.m.idn ?? ''; $('#mT').value = draft.m.t ?? '';
+  setTimeout(idnHinweis);
   $('#btnDelCircuit').hidden = editIdx == null || messModus();
   refreshNoField();
   syncCircuitUi(); go('circuit');
@@ -5415,8 +5440,13 @@ messfeldLogik('#fIso', '#fZs', '#fIsoSug');
 /* Auslösestrom und Auslösezeit sind mit einer Nachkommastelle vollständig. */
 ['#mIdn', '#mT'].forEach(sel => {
   const el = $(sel);
-  el.oninput = () => { if(nachkomma(el.value) >= 1) messWeiter(el); };
+  el.oninput = () => { idnHinweis(); if(nachkomma(el.value) >= 1) messWeiter(el); };
 });
+/* v1.171: kein Mangel, nur ein Hinweis */
+function idnHinweis(){
+  const i = num($('#mIdn').value), br = segVal('#segDevice') === 'rcd' ? $('#cBreaker').value : breakerOf(draft);
+  $('#idnHinweis').hidden = !(i != null && i > 0 && i < idnRated(br) / 2 && !$('#rcdRow').hidden);
+}
 $('#btnAddCircuit').onclick = () => vorVerlassen(() => openCircuit(null));
 
 /* --- Nr.-Feld zeigt bei mehr als 1 TE den belegten Bereich --- */
@@ -6239,7 +6269,8 @@ $('#cCovers').oninput = syncCoversKeys;
    merkt sich der Kreis in seiner Liste "extras" – so bleibt es beim Wechsel
    zwischen den Kreisen erhalten. */
 function rpeOffen(){
-  return draft.extras.includes('rpe') || (draft.m.rpe ?? '') !== '';
+  /* v1.171: bei der Neuinstallation Pflicht – das Feld steht immer offen */
+  return (PROJ && PROJ.mode === 'neu' && segVal('#segDevice') !== 'rcd') || draft.extras.includes('rpe') || (draft.m.rpe ?? '') !== '';
 }
 function renderRpe(){
   const an = PROJ && PROJ.mode === 'neu';
@@ -6248,6 +6279,7 @@ function renderRpe(){
   const offen = rpeOffen();
   $('#btnRpe').hidden     = offen;
   $('#fldRpeWrap').hidden = !offen;
+  $('#btnRpeClear').hidden = PROJ.mode === 'neu';     // v1.171: Pflichtfeld, nichts zu entfernen
   const soll = draft.m.rpe ?? '';                       // nur bei Abweichung setzen,
   if(offen && $('#mRpe').value !== soll) $('#mRpe').value = soll;   // sonst springt der Cursor
 }
@@ -6301,7 +6333,7 @@ function checkCircuit(c){
     if(t != null && t > tMax) w.push(`Auslösezeit ${fmt(t)} ms über ${tMax} ms (gemessen bei ${fuenf ? '5 × IΔn' : 'IΔn'}).`);
   }
   const rpe = num(m.rpe);
-  if(rpe != null && rpe > 1) w.push(`Schutzleiterwiderstand ${fmt(rpe)} Ω über 1 Ω.`);
+  if(rpe != null && rpe > 1) w.push(`Schutzleiterwiderstand ${fmt(rpe)} Ω über dem Richtwert 1 Ω.`);   // v1.171: Richtwert
   return w;
 }
 /* --- speichern --- */
@@ -7234,6 +7266,9 @@ function boardExportFragen(){
    Adresse, offene Übersicherung, eine Bewertung, die nicht mehr passt. */
 function ausgabeSperre(){
   if(!PROJ.checksDone || !PROJ.finishedAt) return 'pruefpunkte';
+  /* v1.171 (Jean, QK-Frage F4): keine Lücken im Protokoll */
+  const f = PROJ.feed || blankFeed();
+  if(f.cable == null || missingValues(f) || circuits().some(missingValues)) return 'luecken';
   if(!(PROJ.tester || '').trim()) return 'pruefer';
   if(!(PROJ.address || '').trim()) return 'adresse';
   if(offeneUebersicherungen().length) return 'uebersicherung';
@@ -7263,9 +7298,10 @@ function renderFinish(){
   const ohne = [!(PROJ.tester || '').trim() ? 'Prüfer' : null, !(PROJ.address || '').trim() ? 'Adresse' : null].filter(Boolean);
   if(ohne.length) h += `<div class="warn"><strong>${ohne.join(' und ')} ${ohne.length > 1 ? 'fehlen' : 'fehlt'}</strong>`
     + `Ohne lässt sich nicht ausgeben. <button class="linkbtn" id="finZuDaten">Projektdaten</button></div>`;
-  if(feedOpen) h += `<div class="warn"><strong>Zuleitung noch nicht erfasst</strong>`
+  if(feedOpen) h += `<div class="warn"><strong>Zuleitung noch nicht erfasst</strong><div class="muted small">Ohne lässt sich nicht ausgeben.</div>`
     + `<button class="linkbtn" data-stelle="${stellen.push(PROJ.feed) - 1}">Zur Zuleitung</button></div>`;
-  if(noVals.length) h += `<div class="warn"><strong>Unvollständige Messwerte</strong>` + noVals.map(zeile).join('') + `</div>`;
+  if(noVals.length) h += `<div class="warn"><strong>Unvollständige Messwerte</strong>`
+    + `<div class="muted small">Ohne lässt sich nicht ausgeben: Wert eintragen oder „Keine Messung“ mit Grund.</div>` + noVals.map(zeile).join('') + `</div>`;
   /* v1.166: rot wie in der Liste (vorher blau); sperrt nicht, der Wert steht
      so im Protokoll. */
   if(overLim.length) h += `<div class="warn"><strong>Grenzwert überschritten</strong>`
@@ -7273,7 +7309,7 @@ function renderFinish(){
   /* v1.161: der Abschluss ist jederzeit erreichbar. Ausgegeben wird aber
      erst nach bestätigten Prüfpunkten – damit steht das Ende der Prüfung fest. */
   const ov = offeneUebersicherungen();               // v1.163
-  if(!PROJ.checksDone || !PROJ.finishedAt) h = `<div class="warn gelb"><strong>Prüfpunkte noch nicht bestätigt</strong>`
+  if(!PROJ.checksDone || !PROJ.finishedAt) h = `<div class="warn"><strong>Prüfpunkte noch nicht bestätigt</strong>`   // v1.171: sperrt – rot
     + `Erst danach lässt sich ausgeben. <button class="linkbtn" id="finZuPruef">Zu den Prüfpunkten</button></div>` + h;
   else if(chkOffen()){
     /* v1.166: Nach dem Bestätigen kam ein Mangel dazu – "keine Mängel" gilt
@@ -7289,7 +7325,7 @@ function renderFinish(){
     ? `Ende ${tstr(PROJ.finishedAt)} · Dauer ${Math.max(0, Math.round((PROJ.finishedAt - PROJ.startedAt) / 60000))} min` : 'Keine offenen Punkte.'}</div>`;
   $('#plausiOut').innerHTML = h;
   /* Offene Übersicherungen (v1.163): hier entscheiden, ausgegeben wird erst danach. */
-  if(ov.length) $('#plausiOut').insertAdjacentHTML('afterbegin', `<div class="warn gelb"><strong>Übersicherung zu entscheiden</strong>`
+  if(ov.length) $('#plausiOut').insertAdjacentHTML('afterbegin', `<div class="warn"><strong>Übersicherung zu entscheiden</strong>`
     + ov.map((o, i) => `<div style="margin-top:6px">${esc(uebersicherungText(o.fi, o.u).kopf)} · `
       + `<button class="linkbtn" data-ov="${i}">Entscheiden</button></div>`).join('') + `</div>`);
   $$('#plausiOut [data-ov]').forEach(b => b.onclick = () => {
@@ -9847,6 +9883,15 @@ const kreisNummern = c => {
   const e = circuitEnd(c); const b = isFinite(e) && e > a ? e : a;
   return Array.from({length: b - a + 1}, (_, i) => a + i);
 };
+/* Alle FI, gleich welcher Nennfehlerstrom – für den Hinweis zur Nullung */
+function rcdSchutzAlle(){
+  const s = new Set();
+  circuits().forEach(c => {
+    if(c.device === 'rcbo') kreisNummern(c).forEach(n => s.add(n));
+    if(c.device === 'rcd')  coversNummern(c.covers).forEach(n => s.add(n));
+  });
+  return s;
+}
 function rcdSchutz(){
   const s = new Set();
   circuits().forEach(c => {
@@ -10018,7 +10063,7 @@ function uebersicherungDialog(fi, u, stand, fertig){
     `<div class="muted small" style="margin-top:8px">${esc(zTxt)}</div>` +
     `<div style="margin-top:14px">` +
     `<button class="btn danger" id="ovMangel">Mangel bestätigen</button>` +
-    `<button class="btn ghost"  id="ovKein"  style="margin-top:10px">Kein Mangel</button>` +
+    `<button class="btn ghost"  id="ovKein"  style="margin-top:10px">Kein Mangel (Lastbetrachtung/Herstellerangabe)</button>` +
     `<button class="btn ghost"  id="ovOffen" style="margin-top:10px">Nicht zu klären</button>` +
     `<button class="btn ghost"  id="ovSpaet" style="margin-top:10px">Später entscheiden</button>` +
     `</div>`;
@@ -10061,7 +10106,8 @@ function uebersicherungTexte(){
     const u = uebersicherung(c); if(!u) return;
     const {kopf, last} = uebersicherungText(c, u);
     out.push(c.over.wahl === 'mangel'
-      ? `${kopf}: Übersicherung. Dahinter ${last}, in Summe ${u.summe} A bei einem Nennstrom von ${u.amp} A.`
+      ? `${kopf}: Summe der Nennströme dahinter ${u.summe} A (${last}) bei einem Nennstrom des FI von ${u.amp} A. `
+        + `Ohne Lastbetrachtung ist der Überlastschutz des FI nicht nachgewiesen.`   // v1.171: als Rechnung
       : `${kopf}: mögliche Übersicherung. Dahinter ${last} bei einem Nennstrom von ${u.amp} A; `
         + `die Aufteilung auf die Phasen war nicht zu klären.`);
   });
@@ -10074,7 +10120,7 @@ const uebersicherungMangel = () =>
 function chkMessMaengel(){
   return [PROJ.feed, ...circuits()].some(o => {
     if(!o || isSpecial(o)) return false;
-    if(o.status !== 'measured') return !['function_ok','inaccessible'].includes(o.reason);
+    if(o.status !== 'measured') return grundFehlt(o);   // v1.171: "Andere" mit Grund ist eine Einschränkung
     return checkCircuit(o).length > 0 || missingValues(o);
   });
 }
@@ -10432,10 +10478,15 @@ function protokollBlatt(){
     /* Ein zweiadriger Kreis kommt in die Mängelliste, auch wenn die Messwerte
        stimmen. Die Spalte trägt dann die Mangel-Nummer statt ✓, F oder n.z.;
        dass nicht gemessen wurde, steht ohnehin im Feld über der Tabelle. */
-    const nul = istNullung(o) ? 'klassische Nullung, PEN im Endstromkreis' : '';
+    /* v1.171: liegt der PEN hinter einem FI, schützt dieser den Kreis nicht */
+    const hinterFi = istNullung(o) && kreisNummern(o).some(n => rcdSchutzAlle().has(n));
+    const nul = istNullung(o) ? 'klassische Nullung, PEN im Endstromkreis' + (hinterFi ? ' (hinter RCD – ohne Schutzwirkung)' : '') : '';
     if(o.status !== 'measured'){
       if(o.reason === 'function_ok'  && !nul) return 'F';
       if(o.reason === 'inaccessible' && !nul) return 'n.z.';
+      /* v1.171: "Andere" mit Beschreibung steht unter den Einschränkungen,
+         nicht als nummerierter Mangel (Jean, QK-Frage F4). */
+      if(o.reason === 'other' && !nul && String(o.note || '').trim()) return 'n.z.';
       const grund = o.reason === 'function_ok'  ? 'Funktionsprobe statt Messung'
                   : o.reason === 'inaccessible' ? 'nicht zugänglich'
                   : (o.note || 'keine Messung');
@@ -10445,7 +10496,7 @@ function protokollBlatt(){
     const w = checkCircuit(o);
     const fehlt = missingValues(o);
     if(!w.length && !fehlt && !nul) return '✓';
-    const teile = [fehlt ? 'Messwerte unvollständig' : '', ...w, nul].filter(Boolean);
+    const teile = [fehlt ? 'Messwerte unvollständig' : '', ...w.map(x => x.replace(/\.$/, '')), nul].filter(Boolean);   // v1.171: kein ".;"
     maengel.push(`${bez}: ${teile.join('; ')}`);
     return String(maengel.length);
   }
