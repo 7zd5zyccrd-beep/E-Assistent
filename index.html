@@ -10,6 +10,22 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.181 09.10.2026 Fehler aus der QK Runde 2. Kalibrierdatum nimmt auf dem iPhone
+                    auch "0327" an (dort fehlt der "/"); Ungueltiges wird nicht mehr
+                    still geloescht. Die FI-Kachel schlaegt nur vorhandene Kreise vor,
+                    die noch kein FI abdeckt (vorher "16-21" ohne solche Kreise).
+                    Ablage: "Pruefer aendern" beim erneuten Ausgeben fuehrt nicht mehr
+                    in eine Sackgasse; wer nachbessert und ohne Ausgabe geht, wird
+                    gefragt (Jetzt ausgeben / Spaeter / Verwerfen) - Verwerfen holt den
+                    alten Stand samt Unterschrift zurueck, "Spaeter" zeigt die Karte
+                    bernstein "nachgebessert, noch nicht ausgegeben"; ohne Aenderung
+                    bleibt alles wie es war. Im "nur ansehen" fragt der erste Tipp in
+                    ein Feld gleich nach "Nachbessern", Foto/Material/aendern sind
+                    ausgeblendet, unter "Unterschrift Pruefer" steht die Unterschrift
+                    oder "ohne Unterschrift abgelegt". Zurueck fuehrt nach "Weiter" in
+                    die Ablage. SAM-Zeichen als kleines Abzeichen an der Wolke, nur auf
+                    Startseite und im Projekt. Papierkorb loescht nach 30 Tagen auch
+                    die Fotos auf dem Geraet. Eingabetaste uebernimmt "Neuer Eintrag".
   v1.180 09.10.2026 Tastatur (Jean: auf dem iPhone blieben Messwerte hinter der
                     Tastatur, QK Runde 2 F1-F3). Bisher hing alles daran, dass iOS
                     die offene Tastatur als kleineres Fenster meldet; tut es das
@@ -1697,11 +1713,14 @@ main{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overfl
 #trainListe .list-item.state-red{border-left-color:var(--fault)}
 /* Stand von SAM: ein Reiter, der unter der Kopfzeile hängt – so bleibt die
    Kopfzeile symmetrisch und die Anzeige doch überall sichtbar. */
-.sam-stand{flex:0 0 auto;align-self:center;min-height:28px;
-  font-family:var(--f-label);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
-  background:rgba(255,255,255,.12);color:#fff;border:0;border-radius:999px;padding:3px 9px;
-  white-space:nowrap}   /* v1.176 (QK G9): neben der Wolke statt über der Bereichsleiste */
-.sam-stand.fehler{background:var(--fault)}
+.sam-stand{position:absolute;top:calc(4px + env(safe-area-inset-top));right:calc(var(--pad) + 34px + 10px - 8px);
+  width:20px;height:20px;padding:0;border:0;border-radius:50%;z-index:2;
+  display:flex;align-items:center;justify-content:center;
+  font:700 12px/1 var(--f-label);background:#3A4232;color:#fff}
+.sam-stand::before{content:"";position:absolute;inset:-12px}   /* 44 px Trefferfläche */
+.sam-stand.fehler{background:#C0392B}
+/* v1.181 (QK D2): als Abzeichen an der Wolke – der Titel behält seinen Platz */
+
 .beta{font-size:11px;letter-spacing:.08em;text-transform:uppercase;border:1px solid currentColor;
   border-radius:4px;padding:0 4px;margin-left:6px;vertical-align:middle}
 .muted{color:var(--ink-soft);font-size:14px}
@@ -2244,6 +2263,7 @@ input.schalter:checked::after{transform:translateX(20px)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.aktiv{pointer-events:auto;white-space:nowrap}                  /* v1.174: "Rückgängig" */
 #toast .toast-knopf{background:none;border:0;color:inherit;font:inherit;font-weight:700;text-decoration:underline;padding:6px 2px}
+input.ungueltig{border-color:var(--fault)!important;color:var(--fault)}   /* v1.181 */
 .le-schloss{flex:0 0 auto;display:inline-flex;align-self:center;opacity:.6;margin-right:4px}
 
 /* ---------- SAM: nächstes Foto (v1.125) ----------
@@ -3754,7 +3774,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.180';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.181';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4144,6 +4164,7 @@ function neueKennung(v){ return v + Date.now().toString(36) + Math.random().toSt
    unerledigt da, auch bei den Kollegen. */
 let archOffen = null;
 let archLesen = false;          // v1.173: abgelegt und noch nicht zum Nachbessern freigegeben
+let archVorher = null;          // v1.181: Stand vor dem Nachbessern, bis ausgegeben oder entschieden
 const saveProj = () => {
   if(!PROJ) return true;
   /* v1.173: Im Lesemodus wird nichts geändert. Was doch geändert wurde, fällt
@@ -4311,6 +4332,14 @@ document.addEventListener('focusin', e => {
   tippt = true;
   leisteVerstecken(true);
   tastaturPlatz(el);                               // v1.180
+  /* v1.181 (QK U4): im "nur ansehen" gleich fragen statt Eingaben zu verwerfen */
+  if(archOffen && archLesen && bild().contains(el) && !el.closest('#view-archive') && el.type !== 'checkbox'){
+    el.blur();
+    waehlDialog('Abgelegte Prüfung nachbessern?', 'Sie ist nur zum Ansehen geöffnet.', [
+      {t:'Nachbessern', cls:'primary', fn:nachbessern},
+      {t:'Nur ansehen', cls:'ghost', fn:null}
+    ]);
+  }
 });
 /* --- v1.180: Feld über die Tastatur holen (Jean, QK Runde 2 F1–F3) ---
    iOS meldet die Tastatur nicht in jedem Fall als kleineres Fenster. Dann
@@ -4571,6 +4600,8 @@ function ablageStreifen(name){
    nach einer Änderung nicht mehr; das Protokoll trägt dann "Nachtrag vom". */
 function nachbessern(){
   const los = () => {
+    const e0 = ARCH.find(x => x.id === archOffen);
+    archVorher = e0 && e0.stand ? JSON.parse(JSON.stringify(e0.stand)) : null;   // v1.181
     archLesen = false;
     PROJ.nachbesserungen = PROJ.nachbesserungen || [];
     PROJ.nachbesserungen.push({am: Date.now(), von: CFG.tester || FB.konto || ''});
@@ -4644,7 +4675,28 @@ $('#btnMehr').onclick = () => {
     + `${n} Stromkreis${n === 1 ? '' : 'e'}${PROJ.abwNr ? ' · Abweichende Nummerierung' : ''}`, wahl);
 };
 
+/* v1.181 (QK U3): Nachgebessertes nicht still in der Ablage lassen. Ohne
+   Änderung wird der alte Stand samt Unterschrift wiederhergestellt. */
+const NB_OHNE = ['modus', 'docs', 'docsStand', 'updatedAt', 'nachbesserungen', 'signature', 'nachtrag', 'nachOffen'];
+const nbOhne = o => JSON.stringify(Object.keys(o || {}).filter(k => !NB_OHNE.includes(k)).sort().map(k => [k, o[k]]));   // Reihenfolge egal
+function nachbessernAbschluss(weiter){
+  const e = ARCH.find(x => x.id === archOffen);
+  const alt = archVorher;
+  const zurueck = () => { e.stand = alt; e.hoch = false; saveArch(); ablageHoch(e); };
+  if(!e || !alt){ weiter(); return; }
+  if(nbOhne(PROJ) === nbOhne(alt)){ archVorher = null; zurueck(); weiter(); return; }
+  waehlDialog('Nachbesserung ausgeben?', 'Der Stand in der Ablage weicht jetzt vom ausgegebenen Protokoll ab.', [
+    {t:'Jetzt ausgeben', cls:'primary', fn:() => { bereichWechseln('abschluss'); $('#btnExportDocs').click(); }},
+    {t:'Später', cls:'ghost', fn:() => { archVorher = null; PROJ.nachOffen = true; saveProj(); weiter(); }},
+    {t:'Verwerfen', cls:'danger', fn:() => { archVorher = null; zurueck(); weiter(); }},
+    {t:'Weiter bearbeiten', cls:'ghost', fn:null}
+  ]);
+}
 function go(name, push = true){
+  if(archOffen && archVorher && !PROJECT_VIEWS.includes(name) && !(name === 'new' && projEdit)){
+    if(!push) stack.push(name);                      // Zurück hat schon herausgenommen – bei "Weiter bearbeiten" bleibt es
+    nachbessernAbschluss(() => { if(!push) stack.pop(); go(name, push); }); return;
+  }
   if(push && name !== current) stack.push(current);
   if(current === 'kamprobe' && name !== 'kamprobe') kpStoppen();   // v1.139: Kamera und Licht aus
   if(!$('#samKam').hidden) samKamSchliessen();                      // v1.143
@@ -4660,7 +4712,8 @@ function go(name, push = true){
   if(name !== 'sam') samNaechstZeigen(false);      // v1.125
   /* Ein zum Ansehen geöffneter Ablage-Eintrag wird beim Verlassen der
      Projektansichten wieder zugemacht. */
-  if(archOffen && !PROJECT_VIEWS.includes(name)){ archOffen = null; archLesen = false; PROJ = null; }
+  /* v1.181 (QK F4): die Projektdaten gehören beim Ablage-Eintrag dazu */
+  if(archOffen && !PROJECT_VIEWS.includes(name) && !(name === 'new' && projEdit)){ archOffen = null; archLesen = false; archVorher = null; PROJ = null; }
   /* Änderungen von anderen Geräten werden nicht mitten in eine Eingabe
      hineingeschrieben – sie warten, bis der Kreis verlassen ist. */
   if(name !== 'circuit' && name !== 'feed') fbNachtragAnwenden();
@@ -4898,7 +4951,12 @@ function korbAufraeumen(){
   const grenze = Date.now() - KORB_TAGE * 864e5;
   const k = korbHolen(), alt = k.filter(x => x.am < grenze);
   if(!alt.length) return;
-  alt.forEach(x => fbProjWeg(x.p.id, true));
+  alt.forEach(x => {
+    fbProjWeg(x.p.id, true);
+    (x.p.photos || []).forEach(f => {                // v1.181: auch die Fotos auf dem Gerät
+      if(f && f.fid){ Bilder.weg(f.fid).catch(() => {}); Bilder.weg(VOR(f.fid)).catch(() => {}); }
+    });
+  });
   Store.set('papierkorb', k.filter(x => x.am >= grenze));
 }
 function korbWiederherstellen(id){
@@ -6545,7 +6603,7 @@ function naechsterOffenerKreis(ref){
 function weiterZumKreis(ref){
   const i = naechsterOffenerKreis(ref);
   if(i < 0){ backToBoard(); return; }               // nach dem letzten zurück zur Liste
-  if(current !== 'board'){ stack = ['home']; go('board', false); }   // Zurück führt zur Liste
+  if(current !== 'board'){ stack = archOffen ? ['home', 'archive'] : ['home']; go('board', false); }   // Zurück führt zur Liste
   openCircuit(i);
 }
 
@@ -6614,12 +6672,25 @@ function coversHint(){
   }
   const start = noStart();
   const te    = Math.max(1, parseInt($('#cTe').value, 10) || 1);
-  const anz   = te >= 4 ? 6 : 2;
-  const von   = start + te;
-  $('#cCovers').placeholder = `z.B. ${von}–${von + anz - 1}`;
+  /* v1.181 (QK U2): nur Kreise, die es gibt und die noch kein anderer FI
+     abdeckt – zuerst die folgenden bis zum nächsten FI, sonst die davor.
+     Vorher stand dort blind "16–21", auch wenn es diese Kreise nicht gab. */
+  const ende = start + te - 1;
+  const selbst = editIdx != null ? PROJ.items[editIdx] : null;
+  const fis = circuits().filter(c => c !== selbst && c.device === 'rcd');
+  const belegt = new Set(); fis.forEach(c => coversNummern(c.covers).forEach(n => belegt.add(n)));
+  const frei = circuits().filter(c => c !== selbst && !isSpecial(c) && c.device !== 'rcd' && c.device !== 'rcbo' && !istFestGerat(c)
+    && isFinite(kreisStart(c)) && !kreisNummern(c).some(n => belegt.has(n)));
+  const naechsterFi = Math.min(Infinity, ...fis.map(kreisStart).filter(n => n > ende));
+  const vorigerFi = Math.max(-Infinity, ...fis.map(c => circuitEnd(c) || kreisStart(c)).filter(n => n < start));
+  let wahl = frei.filter(c => kreisStart(c) > ende && kreisStart(c) < naechsterFi);
+  if(!wahl.length) wahl = frei.filter(c => kreisStart(c) < start && kreisStart(c) > vorigerFi);
+  const nums = wahl.flatMap(kreisNummern);
+  const txt = nums.length ? (Math.min(...nums) === Math.max(...nums) ? String(nums[0]) : `${Math.min(...nums)}–${Math.max(...nums)}`) : '';
+  $('#cCovers').placeholder = txt ? `z.B. ${txt}` : 'z.B. 5–10, 12';
   /* v1.172 (QK G58): der Vorschlag als Kachel, nicht nur als grauer Platzhalter */
-  const sg = $('#coversSug'), txt = `${von}–${von + anz - 1}`;
-  sg.hidden = !!$('#cCovers').value.trim();
+  const sg = $('#coversSug');
+  sg.hidden = !txt || !!$('#cCovers').value.trim();
   sg.firstElementChild.textContent = txt + ' übernehmen';
   sg.firstElementChild.onclick = () => { $('#cCovers').value = txt; syncCoversKeys(); };
 }
@@ -6766,7 +6837,7 @@ function persistCircuit(){
   noteFirstMeasure(c);
   saveProj();
 }
-function backToBoard(){ stack = ['home']; go('board', false); }
+function backToBoard(){ stack = archOffen ? ['home', 'archive'] : ['home']; go('board', false); }   // v1.181: aus der Ablage zurück dorthin
 
 /* --- Überschneidende Nummern -----------------------------------------------
    Wird die Nummer oder die Breite eines Kreises geändert, kann er auf Teilungs-
@@ -7747,7 +7818,14 @@ function renderFinish(){
   const sig = PROJ.signature && PROJ.signature.data;
   $('#sigVorschau').innerHTML = sig ? `<div class="sig-vorschau"><img src="${sig}" alt="Unterschrift"></div>` : '';
   $('#btnSigOeffnen').textContent = sig ? 'Unterschrift ändern' : 'Unterschreiben';
-  $('#btnSigOeffnen').hidden = !!(archOffen && archLesen);   // v1.173: erst nachbessern
+  const lesen = !!(archOffen && archLesen);
+  $('#btnSigOeffnen').hidden = lesen;                // v1.173: erst nachbessern
+  if(lesen && !sig) $('#sigVorschau').innerHTML = '<p class="muted small" style="margin-top:0">Ohne Unterschrift abgelegt.</p>';   // v1.181
+  /* v1.181 (QK D9): im "nur ansehen" keine Bearbeiten-Knöpfe */
+  $('#btnPhotoFinish').hidden = lesen;
+  $$('#docActions button').forEach(b => b.hidden = lesen);
+  const ag = $('#btnAg'); if(ag) ag.hidden = lesen;
+  const za = $('#finZeitAendern'); if(za) za.hidden = lesen;
   const ex = $('#btnExportDocs');
   ex.textContent = archOffen ? 'Erneut ausgeben' : 'Ausgeben und ablegen';
   ex.disabled = !!ausgabeSperre();
@@ -9318,12 +9396,17 @@ function samStandSetzen(z, text){
   SAM_LESER.zustand = z; SAM_LESER.fehlerText = text || '';
   const el = $('#samStand');
   /* v1.176: nur auf der Startseite und in SAM-Projekten */
-  const zeigen = !!CFG.sam && z && z !== 'bereit' && (current === 'home' || !!(PROJ && PROJ.sam));
+  const zeigen = !!CFG.sam && z && z !== 'bereit' && (current === 'home' || (!!(PROJ && PROJ.sam) && PROJECT_VIEWS.includes(current)));
   el.hidden = !zeigen;
   if(!zeigen) return;
   el.className = 'sam-stand' + (z === 'fehler' ? ' fehler' : '');
-  if(z === 'fehler'){ el.textContent = 'SAM !'; el.setAttribute('aria-label', 'SAM Fehler – neu versuchen'); return; }
-  el.innerHTML = '<span class="ring"></span>SAM';           // v1.115: Zeichen statt Worte
+  /* v1.181: an die rechte obere Ecke der Wolke – wo die steht, hängt davon ab,
+     ob rechts daneben noch Zahnrad oder "…" sitzen */
+  const w = $('#btnWolke').getBoundingClientRect(), k = $('header').getBoundingClientRect();
+  if(w.width){ el.style.left = Math.round(w.right - k.left - 12) + 'px'; el.style.right = 'auto';
+               el.style.top = Math.round(w.top - k.top - 8) + 'px'; }
+  if(z === 'fehler'){ el.textContent = '!'; el.setAttribute('aria-label', 'SAM Fehler – neu versuchen'); return; }
+  el.innerHTML = '<span class="ring" style="margin:0"></span>';   // v1.181: nur der Ring
   el.setAttribute('aria-label', z === 'laedt' ? 'SAM lädt' : 'SAM liest');
 }
 $('#samStand').onclick = () => {
@@ -11579,6 +11662,10 @@ async function ablegen(wahl, nochmal, zwischen){
      ab und setzt kein Abschlussdatum; er hält nur fest, was hinausging. */
   if(zwischen){ saveProj(); renderBoardDocs(); }
   else if(!nochmal){ await archLadenP; archiveNow(); }   // erst wenn die Ablage geladen ist
+  if(nochmal && archOffen && PROJ && (archVorher || PROJ.nachOffen)){   // v1.181: Nachbesserung ist hinaus
+    archVorher = null; delete PROJ.nachOffen;
+    const l = archLesen; archLesen = false; saveProj(); archLesen = l;
+  }
   toast(zwischen ? 'Vorab ausgegeben' : (nochmal ? 'Erneut ausgegeben' : 'Ausgegeben – liegt in der Ablage'));   // v1.166
 }
 /* Im Abschluss ist die Auswahl schon in der Ansicht getroffen – der Export
@@ -11606,14 +11693,14 @@ $('#btnExportDocs').onclick = () => {
      nicht der Angemeldete ist. Ohne Unterschrift ein Weg zurück zum Feld. */
   const fremd = (PROJ.tester || '').trim() !== (CFG.tester || '').trim();
   const sigFehlt = !(PROJ.signature && PROJ.signature.data) && d.protokoll;
-  $('#modalBody').innerHTML = `<div class="${fremd ? 'rot' : ''}" style="margin-bottom:8px">Prüfer im Protokoll: <strong>${esc(PROJ.tester || '–')}</strong> · `
-    + `<button class="linkbtn" id="agPruefer">ändern</button></div>`
+  $('#modalBody').innerHTML = `<div class="${fremd ? 'rot' : ''}" style="margin-bottom:8px">Prüfer im Protokoll: <strong>${esc(PROJ.tester || '–')}</strong>`
+    + (archOffen && archLesen ? '' : ` · <button class="linkbtn" id="agPruefer">ändern</button>`) + `</div>`
     + `<div class="small" style="font-weight:600">Geht hinaus</div>`
     + geht.map(t => `<div>✓ ${esc(t)}</div>`).join('')
     + `<div class="small" style="font-weight:600;margin-top:10px">Danach</div>`
     + danach.map(t => `<div class="muted">${esc(t)}</div>`).join('')
     + (sigFehlt ? `<button class="btn ghost" id="agSig" style="margin-top:12px">Erst unterschreiben</button>` : '');
-  $('#agPruefer').onclick = () => { $('#modal').hidden = true; pendingAck = null; projektAendern(); };
+  if($('#agPruefer')) $('#agPruefer').onclick = () => { $('#modal').hidden = true; pendingAck = null; projektAendern(); };
   if(sigFehlt) $('#agSig').onclick = () => { $('#modal').hidden = true; pendingAck = null; sigOeffnen(); };
   $('#modalOk').textContent = 'Zum Kurzbefehl';
   $('#modalBack').textContent = 'Abbrechen';
@@ -11832,7 +11919,7 @@ function renderArchive(){
         fotos ? ' · ' + fotos + ' Foto' + (fotos === 1 ? '' : 's') : ''}</div>
       ${bew && BEWERTUNG_KURZ[bew] ? `<div class="arch-bew b-${bew}">${bew === 'mit' ? '<b>!</b> ' : ''}${BEWERTUNG_KURZ[bew]}</div>` : ''}
       ${(!archStand(e) && !e.hoch) ? '<div class="muted small" style="margin-top:4px">Alter Eintrag – nur als Datei zu sichern</div>' : ''}
-      ${(nb => nb ? `<div class="muted small">nachgebessert ${dstr(nb.am)}${nb.von ? ' von ' + esc(nameGross(nb.von)) : ''}</div>` : '')(((archStand(e) || {}).nachbesserungen || []).slice(-1)[0])}
+      ${(nb => nb ? `<div class="small" style="${(archStand(e) || {}).nachOffen ? 'color:var(--signal-ink);font-weight:600' : 'color:var(--ink-soft)'}">nachgebessert ${dstr(nb.am)}${nb.von ? ' von ' + esc(nameGross(nb.von)) : ''}${(archStand(e) || {}).nachOffen ? ', noch nicht ausgegeben' : ''}</div>` : '')(((archStand(e) || {}).nachbesserungen || []).slice(-1)[0])}
       <div class="btn-row" style="margin-top:10px">
         <button class="btn ghost" data-asee="${i}">Ansehen</button>
         <button class="btn" data-arch="${i}">Erneut ausgeben</button>
@@ -12003,7 +12090,8 @@ function settingsZurueck(){
 const prueffrist = v => { const n = parseInt(v, 10); return n >= 1 && n <= 10 ? n : 4; };
 const kalibListe = () => Object.fromEntries(String(CFG.kalibrierung || '').split('\n')
   .map(z => z.split('|')).filter(t => t.length === 2 && t[0]).map(t => [t[0], t[1]]));
-const kalibNorm = v => { const m = /^(\d{1,2})\D+(\d{2}|\d{4})$/.exec(String(v || '').trim()); if(!m) return '';
+/* v1.181: auch ohne Trennzeichen ("0327", "032027") – die Zifferntastatur des iPhones hat keinen "/" */
+const kalibNorm = v => { const m = /^(\d{1,2})\D*(\d{2}|\d{4})$/.exec(String(v || '').trim()); if(!m) return '';
   const mo = +m[1], j = m[2].length === 2 ? 2000 + +m[2] : +m[2];
   return mo >= 1 && mo <= 12 ? String(mo).padStart(2, '0') + '/' + j : ''; };
 const kalibAbgelaufen = mmjj => { const m = /^(\d{2})\/(\d{4})$/.exec(mmjj || ''); if(!m) return false;
@@ -12037,6 +12125,10 @@ $('#view-settings').addEventListener('change', e => {
   if(e.target.dataset.kalib != null){                 // v1.172
     const k = kalibListe(); const d = CFG.devices[+e.target.dataset.kalib];
     const v = kalibNorm(e.target.value);
+    if(!v && e.target.value.trim()){                 // v1.181: nicht still löschen
+      e.target.classList.add('ungueltig'); toast('Bitte als MM/JJJJ, z. B. 03/2027'); return;
+    }
+    e.target.classList.remove('ungueltig');
     if(v) k[d] = v; else delete k[d];
     CFG.kalibrierung = Object.entries(k).map(([g, m]) => g + '|' + m).join('\n');
     e.target.value = v;
@@ -12109,6 +12201,8 @@ function renderListe(){
       onOk:() => { listeMerken(l.k); arr.splice(i, 1); sichern(); renderListe(); }});
   });
 }
+$('#listeNeu').setAttribute('enterkeyhint', 'done');   // v1.181: Eingabetaste übernimmt
+$('#listeNeu').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); $('#btnListeNeu').click(); } });
 $('#btnListeNeu').onclick = () => {
   const l = LISTEN.find(x => x.k === setListe); if(!l) return;
   const name = $('#listeNeu').value.trim(); if(!name) return;
