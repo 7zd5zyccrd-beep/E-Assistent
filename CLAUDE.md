@@ -156,6 +156,25 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Mängelliste je Haus). Nicht wieder vorschlagen. Ebenso kein Feld für den
   Netzinnenwiderstand.
 
+## QK Runde 2 (v1.180–v1.183)
+
+- **Tastatur (v1.180, Jean: Messwerte auf dem iPhone verdeckt):** nicht mehr allein
+  auf `--app-h` verlassen. `tastaturPlatz` hängt beim Fokus Luft an (`.app.luft
+  main::after`), `feldFreiholen` holt Feld samt Begleiter (`BEGLEITER`: „999“,
+  „übernehmen“) über `tastaturKante()` (aus visualViewport, sonst geschätzt);
+  `ruheH` = Höhe ohne Fokus; kein `scrollTo(0,0)` während des Tippens; Blätter
+  (`#modal`) bekommen `bottom` in Tastaturhöhe. Test: `qk2/funktion/kblib.cjs`
+  bildet die iOS-Tastatur nach (Fall A/B), `t180.cjs`.
+- **Ablage:** `archVorher` hält den Stand vor „Nachbessern“; `go` fragt beim
+  Verlassen (`nachbessernAbschluss`: Jetzt ausgeben / Später → `nachOffen` /
+  Verwerfen), ohne Änderung kommt der alte Stand samt Unterschrift zurück. Im
+  Lesemodus fragt der erste Tipp in ein Feld nach „Nachbessern“.
+- **Messen:** `grenzLive` färbt Werte über Grenz-/Richtwert schon beim Tippen;
+  Zuleitung im Messen mit Kopfkarte und `feedAendern`; `kabelText` zeigt „×“.
+- **Sonst:** `letzterBereich` je Projekt; Listen löschen ohne Rückfrage mit
+  „Rückgängig“ (8 s); SAM-Zeichen als Abzeichen an der Wolke; FI-Typ als Kacheln
+  (`#typKacheln`); `--fault-fill` für rote Flächen.
+
 ## SAM (Beta)
 
 - Die Erkennung kommt aus dem privaten Repository `sam-werkstatt`

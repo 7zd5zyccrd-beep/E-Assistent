@@ -10,6 +10,22 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.183 09.10.2026 QK Runde 2, Abschluss, Ablage, Einstellungen. Ausgabe-Blatt:
+                    Hauptknopf "Ausgeben" (ueber den iOS-Kurzbefehl); ohne Unterschrift
+                    ist "Unterschreiben" der Hauptweg, "Ohne Unterschrift ausgeben" der
+                    Nebenweg. "Bereit zur Ausgabe" nennt fehlende Unterschrift und
+                    fehlendes Kalibrierdatum (ohne Sperre). "Erprobt wie vorgeschlagen"
+                    statt "alles i.O.". Ein Projekt oeffnet im zuletzt benutzten Bereich.
+                    Listen: Entfernen ohne Rueckfrage, dafuer "Entfernt - Rueckgaengig".
+                    Projekt geloescht: "Rueckgaengig" im Hinweis; Einstellungen
+                    "Papierkorb und Daten", der Papierkorb oben. Rueckfragen: Titel
+                    "Aenderungen speichern?", der Gegenstand darunter; neues Projekt
+                    nennt die Wohnung. "Kamera der App" steht auf der SAM-Seite.
+                    Pruefpunkte "2a/2b", "Bemerkungen" ohne Zeichen. Ablage zaehlt
+                    Kreise ohne FI, NEU als Rahmen statt gruener Flaeche. FI-Typ als
+                    Kacheln. Rote Flaechen im Dunkeln dunkler (lesbar), "Standort" und
+                    Verweise mit groesserer Trefferflaeche, Unterschriftsfeld mit Linie,
+                    Abschluss auf dem iPad hoechstens 720 px breit.
   v1.182 09.10.2026 QK Runde 2, Messen und Erfassen. Ein Messwert ueber dem Grenz-
                     oder Richtwert wird schon beim Tippen rot, mit einer Zeile darunter
                     - solange er noch auf dem Messgeraet steht; im Hinweis beim
@@ -1514,6 +1530,7 @@
   --signal:#E3A81F;           /* Bernstein für „keine Messung" – klar vom Markengrün getrennt */
   --pe:#6F9A22;               /* „gemessen" – dunkleres Grün aus der Markenfamilie */
   --fault:#C0392B;
+  --fault-fill:#C0392B;       /* v1.183: rote Flächen mit weißer Schrift */
   --ink:#1A1F16;
   --ink-soft:#5C6355;
   --line:#CBD0C2;
@@ -1932,9 +1949,9 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
 .arch-bew.b-mit{color:var(--fault)}
 .arch-bew.b-ohne{color:var(--signal-ink)}
 .arch-bew.b-keine{color:var(--ink-soft);font-weight:500}
-.art-chip.neu{background:var(--brand);color:#1A1F16}
+.art-chip.neu{background:transparent;color:var(--brand-ink, var(--brand-dark));box-shadow:inset 0 0 0 1.5px currentColor}   /* v1.183: Grün heißt sonst i.O. */
 #view-checks .eyebrow{grid-column:1 / -1}   /* v1.178: auf dem iPad über beide Spalten */
-@media (min-width:900px){ #view-home{max-width:720px;margin-left:auto;margin-right:auto} }   /* v1.178 */
+@media (min-width:900px){ #view-home,#view-finish{max-width:720px;margin-left:auto;margin-right:auto;width:100%} }   /* v1.178, Abschluss v1.183 */
 #view-home.leiser [data-neu]{background:transparent}
 .fortschritt{display:block;height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin-top:3px}
 .fortschritt i{display:block;height:100%;background:var(--brand-ink, var(--pe))}   /* v1.178: kräftiger */
@@ -1954,7 +1971,7 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
 .bereiche button.an[data-b="messen"]{border-bottom-color:#7FB2E4}
 .bereiche em{position:absolute;top:2px;left:calc(50% + 10px);min-width:17px;height:16px;padding:0 4px;border-radius:8px;
   font:600 11px/16px var(--f-data);font-style:normal;letter-spacing:0;text-align:center;background:#5C6355;color:#fff}
-.bereiche em.rot{background:var(--fault)}
+.bereiche em.rot{background:var(--fault-fill)}
 #modalBody .rot{color:var(--fault)}   /* v1.172: Prüfer weicht ab */
 .erste-schritte{border-left:4px solid var(--brand)}
 .bereiche em.ok{background:var(--pe);color:#15180F}   /* v1.175: dunkle Schrift, auch im Dunkeln lesbar */
@@ -1973,6 +1990,7 @@ header h1.tippbar{cursor:pointer}
 /* v1.166: quer auf dem iPhone ist die Höhe knapp – das 3:1-Feld wird dann
    schmaler, statt über Text und Knöpfe zu wachsen */
 #sigView .sigwrap{width:min(100%, 900px, calc((100vh - 210px) * 3))}
+#sigView .sigwrap::after{content:"";position:absolute;left:8%;right:8%;bottom:24%;border-bottom:1.5px solid #C9CFC0;pointer-events:none}   /* v1.183: Linie, nicht im Bild */
 #sigView #sigpad{max-width:none;border-color:#5C6355}
 #sigView .sv-quer{font-size:13px;color:#96A088;margin-top:10px;text-align:center}
 @media (orientation:landscape){ #sigView .sv-quer{display:none} #sigView .sv-text{margin:4px 0 8px} }
@@ -2050,8 +2068,8 @@ input.schalter:checked::after{transform:translateX(20px)}
 .le-zeile button.weg{color:var(--fault)}
 .le-vor{font-size:11px;font-weight:600;color:var(--signal-ink);border:1px solid var(--signal);border-radius:4px;padding:1px 5px;white-space:nowrap}
 .feld-mit-knopf{position:relative}
-.feldknopf{position:absolute;right:0;top:-4px;display:flex;align-items:center;gap:4px;padding:4px 2px 4px 8px;border:0;
-  background:none;color:var(--brand-dark);font-size:14px;font-weight:600}
+.feldknopf{position:absolute;right:0;top:-14px;display:flex;align-items:center;gap:4px;padding:14px 2px 14px 8px;border:0;
+  background:none;color:var(--brand-ink, var(--brand-dark));font-size:14px;font-weight:600}   /* v1.183: dunkler, 44 px hoch */
 #btnCreate.zweizeilig small{font-size:13px}
 /* v1.165: Suchfeld in Lager und Ablage */
 .suche{display:flex;align-items:center;gap:8px;height:48px;padding:0 12px;margin-bottom:12px;border:1px solid var(--line);
@@ -2064,7 +2082,7 @@ input.schalter:checked::after{transform:translateX(20px)}
 .btn.softred{border-color:var(--fault);color:var(--fault);background:var(--warn-bg);font-weight:600}
 .btn + .btn{margin-top:10px}
 /* unauffälliger Textknopf, sieht aus wie ein Link im Fließtext */
-.linkbtn{background:none;border:0;padding:10px 0;margin:-10px 0;font:inherit;color:var(--brand-ink, var(--brand-dark));text-decoration:underline}   /* v1.178: 44 px hoch, Aussehen gleich */
+.linkbtn{background:none;border:0;padding:12px 0;margin:-12px 0;font:inherit;color:var(--brand-ink, var(--brand-dark));text-decoration:underline}   /* v1.178: 44 px hoch, Aussehen gleich */
 .btn[disabled]{opacity:.4;pointer-events:none}
 /* kleines x auf Höhe der Feldbeschriftung: blendet das Feld wieder aus.
    Das Kreuz wird gezeichnet statt gesetzt – als Schriftzeichen sitzt es nicht mittig.
@@ -2095,7 +2113,7 @@ input.schalter:checked::after{transform:translateX(20px)}
 .seg button:first-child{border-left:0}
 .seg button[aria-pressed="true"]{background:var(--sel, var(--strong));color:var(--on-sel, var(--on-strong))}
 /* v1.168: ein gewähltes n.i.O. ist ein Mangel – rot mit "!" */
-.seg button[data-v="nio"][aria-pressed="true"]{background:var(--fault);color:#fff}
+.seg button[data-v="nio"][aria-pressed="true"]{background:var(--fault-fill);color:#fff}
 .seg button[data-v="nio"][aria-pressed="true"]::before{content:"! ";font-weight:700}
 .chk-item .t .vs.mangel{color:var(--fault)}
 .seg.wrap{flex-wrap:wrap}
@@ -2263,7 +2281,7 @@ input.schalter:checked::after{transform:translateX(20px)}
 .lg-wahl input[type="checkbox"]{          /* globale Feldregel gezielt aufheben */
   width:22px;height:22px;min-height:0;flex:0 0 22px;margin:0;padding:0;border:0;border-radius:0;
   background:none;appearance:auto;-webkit-appearance:auto;accent-color:var(--ink)}
-.lg-verw{display:block;width:fit-content;margin:10px 0 0 auto;font-size:14px}
+.lg-verw{display:block;width:fit-content;margin:10px 0 0 auto;font-size:14px;color:var(--fault)}   /* v1.183: verwirft etwas */
 /* Knöpfe unter den Bewegungen: gap statt Rändern, damit der Abstand gleich
    bleibt, wenn "Letzte 10 anzeigen" wegfällt (gap überspringt Verstecktes). */
 .lg-artakt{display:flex;flex-direction:column;gap:10px;margin-top:18px}
@@ -2278,7 +2296,7 @@ input.schalter:checked::after{transform:translateX(20px)}
 }
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.aktiv{pointer-events:auto;white-space:nowrap}                  /* v1.174: "Rückgängig" */
-#toast .toast-knopf{background:none;border:0;color:inherit;font:inherit;font-weight:700;text-decoration:underline;padding:6px 2px}
+#toast .toast-knopf{background:none;border:0;color:inherit;font:inherit;font-weight:700;text-decoration:underline;padding:12px 6px;margin:-12px 0}
 input.ungueltig{border-color:var(--fault)!important;color:var(--fault)}   /* v1.181 */
 .le-schloss{flex:0 0 auto;display:inline-flex;align-self:center;opacity:.6;margin-right:4px}
 
@@ -2530,6 +2548,7 @@ input.ungueltig{border-color:var(--fault)!important;color:var(--fault)}   /* v1.
     --pe:#A0D241;
     --signal:#E3B23C;
     --fault:#E0685C;
+    --fault-fill:#C0392B;     /* weiß darauf 5,4 : 1 statt 3,3 : 1 */
     --warn-bg:#3A2523;
     --sig-bg:#38300F;
     --info-bg:#1E2A36;
@@ -3268,7 +3287,7 @@ function nameGross(s){
           <div class="row" id="rowDevice">
             <label class="field narrow" id="fldChar"><span>Charakteristik</span><select id="cChar"></select></label>
             <label class="field narrow" id="fldRated"><span>Nennstrom</span><select id="cRated"></select></label>
-            <label class="field" id="fldType" hidden><span id="lblType">FI-Typ</span><select id="cBreaker"></select></label>
+            <div class="field" id="fldType" hidden><span id="lblType">FI-Typ</span><div class="chk-grid kacheln" id="typKacheln"></div><select id="cBreaker" hidden></select></div>   <!-- v1.183: Kacheln -->
           </div>
           <div class="field" id="fldPoles" hidden><span>Pole</span><div class="chk-grid kacheln" id="polKacheln"></div><select id="cPoles" hidden></select></div>
           <div class="field" id="fldCovers" hidden><span>Deckt Kreise ab</span>
@@ -3414,7 +3433,8 @@ function nameGross(s){
       <button class="btn ghost" id="btnSheets" style="margin-top:10px">Vorschau</button>
       <!-- Der Verteiler wird oft erst nach Messung und Prüfung im fertigen
            Zustand dokumentiert – die Fotos entstehen dann hier. -->
-      <div id="finishPhotos" style="margin-top:10px"></div>
+      <div class="eyebrow">Fotos</div>   <!-- v1.183 -->
+      <div id="finishPhotos"></div>
       <button class="btn ghost" id="btnPhotoFinish" style="margin-top:10px">Foto aufnehmen</button>
       <div class="eyebrow">Auftraggeber</div>
       <p class="muted small" id="agZeile" style="margin-top:0"></p>
@@ -3484,9 +3504,8 @@ function nameGross(s){
           <label class="set-zeile"><span>Messfolge</span><select id="setMessfolge">
             <option value="nr">Nummernfolge</option>
             <option value="weg">Messweg</option></select></label>
-          <label class="set-zeile"><span>Kamera der App</span><input type="checkbox" class="schalter" id="setEigeneKamera"></label>
         </div>
-        <p class="muted small set-hinweis">Messweg: erst Zuleitung, Herd und CEE, dann reine Beleuchtungskreise, danach raumweise; die FI hinter den Kreisen, die sie abdecken. Gilt für „Weiter messen“ und die Liste im Bereich Messen. Die Kamera der App nimmt mit Licht das schärfste aus zehn Bildern; aus = Kamera von iOS.</p>
+        <p class="muted small set-hinweis">Messweg: erst Zuleitung, Herd und CEE, dann reine Beleuchtungskreise, danach raumweise; die FI hinter den Kreisen, die sie abdecken. Gilt für „Weiter messen“ und die Liste im Bereich Messen.</p>
         <div class="set-gk">Für alle <em>wird abgeglichen</em></div>
         <div class="set-gruppe">
           <button class="set-zeile" type="button" data-seite="pruefung"><span>Prüffrist und Messgeräte</span><svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
@@ -3497,7 +3516,7 @@ function nameGross(s){
         <div class="set-gruppe">
           <button class="set-zeile" type="button" data-seite="sam"><span>SAM <span class="beta">Beta</span></span><em class="v" id="setSamWert"></em><svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
           <button class="set-zeile" type="button" data-seite="konto"><span>Konto und Abgleich</span><em class="v" id="setKontoWert"></em><svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
-          <button class="set-zeile" type="button" data-seite="daten"><span>Daten</span><svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+          <button class="set-zeile" type="button" data-seite="daten"><span>Papierkorb und Daten</span><svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
         </div>
       </div>
 
@@ -3556,6 +3575,9 @@ function nameGross(s){
           <input type="checkbox" id="setSam"><span>SAM auf diesem Gerät freigeben</span></label>
         <p class="muted small" style="margin:0 0 6px">Gilt nur auf diesem Gerät. Beim Anlegen einer
           Wiederholungsprüfung stehen dann „Mit Fotos beginnen“ und „Ohne Fotos beginnen“ zur Wahl.</p>
+        <div class="set-gruppe" style="margin-bottom:6px">   <!-- v1.183: gilt nur für SAM -->
+          <label class="set-zeile"><span>Kamera der App</span><input type="checkbox" class="schalter" id="setEigeneKamera"></label>
+        </div>
         <div id="setWerkstatt" hidden>
           <div class="eyebrow">Werkstatt</div>
           <label class="chk" style="margin-bottom:8px">
@@ -3580,11 +3602,11 @@ function nameGross(s){
       </div>
 
       <div class="set-seite" data-seite="daten" hidden>
-        <p class="muted small">Weitergabe-Dateien aus der Zeit vor dem Abgleich lassen sich hier noch einlesen.</p>
-        <button class="btn ghost" id="btnImport" style="margin-bottom:14px">Projektdatei einlesen</button>
-        <input type="file" id="importFile" accept=".json,application/json" hidden>
         <div class="set-gk">Papierkorb <em>30 Tage, auf diesem Gerät</em></div>
         <div class="set-gruppe" id="setKorb"></div>
+        <p class="muted small" style="margin-top:18px">Weitergabe-Dateien aus der Zeit vor dem Abgleich lassen sich hier noch einlesen.</p>
+        <button class="btn ghost" id="btnImport" style="margin-bottom:14px">Projektdatei einlesen</button>
+        <input type="file" id="importFile" accept=".json,application/json" hidden>
       </div>
     </section>
   </main>
@@ -3791,7 +3813,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.182';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.183';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4206,7 +4228,7 @@ const saveProj = () => {
     if(e){
       e.stand   = PROJ;
       e.adresse = PROJ.address || ''; e.wohnung = PROJ.flat || '';
-      e.kreise  = (PROJ.items || []).length;
+      e.kreise  = kreisZahl(PROJ);
       e.fotos   = (PROJ.photos || []).length;
       e.hoch    = false;                       // der volle Stand muss neu hinauf
       saveArch(); ablageHoch(e);
@@ -4249,7 +4271,7 @@ function toastAktion(msg, knopf, fn){
   t.innerHTML = `${esc(msg)} · <button type="button" class="toast-knopf">${esc(knopf)}</button>`;
   toastSetzen(); t.classList.add('show', 'aktiv');
   t.querySelector('button').onclick = () => { t.classList.remove('show', 'aktiv'); fn(); };
-  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show', 'aktiv'), 5000);
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show', 'aktiv'), 8000);   // v1.183: mit Handschuhen länger
 }
 function toast(msg){
   const t = $('#toast'); t.textContent = msg; t.classList.remove('aktiv');
@@ -4650,6 +4672,7 @@ function bereicheZeigen(name){
 }
 function bereichWechseln(b){
   if(!PROJ) return;
+  if(!archOffen && PROJ.letzterBereich !== b){ PROJ.letzterBereich = b; saveProj(); }   // v1.183: dort wieder öffnen
   const basis = archOffen ? ['home', 'archive'] : ['home'];
   if(b === 'erfassen' || b === 'messen'){
     const m = b === 'messen' ? 'mess' : 'edit';
@@ -4819,6 +4842,7 @@ const SCHUTZ = {
   /* v1.167: auch beim Anlegen; mit SAM legt "Speichern" ohne Fotos an,
      damit nicht still die Kamera aufgeht. */
   new:      {stand: () => feldStand('#view-new'), knopf: () => projEdit ? 'Speichern' : 'Projekt anlegen',
+             titel: () => projEdit ? 'Projektdaten' : `Neues Projekt${$('#npFlat').value.trim() ? ' · ' + flatLabel($('#npFlat').value.trim()) : ''}`,
              speichern: () => projEdit || $('#btnCreateOhne').hidden ? $('#btnCreate').click() : $('#btnCreateOhne').click()},
   settings: {stand: () => setSeite === 'liste' ? $('#listeNeu').value.trim() + '\u0001' + $('#listeNeuTe').value.trim() : '',
              knopf: () => 'Hinzufügen', titel: () => 'Neuer Eintrag – hinzufügen?',
@@ -4852,7 +4876,9 @@ function waehlDialog(titel, text, wahl){
 function vorVerlassen(weiter){
   if(!schutzGeaendert()){ weiter(); return; }
   const s = SCHUTZ[current];
-  waehlDialog(s.titel ? s.titel() : 'Änderungen speichern?', 'Hier ist etwas geändert und noch nicht gespeichert.', [   // v1.177: mit Gegenstand
+  /* v1.183 (QK D15): kurzer Titel, der Gegenstand steht darunter */
+  const gegenstand = s.titel ? s.titel().replace(/\s*–\s*(speichern|hinzufügen)\?$/, '') : '';
+  waehlDialog('Änderungen speichern?', (gegenstand ? gegenstand + ' – ' : '') + 'noch nicht gespeichert.', [
     {t:s.knopf ? s.knopf() : 'Speichern', cls:'primary', fn:() => s.speichern(weiter)},
     {t:'Verwerfen', cls:'danger',  fn:() => { if(s.verwerfen) s.verwerfen(); else schutzStart = null; if(current === 'new') projEdit = false; weiter(); }},
     {t:'Weiter bearbeiten', cls:'ghost', fn:null}
@@ -5012,7 +5038,7 @@ function projektLoeschen(p){
       PROJECTS = PROJECTS.filter(x => x.id !== p.id); saveProjects();
       fbProjWeg(p.id, false);               // gilt für alle Geräte; Fotos erst beim Leeren des Papierkorbs
       PROJ = null; stack = []; go('home', false);
-      toast('Gelöscht – 30 Tage im Papierkorb');
+      toastAktion('Gelöscht', 'Rückgängig', () => { korbWiederherstellen(p.id); renderHome(); });   // v1.183
     }});
 }
 
@@ -6443,6 +6469,9 @@ function kachelnMalen(){
       });
       $('#modal').hidden = false;
     });
+  /* v1.183: FI-Typ als Kacheln */
+  if(!$('#fldType').hidden) kachelGruppe($('#typKacheln'), optionen($('#cBreaker')).map(v => ({v, t:v})), $('#cBreaker').value,
+    v => waehleIn($('#cBreaker'), v));
   /* Pole */
   kachelGruppe($('#polKacheln'), optionen($('#cPoles')).map(v => ({v, t:v + '-polig'})), $('#cPoles').value,
     v => waehleIn($('#cPoles'), v));
@@ -6460,9 +6489,9 @@ $$('#teStep button').forEach(b => b.onclick = () => {
    Kacheln über die Auswahllisten mit. */
 if(window.MutationObserver){
   const mo = new MutationObserver(() => kachelnMalen());
-  ['#cCable', '#cRated', '#cChar', '#cPoles', '#cTe'].forEach(id => mo.observe($(id), {childList:true}));
+  ['#cCable', '#cRated', '#cChar', '#cPoles', '#cTe', '#cBreaker'].forEach(id => mo.observe($(id), {childList:true}));
 }
-['#cCable', '#cRated', '#cChar', '#cPoles', '#cTe'].forEach(id => $(id).addEventListener('change', () => setTimeout(kachelnMalen, 0)));
+['#cCable', '#cRated', '#cChar', '#cPoles', '#cTe', '#cBreaker'].forEach(id => $(id).addEventListener('change', () => setTimeout(kachelnMalen, 0)));
 
 /* "Sonstiges" in der Geräteart öffnet die Auswahl der sonstigen Geräte als
    Blatt; der Schalter springt erst mit der Wahl um. */
@@ -7858,7 +7887,12 @@ function renderFinish(){
           + b.opts.map(([val, txt]) => `<button data-bew="${val}"${val === 'keine' && grund ? ' disabled' : ''}>${esc(txt)}</button>`).join('') + `</div>`
         : `<button class="linkbtn" id="finZuPruef">Zu den Prüfpunkten</button>`) + `</div>` + h;
   }
-  if(!h && !ov.length) h = `<div class="warn ok"><strong>Bereit zur Ausgabe</strong>Keine offenen Punkte.</div>`;   // v1.172: Zeit steht darunter
+  if(!h && !ov.length){
+    /* v1.183 (QK U10): was noch fehlt, ohne zu sperren */
+    const noch = [!(PROJ.signature && PROJ.signature.data) ? 'Noch nicht unterschrieben.' : '',
+                  !kalibListe()[PROJ.device] ? 'Kalibrierdatum des Messgeräts fehlt (Einstellungen › Prüffrist und Messgeräte).' : ''].filter(Boolean);
+    h = `<div class="warn ok"><strong>Bereit zur Ausgabe</strong>${noch.length ? noch.map(esc).join(' ') : 'Keine offenen Punkte.'}</div>`;
+  }
   if(archOffen && archLesen) h = '';                // v1.173: abgelegt – nichts zu entscheiden
   $('#plausiOut').innerHTML = h;
   /* Offene Übersicherungen (v1.163): hier entscheiden, ausgegeben wird erst danach. */
@@ -7941,7 +7975,7 @@ function renderAuftraggeber(){
   if(!PROJ) return;
   const eigen = (PROJ.auftraggeber || '').trim();
   const zeile = (eigen || CFG.auftraggeber || '').split('\n')[0] || 'nicht hinterlegt';
-  $('#agZeile').innerHTML = `Auftraggeber: ${esc(zeile)}${eigen ? ' (abweichend)' : ''} · `
+  $('#agZeile').innerHTML = `${esc(zeile)}${eigen ? ' (abweichend)' : ''} · `   // v1.183: Überschrift steht darüber
     + `<button class="linkbtn" id="btnAg">ändern</button>`;
   $('#btnAg').onclick = auftraggeberAendern;
 }
@@ -10704,7 +10738,7 @@ const CHECKS = [
     {k:'erdRA', label:'Erdungswiderstand RA messen und eintragen', text:true, unit:'Ω',
      when:() => chkOn('netz','tt')}
   ]},
-  {sec:'2 · Besichtigen', items:[
+  {sec:'2a · Besichtigen', items:[
     {k:'betriebsmittel',   label:'Auswahl der Betriebsmittel (Umgebung, IP-Schutzart)',
      sug:() => 'io'},
     {k:'verteilerZugang',  label:'Zugänglichkeit Stromkreisverteiler', sug:() => 'io'},
@@ -10738,7 +10772,7 @@ const CHECKS = [
     {k:'spd',              label:'Überspannungsschutz (SPD) im Wohnungsverteiler',
      sug:P => chkSpd() ? 'io' : (P.mode === 'neu' ? null : 'nz')}
   ]},
-  {sec:'2 · Erproben', erproben:true, items:[
+  {sec:'2b · Erproben', erproben:true, items:[
     /* v1.170: Erprobungen sind Handlungen. Sie gelten erst nach einem Tipp –
        einzeln oder über "Erprobt: alles i.O." (bewusst:true, Jean, QK-Frage F5). */
     {k:'funktion',  label:'Funktionsprüfung der Anlage', sug:() => 'io', bewusst:true},
@@ -10861,12 +10895,12 @@ function renderChecks(){
     h += `<div class="eyebrow">${esc(g.sec)}</div>`;
     /* v1.170: ein Tipp für alle Erprobungen, danach jede einzeln änderbar */
     if(g.erproben && items.some(it => it.bewusst && chkStatus(it) === 'red' && it.sug && it.sug(PROJ) != null))
-      h += `<button class="btn ghost" data-erprobt="1" style="margin:0 0 10px">Erprobt: alles i.O.</button>`;
+      h += `<button class="btn ghost" data-erprobt="1" style="margin:0 0 10px">Erprobt wie vorgeschlagen</button>`;   // v1.183: setzt auch n.z.
     items.forEach(it => {
       if(it.text){
         const t = esc(String((PROJ.checks || {})[it.k] || ''));
         h += `<div class="chk-item ${chkZustand(it)}">
-          <div class="t">${ZST}${esc(it.label)}</div>` +
+          <div class="t">${it.opt ? '' : ZST}${esc(it.label)}</div>` +
           (it.mehrzeilig
             ? `<textarea data-chktext="${it.k}" rows="3">${t}</textarea>`
             : `<span class="unit"><input data-chktext="${it.k}" inputmode="decimal" value="${t}"><em>${esc(it.unit || '')}</em></span>`) +
@@ -11772,12 +11806,14 @@ $('#btnExportDocs').onclick = () => {
     + geht.map(t => `<div>✓ ${esc(t)}</div>`).join('')
     + `<div class="small" style="font-weight:600;margin-top:10px">Danach</div>`
     + danach.map(t => `<div class="muted">${esc(t)}</div>`).join('')
-    + (sigFehlt ? `<button class="btn ghost" id="agSig" style="margin-top:12px">Erst unterschreiben</button>` : '');
+    + `<div class="muted small" style="margin-top:10px">Ausgegeben wird über den iOS-Kurzbefehl.</div>`
+    + (sigFehlt ? `<button class="btn ghost" id="agOhne" style="margin-top:12px">Ohne Unterschrift ausgeben</button>` : '');
   if($('#agPruefer')) $('#agPruefer').onclick = () => { $('#modal').hidden = true; pendingAck = null; projektAendern(); };
-  if(sigFehlt) $('#agSig').onclick = () => { $('#modal').hidden = true; pendingAck = null; sigOeffnen(); };
-  $('#modalOk').textContent = 'Zum Kurzbefehl';
+  /* v1.183 (QK U9): ohne Unterschrift ist Unterschreiben der Hauptweg (Jean, F1 c) */
+  if(sigFehlt) $('#agOhne').onclick = () => { $('#modal').hidden = true; pendingAck = null; ausgebenJetzt(d); };
+  $('#modalOk').textContent = sigFehlt ? 'Unterschreiben' : 'Ausgeben';
   $('#modalBack').textContent = 'Abbrechen';
-  pendingAck = () => ausgebenJetzt(d);
+  pendingAck = sigFehlt ? () => sigOeffnen() : () => ausgebenJetzt(d);
   $('#modal').hidden = false;
 };
 function ausgebenJetzt(d){
@@ -11803,6 +11839,7 @@ function ausgebenJetzt(d){
 const ABLAGE_MAX = 60;                       // rund drei Monate bei zwanzig Wohnungen
 
 const archStand   = e => e && e.stand ? e.stand : null;
+const kreisZahl = P => (P.items || []).filter(c => c.kind === 'circuit' && c.device !== 'rcd' && !isSpecial(c)).length;
 const archAdresse = e => e.adresse || (archStand(e) ? (e.stand.address || '') : ((e.projekt || {}).adresse || ''));
 const archWohnung = e => e.wohnung || (archStand(e) ? (e.stand.flat || '')    : ((e.projekt || {}).wohnung || ''));
 const archKreise  = e => e.kreise != null ? e.kreise
@@ -11838,7 +11875,7 @@ function archiveNow(){
     ownerName: PROJ.ownerName || '',
     ablegerName: CFG.tester || FB.konto || '', ablegerUid: FB.uid || null,
     adresse: PROJ.address || '', wohnung: PROJ.flat || '',
-    kreise: (PROJ.items || []).length, fotos: (PROJ.photos || []).length,
+    kreise: kreisZahl(PROJ), fotos: (PROJ.photos || []).length,   // v1.183: ohne FI und Sonstiges
     stand: JSON.parse(JSON.stringify(PROJ)),   // vollständig, damit sich der Export wiederholen lässt
     bericht: exportObj()
   };
@@ -11995,7 +12032,7 @@ function renderArchive(){
       ${(nb => nb ? `<div class="small" style="${(archStand(e) || {}).nachOffen ? 'color:var(--signal-ink);font-weight:600' : 'color:var(--ink-soft)'}">nachgebessert ${dstr(nb.am)}${nb.von ? ' von ' + esc(nameGross(nb.von)) : ''}${(archStand(e) || {}).nachOffen ? ', noch nicht ausgegeben' : ''}</div>` : '')(((archStand(e) || {}).nachbesserungen || []).slice(-1)[0])}
       <div class="btn-row" style="margin-top:10px">
         <button class="btn ghost" data-asee="${i}">Ansehen</button>
-        <button class="btn" data-arch="${i}">Erneut ausgeben</button>
+        <button class="btn" data-arch="${i}" style="padding:0 8px;white-space:nowrap">Erneut ausgeben</button>
       </div>
     </div>`;
   }).join('');
@@ -12103,7 +12140,7 @@ async function erneutSichern(e, knopf){
    mit Sonderregeln ("erste Zeile ist Vorauswahl", "Hauptschalter, 3"). */
 let setSeite = 'start', setListe = null;
 const SET_TITEL = {start:'Einstellungen', pruefung:'Prüffrist und Messgeräte', adressen:'Adressen im Protokoll', listen:'Listen', lager:'Lager',
-  sam:'SAM (Beta)', konto:'Konto und Abgleich', daten:'Daten'};
+  sam:'SAM (Beta)', konto:'Konto und Abgleich', daten:'Papierkorb und Daten'};
 const LISTEN = [
   {k:'devices',  t:'Messgeräte',        hw:'Der erste Eintrag ist die Vorgabe für neue Projekte.'},
   {k:'chars',    t:'Charakteristiken',  hw:'Der erste Eintrag ist die Vorauswahl.'},
@@ -12222,9 +12259,9 @@ const matGerechnet = n => MAT_GERECHNET.has(n) || n === MAT_SPD_2 || n === MAT_S
 /* Listenänderung mit "Rückgängig" (v1.174, QK G42) */
 let listeVorher = null;
 function listeMerken(k){ listeVorher = {k, arr: (CFG[k] || []).slice()}; }
-function listeGespeichert(){
+function listeGespeichert(was){
   const v = listeVorher; if(!v) return;
-  toastAktion('Gespeichert', 'Rückgängig', () => {
+  toastAktion(was || 'Gespeichert', 'Rückgängig', () => {
     CFG[v.k] = v.arr; saveCfg(); fbHoch(v.k); listeVorher = null;
     if(current === 'settings' && setSeite === 'liste') renderListe();
     toast('Zurückgenommen');
@@ -12269,9 +12306,8 @@ function renderListe(){
   });
   $$('#listeEditor [data-weg]').forEach(b => b.onclick = () => {
     const i = +b.dataset.weg;
-    showDialog({title:'Eintrag löschen?', danger:true, ok:'Löschen',
-      body:`„${arr[i]}“ aus der Liste entfernen? Gilt sofort für alle Kollegen. Schon erfasste Kreise und Projekte behalten ihren Wert.`,
-      onOk:() => { listeMerken(l.k); arr.splice(i, 1); sichern(); renderListe(); }});
+    /* v1.183 (QK U13): ohne Rückfrage – "Rückgängig" reicht */
+    listeMerken(l.k); arr.splice(i, 1); saveCfg(); fbHoch(l.k); renderListe(); listeGespeichert('Entfernt');
   });
 }
 $('#listeNeu').setAttribute('enterkeyhint', 'done');   // v1.181: Eingabetaste übernimmt
@@ -12734,7 +12770,8 @@ function seitWann(ts){
 function projektOeffnen(p){
   if(!p) return;
   const f = fremdeArbeit(p.id);
-  const rein = () => { PROJ = p; stack = ['home']; go('board', false); };
+  const rein = () => { PROJ = p; stack = ['home'];
+    if(['pruefpunkte', 'abschluss'].includes(p.letzterBereich)) bereichWechseln(p.letzterBereich); else go('board', false); };
   if(!f) return rein();
   showDialog({
     title:'Wird gerade bearbeitet',
