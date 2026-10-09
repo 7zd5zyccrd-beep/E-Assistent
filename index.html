@@ -10,6 +10,21 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.182 09.10.2026 QK Runde 2, Messen und Erfassen. Ein Messwert ueber dem Grenz-
+                    oder Richtwert wird schon beim Tippen rot, mit einer Zeile darunter
+                    - solange er noch auf dem Messgeraet steht; im Hinweis beim
+                    Speichern heisst der Knopf "Korrigieren". Die Zuleitung sieht im
+                    Messen aus wie der Kreis (Kopfkarte, "Kabel und Absicherung
+                    aendern"); Kacheln nur, solange das Kabel fehlt. In der Liste
+                    heisst sie "offen" statt "Noch nicht erfasst". Kabel nach Kreisart
+                    auch beim selbst getippten Namen; "Beleuchtung, Steckdosen" und
+                    ein neuer Kreis mit B16 bekommen 3x2,5 statt 3x1,5. Beim FI der
+                    Neuinstallation kein Knopf "Schutzleiterwiderstand" mehr. Kabel
+                    ueberall mit "x" als Malzeichen geschrieben. "Andere" bei der
+                    Absicherung geordnet nach B, C, D, gG. Nummern-Ueberschneidung als
+                    Hinweiskarte. Gesperrte Hauptknoepfe grau, auch im Dunkeln. Der
+                    SAM-Knopf im Verteiler erscheint nur, solange SAM-Eintraege offen
+                    sind. Auf dem iPhone heisst die Art im Kopf kurz WDH/NEU.
   v1.181 09.10.2026 Fehler aus der QK Runde 2. Kalibrierdatum nimmt auf dem iPhone
                     auch "0327" an (dort fehlt der "/"); Ungueltiges wird nicht mehr
                     still geloescht. Die FI-Kachel schlaegt nur vorhandene Kreise vor,
@@ -1901,6 +1916,7 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
   background:var(--surface);color:var(--ink);
 }
 .btn.primary{background:var(--strong);color:var(--on-strong);border-color:var(--strong)}
+.btn.primary:disabled{background:var(--neutral-bg);color:var(--ink-soft);border-color:var(--line);opacity:1}   /* v1.182: gesperrt ist grau, auch im Dunkeln */
 .btn.accent{background:var(--brand);border-color:var(--brand-dark);color:#1A1F16;font-weight:700}
 .btn.ghost{border-color:var(--rail-dark);color:var(--ink-soft);background:transparent}
 .btn.danger{border-color:var(--fault);color:var(--fault);background:var(--surface)}
@@ -3227,7 +3243,7 @@ function nameGross(s){
               <div class="stepper" id="teStep"><button type="button" data-d="-1" aria-label="schmaler">−</button><b id="teWert">1</b><button type="button" data-d="1" aria-label="breiter">+</button></div>
               <select id="cTe" hidden></select></div>
           </div>
-          <p class="small" id="noUeber" hidden style="margin:-6px 0 12px"></p>
+          <div id="noUeber" hidden></div>
           <div class="field" id="fldDevSeg"><span>Geräteart</span>
             <div class="seg" id="segDevice">
               <button data-v="ls" aria-pressed="true">LS</button>
@@ -3295,6 +3311,7 @@ function nameGross(s){
               <label class="field"><span>Auslösestrom</span><span class="unit"><input id="mIdn" inputmode="decimal"><em>mA</em></span></label>
               <label class="field"><span>Auslösezeit</span><span class="unit"><input id="mT" inputmode="decimal"><em>ms</em></span></label>
             </div>
+            <p class="small" id="grenzLive" hidden style="margin:-6px 0 12px;color:var(--fault);font-weight:600"></p>
             <p class="muted small" id="idnHinweis" hidden style="margin:-6px 0 12px">ⓘ Auslösestrom unter dem halben Nennfehlerstrom – Ableitströme prüfen.</p>
             <div id="rpeBlock" hidden>
               <button class="btn ghost" id="btnRpe" style="margin-bottom:12px">Schutzleiterwiderstand</button>
@@ -3774,7 +3791,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.181';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.182';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4651,7 +4668,8 @@ function projektTitel(){
      Kopfzeile genau die Wohnung ab, an der man gerade arbeitet */
   const str = ((PROJ.address || '').split('\n')[0] || 'Ohne Adresse').replace(/straße\b/i, 'str.');
   const gross = PROJ.flat ? flatLabel(PROJ.flat) : str;
-  const klein = (PROJ.flat ? str + ' · ' : '') + MODES[PROJ.mode || 'wdh'].label + (archOffen ? ' · Ablage' : '');
+  const art = window.innerWidth < 600 ? ((PROJ.mode || 'wdh') === 'neu' ? 'NEU' : 'WDH') : MODES[PROJ.mode || 'wdh'].label;   // v1.182: kurz auf dem iPhone
+  const klein = (PROJ.flat ? str + ' · ' : '') + art + (archOffen ? ' · Ablage' : '');
   t.innerHTML = `${esc(gross)}<small>${esc(klein)}</small>`;
   t.classList.add('tippbar');
 }
@@ -5307,7 +5325,7 @@ function andereWaehlen(titel, alle, jetzt, fertig){
   resetModal(false);
   $('#modalTitle').textContent = titel;
   $('#modalBody').innerHTML = `<div class="chk-grid">${alle.map((x, i) =>
-    `<button class="sug${x === jetzt ? ' back' : ''}" type="button" data-i="${i}">${esc(x)}</button>`).join('')}</div>`;
+    `<button class="sug${x === jetzt ? ' back' : ''}" type="button" data-i="${i}">${esc(kabelText(x))}</button>`).join('')}</div>`;
   $('#modalOk').hidden = true;
   $('#modalBack').textContent = 'Abbrechen';
   pendingAck = null;
@@ -5317,6 +5335,8 @@ function andereWaehlen(titel, alle, jetzt, fertig){
   });
   $('#modal').hidden = false;
 }
+/* v1.182 (QK D7): Anzeige mit Malzeichen; gespeichert bleibt der Wert, wie er ist */
+const kabelText = v => String(v || '').replace(/(\d)\s*x\s*(\d)/g, '$1×$2');
 function cableSection(name){                         // "NYM-J 5x2,5" -> 2.5
   const m = /\d+\s*x\s*(\d+(?:[.,]\d+)?)/i.exec(String(name));
   return m ? parseFloat(m[1].replace(',', '.')) : null;
@@ -5429,11 +5449,14 @@ function mangelText(c){
 function feedSummary(f){
   if(f.status !== 'measured') return (REASONS[f.reason] || 'Keine Messung') + (f.note ? ' – ' + f.note : '');
   const parts = [f.m.iso != null ? `ISO ${fmt(f.m.iso)} MΩ` : null, f.m.zs != null ? `Zs ${fmt(f.m.zs)} Ω` : null].filter(Boolean);
-  return parts.length ? parts.join(' · ') : 'Noch nicht erfasst';
+  return parts.length ? parts.join(' · ') : 'offen';   // v1.182: erfasst ist sie, es fehlen die Werte
 }
 function renderBoard(){
   if(!PROJ){ go('home', false); return; }
-  $('#btnSamBoard').hidden = !PROJ.sam;              // SAM-Projekt: Fotos, Liste, neu lesen
+  /* v1.182 (QK D14): oben nur, solange SAM-Einträge offen sind – sonst unter "…" */
+  const samOffen = PROJ.sam ? circuits().filter(c => erfassZustand(c, false) === 'z-ask').length : 0;
+  $('#btnSamBoard').hidden = !samOffen;
+  if(samOffen) $('#btnSamBoard').textContent = `SAM: ${samOffen} ${samOffen === 1 ? 'Eintrag' : 'Einträge'} ansehen ›`;
   $('#btnAddCircuit').hidden = messModus();   // im Messen-Modus wird nichts angelegt
   PROJ.feed = PROJ.feed || blankFeed();   // ältere Projekte ohne Zuleitung nachrüsten
   const f = PROJ.feed;
@@ -5443,7 +5466,7 @@ function renderBoard(){
   btn.className = 'list-item ' + (mess ? zustand(f, true) : erfassZustand(f, true));
   btn.innerHTML = (mess || !captured ? ZST : '') + (captured
     ? `<span class="body">
-        <span class="t">${esc(f.name || 'Zuleitung')}${f.cable ? ' · ' + esc(f.cable) : ''}</span>
+        <span class="t">${esc(f.name || 'Zuleitung')}${f.cable ? ' · ' + esc(kabelText(f.cable)) : ''}</span>
         <span class="s">${esc(mess ? feedSummary(f) : (f.fuse || 'Absicherung unbekannt'))}</span>
       </span>`
     : `<span class="body">
@@ -5548,7 +5571,7 @@ function listHtml(){
          it.m.rpe != null && it.m.rpe !== '' ? `R_PE ${fmt(it.m.rpe)} Ω` : null].filter(Boolean).join(' · ');
     const zeile = mess
       ? (offen || [z === 'z-bad' ? mangelText(it) : '', mv].filter(Boolean).join(' · ') || 'Werte fehlen') + ov
-      : [it.breaker, fehlt || it.cable, isSpecial(it) ? '' : ''].filter(Boolean).join(' · ') + ov;
+      : [it.breaker, fehlt || kabelText(it.cable), isSpecial(it) ? '' : ''].filter(Boolean).join(' · ') + ov;
     return out += `<button class="list-item ${z}" data-idx="${idx}">
       ${z === 'z-plain' ? '' : ZST}<span class="no">${esc(circuitLabel(it) || '–')}</span>
       <span class="body">
@@ -5643,7 +5666,8 @@ function blankCircuit(){
     device:'ls',
     char:'B', rated: p ? p.rated : '16 A', poles:'2', breaker:'B16',
     te:'1', covers:'',
-    cable: lastCable(),
+    /* v1.182 (QK U7): an B16 nicht 1,5 mm² vorwählen */
+    cable: (p ? p.rated : '16 A') === '16 A' && (cableSection(lastCable()) || 0) < 2.5 ? 'NYM-J 3x2,5' : lastCable(),
     special:'',
     status:'measured', reason:'inaccessible', note:'', m:{}, extras:[]
   };
@@ -5730,6 +5754,7 @@ function openCircuit(idx){
   samKabelWahl = draft.sam ? (draft.cable || '') : null;
   samAendern = false;
   absAndere = false;                                 // v1.163: Listen der Absicherung zu
+  kabelHand = !!(draft.cable && idx != null);        // v1.182: Gespeichertes gilt als gewählt
   cableFilter = null;
   ratedFilter = null; fillSelect($('#cRated'), CFG.rated, draft.rated);
   autoRoom = null;                     // gespeicherter Ort gilt als von Hand gesetzt
@@ -5747,7 +5772,7 @@ function openCircuit(idx){
   $('#cReason').value = draft.reason; $('#cNote').value = draft.note || '';
   $('#mIso').value = draft.m.iso ?? ''; $('#mZs').value = draft.m.zs ?? '';
   $('#mIdn').value = draft.m.idn ?? ''; $('#mT').value = draft.m.t ?? '';
-  setTimeout(idnHinweis);
+  setTimeout(idnHinweis); setTimeout(grenzLive);
   $('#btnDelCircuit').hidden = editIdx == null || messModus();
   refreshNoField();
   syncCircuitUi(); go('circuit');
@@ -5827,6 +5852,25 @@ messfeldLogik('#fIso', '#fZs', '#fIsoSug');
     if(nachkomma(el.value) >= 1 || (sel === '#mIdn' && idnRated(br) <= 30 && /^\d{2}$/.test(el.value.trim()))) messWeiter(el);
   };
 });
+/* v1.182 (QK D10): Grenz- und Richtwerte schon beim Tippen – solange der Wert
+   noch auf dem Messgerät steht, ist Nachmessen ein Handgriff */
+const GRENZ_FELD = [['Isolationswiderstand', '#mIso'], ['Schleifenimpedanz', '#mZs'], ['Auslösestrom', '#mIdn'],
+                    ['Auslösezeit', '#mT'], ['Schutzleiterwiderstand', '#mRpe']];
+function grenzLive(){
+  if(!draft || current !== 'circuit') return;
+  const dev = segVal('#segDevice') || draft.device;
+  const probe = Object.assign({}, draft, {device: dev, status:'measured',
+    breaker: dev === 'rcd' ? $('#cBreaker').value : breakerOf(Object.assign({}, draft, {device: dev})),
+    m: {iso: $('#mIso').value.trim(), zs: $('#mZs').value.trim() === '0,' ? '' : $('#mZs').value.trim(),
+        idn: $('#mIdn').value.trim(), t: $('#mT').value.trim(), rpe: $('#mRpe').value.trim()}});
+  let w = [];
+  try { w = draft.special ? [] : checkCircuit(probe); } catch(e){ w = []; }
+  GRENZ_FELD.forEach(([wort, sel]) => $(sel).classList.toggle('ungueltig', w.some(x => x.startsWith(wort))));
+  const z = $('#grenzLive');
+  z.hidden = !w.length;
+  z.textContent = w.length ? '! ' + w.join(' ') : '';
+}
+['#mIso', '#mZs', '#mIdn', '#mT', '#mRpe'].forEach(sel => $(sel).addEventListener('input', grenzLive));
 /* v1.171: kein Mangel, nur ein Hinweis */
 function idnHinweis(){
   const i = num($('#mIdn').value), br = segVal('#segDevice') === 'rcd' ? $('#cBreaker').value : breakerOf(draft);
@@ -5861,7 +5905,9 @@ function noUeberZeigen(von, bis){
   const o = abwNr() ? null : circuits().find(c => c !== selbst && kreisNummern(c).some(n => n >= von && n <= bis));
   z.hidden = !o;
   if(!o) return;
-  z.innerHTML = `Nr. ${esc(von === bis ? String(von) : von + '–' + bis)} überschneidet sich mit ${esc(circuitLabel(o))} ${esc(o.name || '')}. `
+  z.className = 'warn gelb';                         // v1.182: als Hinweiskarte
+  z.innerHTML = `<strong>Nr. ${esc(von === bis ? String(von) : von + '–' + bis)} ist schon belegt</strong>`
+    + `Kreis ${esc(circuitLabel(o))}${o.name ? ' · ' + esc(o.name) : ''}. `
     + `<button class="linkbtn" id="btnAbwNrEin" type="button">Abweichende Nummerierung einschalten</button>`;
   $('#btnAbwNrEin').onclick = () => {
     if(!abwNrUmschalten(true)) return;
@@ -6014,6 +6060,7 @@ function renderNameSug(list){
 }
 /* v1.175 (QK G27): Kabel nach Kreisart – der Steckdosenkreis nach einem
    Lichtkreis erbte sonst 3×1,5. */
+/* v1.182: bei Paaren zählt der stärkere Teil – "Beleuchtung, Steckdosen" ist ein Steckdosenkreis */
 function kabelJeArt(label){
   const art = /steckdose/i.test(label || '') ? /steckdose/i : /beleuchtung|licht/i.test(label || '') ? /beleuchtung|licht/i : null;
   if(!art) return null;
@@ -6045,7 +6092,11 @@ function applySugValues(){
     cableFilter = (src.cables || src.maxSection || src.minCores || src.maxCores)
       ? {list:src.cables, maxSection:src.maxSection, minCores:src.minCores, maxCores:src.maxCores} : null;
     if(src.cable && !CFG.cables.includes(src.cable)) CFG.cables.push(src.cable);   // falls aus der Liste entfernt
-    paintCableList(src.cable || kabelJeArt(sugPath[0] && sugPath[0].label) || draft.cable);
+    const nm = $('#cName').value || (sugPath[0] && sugPath[0].label) || '';
+    const kj = kabelJeArt(nm);
+    /* v1.182 (QK U6, Jean): beim Paar Licht + Steckdosen zählt der Steckdosenkreis –
+       sonst kam das 1,5 mm² der Beleuchtung an den B16 */
+    paintCableList((/steckdose/i.test(nm) && /beleuchtung|licht/i.test(nm) && kj) || src.cable || kj || draft.cable);
   }
   const rf = [...sugPath].reverse().find(n => n.rooms);   // tiefste Ebene bestimmt die Auswahlliste
   const rp = [...sugPath].reverse().find(n => n.room);    // tiefste Ebene bestimmt die Vorauswahl
@@ -6061,6 +6112,11 @@ function pickSug(o){
   showNameSug();          // Folgekacheln gleich anzeigen, ohne erneutes Antippen
 }
 $('#cName').onfocus = showNameSug;
+$('#cName').addEventListener('change', () => {     // v1.182 (QK F8): auch beim selbst getippten Namen
+  if(!draft || kabelHand || segVal('#segDevice') === 'rcd' || draft.special) return;
+  const k = kabelJeArt($('#cName').value);
+  if(k && k !== draft.cable){ paintCableList(k, true); kachelnMalen(); }
+});
 $('#cName').oninput = () => {            // Checkboxen folgen der Bezeichnung
   sugPath = [];                          // Handeingabe verlässt den geführten Pfad
   roomFilter = null;                     // und bietet wieder alle Räume an
@@ -6100,10 +6156,10 @@ function feedKachelnMalen(){
   const kb = $('#fKabelKacheln'), ab = $('#fAbsKacheln'); if(!kb || !ab) return;
   const kab = optionen($('#fCable')).filter(v => v && v !== ANDERE);
   kachelGruppe(kb, kab.map(v => ({v, t: v === CABLE_UNBEKANNT ? 'unbekannt' : v, mono: v !== CABLE_UNBEKANNT})), $('#fCable').value,
-    v => { $('#fCable').value = v; feedKabelJetzt = v; setTimeout(feedKachelnMalen); },
+    v => { $('#fCable').value = v; feedKabelJetzt = v; setTimeout(() => { feedKachelnMalen(); if(messModus()) feedModus(); }); },
     optionen($('#fCable')).includes(ANDERE) ? feedAndere : null);
   kachelGruppe(ab, optionen($('#fFuse')).map(v => ({v, t: v === FEED_FUSE_UNBEKANNT ? 'unbekannt' : v, mono: v !== FEED_FUSE_UNBEKANNT})), $('#fFuse').value,
-    v => { $('#fFuse').value = v; setTimeout(feedKachelnMalen); });
+    v => { $('#fFuse').value = v; setTimeout(() => { feedKachelnMalen(); if(messModus()) feedModus(); }); });
 }
 function feedAndere(){
   andereWaehlen('Kabelart', feedCableAlle(), feedKabelJetzt, v => { feedCableMalen(v); feedModus(); });
@@ -6116,6 +6172,7 @@ $('#fCable').onchange = () => {
 let feedDraft = null;   // Entwurf, damit "Zurück zur Eingabe" wirklich nichts speichert
 $('#btnFeed').onclick = () => vorVerlassen(feedOeffnen);
 function feedOeffnen(){
+  feedAendern = false;                               // v1.182
   feedDraft = JSON.parse(JSON.stringify(PROJ.feed));
   feedDraft.m = feedDraft.m || {}; feedDraft.extras = feedDraft.extras || [];
   const f = feedDraft;
@@ -6183,16 +6240,23 @@ function feedKopfZeile(){
     abs && abs !== FEED_FUSE_UNBEKANNT ? abs : 'Absicherung unbekannt'
   ].filter(Boolean).join(', ');
 }
+let feedAendern = false;                            // v1.182: im Messen Kabel und Absicherung aufgeklappt
 function feedModus(){
   const mess = messModus();
-  $('#paneZuleitung').hidden    = mess;
+  /* v1.182 (QK D6): wie der Kreis – Kopfkarte in Zeilen und "ändern"; die
+     Kacheln nur, solange das Kabel fehlt oder bewusst geöffnet */
+  const offen = !mess || feedAendern || !$('#fCable').value;
+  $('#paneZuleitung').hidden    = !offen;
   $('#feedKopf').hidden         = !mess;
+  const abs = $('#fFuse').value;
   if(mess) $('#feedKopf').innerHTML =
-    `<div><strong>${esc(feedKopfZeile())}</strong></div>`
-    + ($('#fCable').value ? '' : `<button class="linkbtn" id="feedKabelWahl">Kabel nicht erfasst – wählen</button>`);
-  const kw = $('#feedKabelWahl');                   // v1.168
-  if(kw) kw.onclick = () => andereWaehlen('Kabelart', feedCableOptions(), '', v => { feedCableMalen(v); feedModus(); });
-  samFeedZeigen(mess && !!(PROJ && PROJ.sam));
+    `<div><strong>${esc(($('#fName').value || '').trim() || 'Zuleitung')}</strong></div>`
+    + `<div class="muted small">${esc(kabelText($('#fCable').value) || 'Kabel nicht erfasst')}</div>`
+    + `<div class="muted small">${esc(abs && abs !== FEED_FUSE_UNBEKANNT ? abs : 'Absicherung unbekannt')}</div>`
+    + (offen ? '' : `<div class="small" style="margin-top:6px"><button class="linkbtn" id="feedAendernKnopf" type="button">Kabel und Absicherung ändern</button></div>`);
+  const ka = $('#feedAendernKnopf');
+  if(ka) ka.onclick = () => { feedAendern = true; feedModus(); };
+  samFeedZeigen(false);
   /* Im Messen-Modus führt die Zuleitung direkt zum ersten offenen Kreis weiter;
      der schlichte Knopf tritt dann zurück. */
   $('#btnSaveFeedNext').hidden  = !mess;
@@ -6300,6 +6364,8 @@ $('#cRated').onchange = () => {
     draft.rated = v; fillMitAndere($('#cRated'), ratedOptions(), CFG.rated, v);
   });
 };
+let kabelHand = false;                              // v1.182: Kabel von Hand gewählt – dann nicht mehr nachziehen
+$('#cCable').addEventListener('change', () => { kabelHand = true; });
 $('#cCable').onchange = () => {
   if($('#cCable').value !== ANDERE){ draft.cable = $('#cCable').value; if(samKabelWahl !== null) samKabelWahl = draft.cable; return; }
   $('#cCable').value = draft.cable;
@@ -6340,7 +6406,7 @@ function waehleIn(sel, v){
 }
 function kachelGruppe(box, eintraege, gewaehlt, wahl, andere){
   box.innerHTML = eintraege.map((e, i) =>
-    `<button class="sug${e.mono ? ' mono' : ''}${e.v === gewaehlt ? ' gewaehlt' : ''}" type="button" data-i="${i}">${esc(e.t)}</button>`).join('')
+    `<button class="sug${e.mono ? ' mono' : ''}${e.v === gewaehlt ? ' gewaehlt' : ''}" type="button" data-i="${i}">${esc(kabelText(e.t))}</button>`).join('')
     + (andere ? `<button class="sug andere" type="button" data-andere="1">${esc(ANDERE)}</button>` : '');
   box.querySelectorAll('button').forEach(b => b.onclick = () => {
     if(b.dataset.andere) andere(); else wahl(eintraege[+b.dataset.i].v);
@@ -6364,11 +6430,18 @@ function kachelnMalen(){
   kachelGruppe($('#absKacheln'), l.map(([c, r]) => ({v:c + '|' + r, t:absText(c, r), mono:true})), ist.join('|'),
     v => { const [c, r] = v.split('|'); waehleIn($('#cChar'), c); waehleIn($('#cRated'), r); },
     () => {                                          // v1.175: Kachelblatt statt zweier Listen
-      const alle = [];
-      chars.filter(c => c !== ANDERE).forEach(c => rated.forEach(r => alle.push(c + '|' + r)));
-      andereWaehlen('Absicherung', alle.map(v => absText(...v.split('|'))), absText(...ist),
-        t => { const v = alle.find(x => absText(...x.split('|')) === t); if(!v) return;
-               const [c, r] = v.split('|'); waehleIn($('#cChar'), c); waehleIn($('#cRated'), r); kachelnMalen(); });
+      /* v1.182 (QK D8): je Charakteristik eine Zeile, Kacheln wie in der Ansicht */
+      resetModal(false);
+      $('#modalTitle').textContent = 'Absicherung';
+      $('#modalBody').innerHTML = chars.filter(c => c !== ANDERE).map(c =>
+        `<div class="eyebrow" style="margin:6px 0 4px;text-transform:none">${esc(c)}</div><div class="chk-grid kacheln">`
+        + rated.map(r => `<button class="sug mono${c === ist[0] && r === ist[1] ? ' gewaehlt' : ''}" type="button" data-c="${esc(c)}" data-r="${esc(r)}">${esc(absText(c, r))}</button>`).join('')
+        + `</div>`).join('');
+      $('#modalOk').hidden = true; $('#modalBack').textContent = 'Abbrechen'; pendingAck = null;
+      $$('#modalBody [data-c]').forEach(b => b.onclick = () => {
+        $('#modal').hidden = true; waehleIn($('#cChar'), b.dataset.c); waehleIn($('#cRated'), b.dataset.r); kachelnMalen();
+      });
+      $('#modal').hidden = false;
     });
   /* Pole */
   kachelGruppe($('#polKacheln'), optionen($('#cPoles')).map(v => ({v, t:v + '-polig'})), $('#cPoles').value,
@@ -6465,7 +6538,7 @@ function messKopfZeilen(c){
       ? `FI/LS ${c.char} ${c.rated} / ${RCBO_IDN}`
       : (c.char === 'gG' ? `gG ${String(c.rated).replace(/\s*A$/, '')}` : `${c.char}${String(c.rated).replace(/\s*A$/, '')}`);
     const kabel = (c === draft && samKabelWahl !== null) ? '' : c.cable;   // SAM: steht in der Kabelwahl
-    z.push([ger, kabel].filter(Boolean).join(' · '));   // v1.178: wie in der Liste
+    z.push([ger, kabelText(kabel)].filter(Boolean).join(' · '));   // v1.178: wie in der Liste
   }
   return z.filter(t => String(t).trim());
 }
@@ -6722,7 +6795,7 @@ function rpeOffen(){
   return (PROJ && PROJ.mode === 'neu' && segVal('#segDevice') !== 'rcd') || draft.extras.includes('rpe') || (draft.m.rpe ?? '') !== '';
 }
 function renderRpe(){
-  const an = PROJ && PROJ.mode === 'neu';
+  const an = PROJ && PROJ.mode === 'neu' && segVal('#segDevice') !== 'rcd';   // v1.182: am FI gemessen wird an den Kreisen
   $('#rpeBlock').hidden = !an;
   if(!an) return;
   const offen = rpeOffen();
@@ -6946,7 +7019,7 @@ function showWarnModal(list, onAck){
   $('#modalBody').innerHTML = list.map(x => `<div>${esc(x)}</div>`).join('');
   $('#modalFoot').hidden = false;
   $('#modalOk').textContent   = 'Verstanden';
-  $('#modalBack').textContent = 'Zurück zur Eingabe';
+  $('#modalBack').textContent = 'Korrigieren';        // v1.182
   pendingAck = onAck;
   $('#modal').hidden = false;
   $('#modalOk').focus();
