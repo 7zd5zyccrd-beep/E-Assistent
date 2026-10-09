@@ -10,6 +10,19 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.175 09.10.2026 Qualitaetskontrolle, Paket 4a: Tempo und Lesbarkeit. Das
+                    Kabel richtet sich nach der Kreisart: Steckdosen vom letzten
+                    Steckdosenkreis (sonst 3x2,5), Beleuchtung vom letzten Lichtkreis
+                    (sonst 3x1,5). NYM 2x1,5 und NYIF 2x1,5 stehen unter "Andere";
+                    "Andere" bei der Absicherung oeffnet ein Kachelblatt. Fuer gG gilt
+                    ein Zs-Richtwert aus der gaengigen Tabelle fuer 0,4 s (Jean, F9).
+                    Ueberschneidet sich eine Nummer, steht direkt darunter "Abweichende
+                    Nummerierung einschalten". Im Messen laesst sich bei jedem Kreis
+                    "Geraet und Kabel aendern". Die Messen-Liste zeigt nur Werte, Zs
+                    zuerst, Fehlendes vorn. Zuleitung mit derselben Knopfreihe wie der
+                    Kreis. Kopfzeile: gross die Wohnung, klein die Strasse. Abzeichen
+                    der Bereichsleiste mit dunkler Schrift; Zurueck-Knopf mit groesserer
+                    Trefferflaeche. "Angaben" im Lager heisst "Artikeldaten".
   v1.174 09.10.2026 Qualitaetskontrolle, Paket 3b: Betrieb. Geloeschte offene
                     Projekte liegen 30 Tage im Papierkorb (Einstellungen > Daten
                     > Wiederherstellen; auf dem Geraet, das geloescht hat). Bauteile,
@@ -1480,7 +1493,9 @@ header .back{                                  /* greift die offenen Kreise des 
   background:none;color:var(--brand);
   font-size:18px;line-height:1;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
+  position:relative;
 }
+header .back::before{content:"";position:absolute;inset:-11px}   /* v1.175: 56 px Trefferfläche, Aussehen gleich */
 header .back svg{display:block}      /* sonst versetzt die Textgrundlinie das Symbol nach unten */
 header .back:disabled{visibility:hidden}   /* Platz bleibt, damit die Kopfzeile symmetrisch bleibt */
 /* Punktraster wie im Logo: 2 Reihen à 4 Feldern, gefüllt / offen / leer */
@@ -1830,11 +1845,11 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
 .bereiche button.an{color:#fff;border-bottom-color:var(--brand)}
 .bereiche button.an[data-b="messen"]{border-bottom-color:#7FB2E4}
 .bereiche em{position:absolute;top:2px;left:calc(50% + 10px);min-width:17px;height:16px;padding:0 4px;border-radius:8px;
-  font:600 10px/16px var(--f-data);font-style:normal;letter-spacing:0;text-align:center;background:#5C6355;color:#fff}
+  font:600 11px/16px var(--f-data);font-style:normal;letter-spacing:0;text-align:center;background:#5C6355;color:#fff}
 .bereiche em.rot{background:var(--fault)}
 #modalBody .rot{color:var(--fault)}   /* v1.172: Prüfer weicht ab */
 .erste-schritte{border-left:4px solid var(--brand)}
-.bereiche em.ok{background:var(--pe)}
+.bereiche em.ok{background:var(--pe);color:#15180F}   /* v1.175: dunkle Schrift, auch im Dunkeln lesbar */
 @media (max-width:359px){ .bereiche button{font-size:11px;letter-spacing:.03em} }
 header h1 small{display:block;font-family:var(--f-body);font-size:11px;font-weight:500;letter-spacing:0;
   text-transform:none;color:#96A088;margin-top:1px;overflow:hidden;text-overflow:ellipsis}
@@ -3113,6 +3128,7 @@ function nameGross(s){
               <div class="stepper" id="teStep"><button type="button" data-d="-1" aria-label="schmaler">−</button><b id="teWert">1</b><button type="button" data-d="1" aria-label="breiter">+</button></div>
               <select id="cTe" hidden></select></div>
           </div>
+          <p class="small" id="noUeber" hidden style="margin:-6px 0 12px"></p>
           <div class="field" id="fldDevSeg"><span>Geräteart</span>
             <div class="seg" id="segDevice">
               <button data-v="ls" aria-pressed="true">LS</button>
@@ -3242,8 +3258,10 @@ function nameGross(s){
       </div>
 
       <div class="actionbar"><div class="inner">
-        <button class="btn primary" id="btnSaveFeedNext" hidden>Weiter</button>
-        <button class="btn primary" id="btnSaveFeed">Fertig</button>
+        <div class="btn-row">                          <!-- v1.175: wie beim Kreis -->
+          <button class="btn primary" id="btnSaveFeed">Fertig</button>
+          <button class="btn primary" id="btnSaveFeedNext" hidden>Weiter</button>
+        </div>
       </div></div>
     </section>
 
@@ -3321,7 +3339,7 @@ function nameGross(s){
     <section class="view" id="view-lagerart">
       <div id="lagerArtBody"></div>
       <div class="actionbar"><div class="inner">
-        <button class="btn primary" id="btnLagerArtSave">Angaben speichern</button>
+        <button class="btn primary" id="btnLagerArtSave">Fertig</button>
       </div></div>
     </section>
 
@@ -3657,7 +3675,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.174';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.175';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4467,9 +4485,12 @@ $$('#bereiche button').forEach(k => k.onclick = () => vorVerlassen(() => bereich
    Projektdaten. */
 function projektTitel(){
   const t = $('#title');
-  const kurz = ((PROJ.address || '').split('\n')[0] || 'Ohne Adresse').replace(/straße\b/i, 'str.')
-    + (PROJ.flat ? ' · ' + flatLabel(PROJ.flat).replace(/^Whg\. /, '') : '');
-  t.innerHTML = `${esc(kurz)}<small>${esc(MODES[PROJ.mode || 'wdh'].label)}${archOffen ? ' · Ablage' : ''}</small>`;
+  /* v1.175 (QK G88): groß die Wohnung, klein die Straße – sonst schnitt die
+     Kopfzeile genau die Wohnung ab, an der man gerade arbeitet */
+  const str = ((PROJ.address || '').split('\n')[0] || 'Ohne Adresse').replace(/straße\b/i, 'str.');
+  const gross = PROJ.flat ? flatLabel(PROJ.flat) : str;
+  const klein = (PROJ.flat ? str + ' · ' : '') + MODES[PROJ.mode || 'wdh'].label + (archOffen ? ' · Ablage' : '');
+  t.innerHTML = `${esc(gross)}<small>${esc(klein)}</small>`;
   t.classList.add('tippbar');
 }
 $('#title').onclick = () => {
@@ -5147,10 +5168,14 @@ function cableOptions(){
      gilt der Vorschlag allein. */
   return l.some(c => cableCores(c) != null) ? l : basis.filter(c => passt(c, false));
 }
+/* v1.175 (QK G28): zweiadrige Kupferleitungen des Altbestands stehen immer
+   unter "Andere …" – an ihnen erkennt die App die klassische Nullung. */
+const KABEL_ALT = ['NYM 2x1,5', 'NYIF 2x1,5'];
+const kabelAlle = () => [...new Set([...CFG.cables, ...KABEL_ALT])];
 function paintCableList(want, behalten){
   const list = cableOptions();
   const val  = list.includes(want) || (behalten && want) ? want : (list[0] || want);
-  fillMitAndere($('#cCable'), list, CFG.cables, val);
+  fillMitAndere($('#cCable'), list, kabelAlle(), val);
   if(val) draft.cable = val;
 }
 /* Nach einer Änderung an Gerät, Polen oder TE: die Auswahl folgt, und eine
@@ -5322,8 +5347,16 @@ function listHtml(){
     const z = mess ? zustand(it, false) : erfassZustand(it, false);
     const fehlt = !mess && z === 'z-ask' ? 'Kabelart fehlt' : '';
     const offen = mess && z === 'z-open' ? 'offen' : '';
+    /* v1.175 (QK G83): im Messen nur Werte, Zs zuerst, Fehlendes vorn – Gerät
+       und Kabel stehen im Erfassen; auf dem iPhone war der Zs abgeschnitten. */
+    const mv = isSpecial(it) ? vals : it.status !== 'measured' ? vals
+      : [it.m.zs  != null && it.m.zs  !== '' ? `Zs ${fmt(it.m.zs)} Ω`   : null,
+         it.m.iso != null && it.m.iso !== '' ? `ISO ${fmt(it.m.iso)}`   : null,
+         it.m.idn != null && it.m.idn !== '' ? `IΔ ${fmt(it.m.idn)} mA` : null,
+         it.m.t   != null && it.m.t   !== '' ? `t ${fmt(it.m.t)} ms`    : null,
+         it.m.rpe != null && it.m.rpe !== '' ? `R_PE ${fmt(it.m.rpe)} Ω` : null].filter(Boolean).join(' · ');
     const zeile = mess
-      ? [it.breaker, it.cable].filter(Boolean).join(' ') + ' · ' + (offen || [z === 'z-bad' ? mangelText(it) : '', vals].filter(Boolean).join(' · ') || 'Werte fehlen') + ov
+      ? (offen || [z === 'z-bad' ? mangelText(it) : '', mv].filter(Boolean).join(' · ') || 'Werte fehlen') + ov
       : [it.breaker, fehlt || it.cable, isSpecial(it) ? '' : ''].filter(Boolean).join(' · ') + ov;
     return out += `<button class="list-item ${z}" data-idx="${idx}">
       ${z === 'z-plain' ? '' : ZST}<span class="no">${esc(circuitLabel(it) || '–')}</span>
@@ -5614,6 +5647,7 @@ function refreshNoField(){
   if(abwNr()){
     draft.no = $('#cNo').value.trim();                 // Freitext, auch leer erlaubt
     coversHint();
+    if($('#noUeber')) $('#noUeber').hidden = true;
     return;
   }
   const start = noStart();
@@ -5621,6 +5655,22 @@ function refreshNoField(){
   draft.no = String(start);
   $('#cNo').value = te > 1 ? `${start}–${start + te - 1}` : String(start);
   coversHint();
+  noUeberZeigen(start, start + te - 1);
+}
+/* v1.175 (QK G33): Überschneidung im Moment des Tippens zeigen – am Verteiler
+   weichen die Nummern oft ab (Herd 1–3, daneben Licht "2"). */
+function noUeberZeigen(von, bis){
+  const z = $('#noUeber'); if(!z) return;
+  const selbst = editIdx != null ? PROJ.items[editIdx] : null;
+  const o = abwNr() ? null : circuits().find(c => c !== selbst && kreisNummern(c).some(n => n >= von && n <= bis));
+  z.hidden = !o;
+  if(!o) return;
+  z.innerHTML = `Nr. ${esc(von === bis ? String(von) : von + '–' + bis)} überschneidet sich mit ${esc(circuitLabel(o))} ${esc(o.name || '')}. `
+    + `<button class="linkbtn" id="btnAbwNrEin" type="button">Abweichende Nummerierung einschalten</button>`;
+  $('#btnAbwNrEin').onclick = () => {
+    if(!abwNrUmschalten(true)) return;
+    saveProj(); z.hidden = true; refreshNoField(); toast('Abweichende Nummerierung an');
+  };
 }
 /* Beim FI zieht die geänderte Breite den Typ nach (v1.89, siehe
    rcdTypMitPolen). Gewechselt wird nur zwischen den gebauten Polzahlen und nur,
@@ -5766,6 +5816,14 @@ function renderNameSug(list){
   });
   kachelnBegrenzen(box);
 }
+/* v1.175 (QK G27): Kabel nach Kreisart – der Steckdosenkreis nach einem
+   Lichtkreis erbte sonst 3×1,5. */
+function kabelJeArt(label){
+  const art = /steckdose/i.test(label || '') ? /steckdose/i : /beleuchtung|licht/i.test(label || '') ? /beleuchtung|licht/i : null;
+  if(!art) return null;
+  const vor = circuits().filter(c => c.cable && art.test(c.name || '') && (cableCores(c.cable) == null || cableCores(c.cable) <= 3)).pop();
+  return vor ? vor.cable : (art.test('Steckdose') ? 'NYM-J 3x2,5' : 'NYM-J 3x1,5');
+}
 function applySugValues(){
   const src = Object.assign({}, ...sugPath);          // Wurzel zuerst, tiefere Ebenen überschreiben
   const dev = segVal('#segDevice');
@@ -5791,7 +5849,7 @@ function applySugValues(){
     cableFilter = (src.cables || src.maxSection || src.minCores || src.maxCores)
       ? {list:src.cables, maxSection:src.maxSection, minCores:src.minCores, maxCores:src.maxCores} : null;
     if(src.cable && !CFG.cables.includes(src.cable)) CFG.cables.push(src.cable);   // falls aus der Liste entfernt
-    paintCableList(src.cable || draft.cable);
+    paintCableList(src.cable || kabelJeArt(sugPath[0] && sugPath[0].label) || draft.cable);
   }
   const rf = [...sugPath].reverse().find(n => n.rooms);   // tiefste Ebene bestimmt die Auswahlliste
   const rp = [...sugPath].reverse().find(n => n.room);    // tiefste Ebene bestimmt die Vorauswahl
@@ -5934,6 +5992,7 @@ function feedModus(){
   $('#btnSaveFeedNext').textContent = zf >= 0 ? 'Weiter → ' + (circuitLabel(PROJ.items[zf]) || '–') : 'Weiter';
   $('#btnSaveFeed').textContent = 'Fertig';
   $('#btnSaveFeed').className   = 'btn ' + (mess ? 'ghost' : 'primary');
+  $('#btnSaveFeed').style.flex  = mess ? '0 0 34%' : '';
 }
 /* SAM: im Messen-Modus stehen Kabelart und Absicherung der Zuleitung als
    Flächen da – im Idealfall ist das zusammen mit den Messwerten alles, was an
@@ -6036,8 +6095,8 @@ $('#cRated').onchange = () => {
 $('#cCable').onchange = () => {
   if($('#cCable').value !== ANDERE){ draft.cable = $('#cCable').value; if(samKabelWahl !== null) samKabelWahl = draft.cable; return; }
   $('#cCable').value = draft.cable;
-  andereWaehlen('Kabelart', CFG.cables, draft.cable, v => {
-    draft.cable = v; fillMitAndere($('#cCable'), cableOptions(), CFG.cables, v);
+  andereWaehlen('Kabelart', kabelAlle(), draft.cable, v => {
+    draft.cable = v; fillMitAndere($('#cCable'), cableOptions(), kabelAlle(), v);
     if(samKabelWahl !== null) samKabelWahl = v;
   });
 };
@@ -6096,7 +6155,13 @@ function kachelnMalen(){
   if(ist[0] && ist[1] && ist[1] !== ANDERE && !l.some(([c, r]) => c === ist[0] && r === ist[1])) l.unshift(ist);
   kachelGruppe($('#absKacheln'), l.map(([c, r]) => ({v:c + '|' + r, t:absText(c, r), mono:true})), ist.join('|'),
     v => { const [c, r] = v.split('|'); waehleIn($('#cChar'), c); waehleIn($('#cRated'), r); },
-    () => { absAndere = !absAndere; syncCircuitUi(); });
+    () => {                                          // v1.175: Kachelblatt statt zweier Listen
+      const alle = [];
+      chars.filter(c => c !== ANDERE).forEach(c => rated.forEach(r => alle.push(c + '|' + r)));
+      andereWaehlen('Absicherung', alle.map(v => absText(...v.split('|'))), absText(...ist),
+        t => { const v = alle.find(x => absText(...x.split('|')) === t); if(!v) return;
+               const [c, r] = v.split('|'); waehleIn($('#cChar'), c); waehleIn($('#cRated'), r); kachelnMalen(); });
+    });
   /* Pole */
   kachelGruppe($('#polKacheln'), optionen($('#cPoles')).map(v => ({v, t:v + '-polig'})), $('#cPoles').value,
     v => waehleIn($('#cPoles'), v));
@@ -6203,8 +6268,9 @@ function messKopfSetzen(an){
   k.hidden = false;
   k.innerHTML = `<div><strong>${esc(z[0])}</strong></div>`
     + z.slice(1).map(t => `<div class="muted small">${esc(t)}</div>`).join('')
-    + (draft.sam ? '<div class="small" style="margin-top:6px"><button class="linkbtn" id="btnSamAendern" type="button">Angaben ändern</button></div>' : '');
-  if(draft.sam) $('#btnSamAendern').onclick = () => {
+    /* v1.175 (QK G52): bei jedem Kreis – B10 statt B16 bemerkt kostete sonst den Weg ins Erfassen */
+    + '<div class="small" style="margin-top:6px"><button class="linkbtn" id="btnSamAendern" type="button">Gerät und Kabel ändern</button></div>';
+  $('#btnSamAendern').onclick = () => {
     samAendern = true;
     if(samKabelWahl) paintCableList(samKabelWahl);    // die Wahl steht dann im Feld
     syncCircuitUi();
@@ -6244,7 +6310,7 @@ function samKabelZeigen(an){
     + (mehr ? `<button class="sug" type="button" data-andere="1">${esc(ANDERE)}</button>` : '');
   $$('#samKabelWahl button').forEach(b => b.onclick = () => {
     if(b.dataset.andere){
-      andereWaehlen('Kabelart', CFG.cables, samKabelWahl, v => { samKabelWahl = v; draft.cable = v; samKabelZeigen(true); });
+      andereWaehlen('Kabelart', kabelAlle(), samKabelWahl, v => { samKabelWahl = v; draft.cable = v; samKabelZeigen(true); });
       return;
     }
     samKabelWahl = l[+b.dataset.i]; draft.cable = samKabelWahl;
@@ -6459,8 +6525,12 @@ $('#btnRpeClear').onclick = () => {
 $('#mRpe').oninput = () => { draft.m.rpe = $('#mRpe').value; };
 
 /* --- Grenzwertprüfung: nur Hinweis, blockiert nichts --- */
+/* v1.175 (Jean, QK-Frage F9): Zs-Richtwerte für gG aus der gängigen Tabelle
+   der Abschaltströme für 0,4 s (Zs = 230 V / Ia), gerundet. */
+const GG_ZS = {6:4.89, 10:2.80, 16:2.15, 20:1.59, 25:1.28, 32:0.87, 35:0.77, 40:0.74, 50:0.50, 63:0.42};
 function maxZs(breaker){
-  const m = /^([BCD])\s*(\d+)/i.exec(breaker || ''); if(!m) return null;   // gG: kein Richtwert hinterlegt
+  const g = /^gG\s*(\d+)/i.exec(breaker || ''); if(g) return GG_ZS[+g[1]] || null;
+  const m = /^([BCD])\s*(\d+)/i.exec(breaker || ''); if(!m) return null;
   const k = {B:5, C:10, D:20}[m[1].toUpperCase()];
   return 230 / (k * parseInt(m[2], 10));
 }
@@ -6473,7 +6543,7 @@ function checkCircuit(c){
   if(!c || isSpecial(c) || c.status !== 'measured') return [];
   const w = [], dev = devOf(c), m = c.m || {};
   const br  = c.breaker || '';
-  const zsRef = (dev === 'ls' || dev === 'rcbo') ? lsCode(c) : br;   // "B16" statt der langen FI/LS-Bezeichnung
+  const zsRef = (dev === 'ls' || dev === 'rcbo') ? (lsCode(c) || br) : br;   // "B16" statt der langen FI/LS-Bezeichnung; gG wie gespeichert
   const iso = dev !== 'rcd' ? num(m.iso) : null;
   const zs  = dev !== 'rcd' ? num(m.zs)  : null;
   const idn = dev !== 'ls'  ? num(m.idn) : null;
@@ -12779,9 +12849,9 @@ function renderLagerArt(){
     const kurz = [+a.melde ? 'Melden ab ' + a.melde : null, +a.soll ? 'Soll ' + a.soll : null,
                   +a.vpe > 1 ? 'VPE ' + a.vpe : null, a.artnr ? 'Art.-Nr. ' + a.artnr : null].filter(Boolean).join(' · ');
     h += `<div class="set-gruppe" style="margin-top:18px"><button class="set-zeile" id="lgAngabenAuf" type="button">`
-      + `<span>Angaben</span><em class="v">${esc(kurz || 'ändern')}</em></button></div><div id="lgAngaben" hidden>`;
+      + `<span>Artikeldaten</span><em class="v">${esc(kurz || 'ändern')}</em></button></div><div id="lgAngaben" hidden>`;
   }
-  h += `<div class="eyebrow">${neu ? 'Artikel' : 'Angaben'}</div>`;
+  h += `<div class="eyebrow">${neu ? 'Artikel' : 'Artikeldaten'}</div>`;
   if(neu){
     const frei = CFG.material.filter(n => !lagerArtikelZuName(n));
     h += `<label class="field"><span>Aus den Bauteilen</span><select id="lgStamm">
@@ -12811,7 +12881,7 @@ function renderLagerArt(){
       </div>`;
   }
   $('#lagerArtBody').innerHTML = h;
-  $('#btnLagerArtSave').textContent = neu ? 'Artikel anlegen' : 'Angaben speichern';
+  $('#btnLagerArtSave').textContent = neu ? 'Artikel anlegen' : 'Fertig';
   const leiste = $('#btnLagerArtSave').closest('.actionbar');
   leiste.hidden = !neu;
   const auf = $('#lgAngabenAuf');
