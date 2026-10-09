@@ -10,6 +10,19 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.168 09.10.2026 Qualitaetskontrolle, Paket 1c: Fachregeln. Die Zeile "t_A
+                    gemessen bei" gibt es nur mit erfasstem FI; Vorschlag ist
+                    "1 x IdeltaN" (Jean: gemessen wird bei IdeltaN), danach die
+                    zuletzt bestaetigte Wahl. Der Grenzwert folgt der Wahl:
+                    300 ms bei IdeltaN, 40 ms bei 5 x; selektive FI 500/150 ms.
+                    Als Zusatzschutz zaehlen nur FI bis 30 mA. Der RCD-Typ im
+                    Protokoll kommt aus dem Namen in der FI-Liste ("Typ A"),
+                    sonst bleibt die Zelle leer statt immer "A". Die Zuleitung
+                    hat kein vorgewaehltes Kabel mehr; im Messen steht dann
+                    "Kabel nicht erfasst - waehlen". "Bad / Dusche" bekommt
+                    keinen Vorschlag, solange ein Badkreis ohne FI ist. Im
+                    Dunkeln sind gewaehlte Tasten hell statt logogruen; ein
+                    gewaehltes n.i.O. ist rot mit "!" und "Mangel".
   v1.167 09.10.2026 Qualitaetskontrolle, Paket 1b: Datenwege. iPad: Nach
                     "Speichern" in der Rueckfrage oeffnet sich der angetippte
                     Kreis, nicht der, der nach dem Umsortieren an seinem Platz
@@ -1682,7 +1695,7 @@ button.foto-fehlt:disabled{opacity:.6;cursor:default}
 .stepper button{flex:0 0 56px;border:0;background:var(--enclosure-2);font-size:24px;font-weight:600;color:var(--ink)}
 .stepper button:disabled{opacity:.3}
 /* Kacheln statt Auswahllisten: Absicherung, Pole, Kabelart */
-.kacheln .sug.gewaehlt{background:var(--strong);border-color:var(--strong);color:var(--on-strong);font-weight:600}
+.kacheln .sug.gewaehlt{background:var(--sel, var(--strong));border-color:var(--sel, var(--strong));color:var(--on-sel, var(--on-strong));font-weight:600}
 .kacheln .sug.mono{font-family:var(--f-data);font-weight:600;font-size:14px}
 .kacheln .sug.andere{border-style:dashed;color:var(--ink-soft)}
 #ovZeile{margin:-4px 0 14px}
@@ -1867,7 +1880,11 @@ input.schalter:checked::after{transform:translateX(20px)}
   background:var(--surface);font-size:15px;font-weight:600;color:var(--ink-soft);padding:0 6px;
 }
 .seg button:first-child{border-left:0}
-.seg button[aria-pressed="true"]{background:var(--strong);color:var(--on-strong)}
+.seg button[aria-pressed="true"]{background:var(--sel, var(--strong));color:var(--on-sel, var(--on-strong))}
+/* v1.168: ein gewähltes n.i.O. ist ein Mangel – rot mit "!" */
+.seg button[data-v="nio"][aria-pressed="true"]{background:var(--fault);color:#fff}
+.seg button[data-v="nio"][aria-pressed="true"]::before{content:"! ";font-weight:700}
+.chk-item .t .vs.mangel{color:var(--fault)}
 .seg.wrap{flex-wrap:wrap}
 .seg.wrap button{flex:1 0 50%;border-top:1.5px solid var(--ink)}
 .seg.wrap button:nth-child(-n+2){border-top:0}
@@ -2020,7 +2037,7 @@ input.schalter:checked::after{transform:translateX(20px)}
 .lg-bestand{font-family:var(--f-data);font-size:34px;font-weight:600;margin:10px 0 2px}
 .lg-akt{margin-bottom:10px}
 .lg-akt .btn{padding:0 6px;font-size:16px}
-.lg-akt .btn[aria-pressed="true"]{background:var(--strong);color:var(--on-strong);border-color:var(--strong)}
+.lg-akt .btn[aria-pressed="true"]{background:var(--sel, var(--strong));color:var(--on-sel, var(--on-strong));border-color:var(--sel, var(--strong))}
 .lg-panel .mat{border:0;padding:0;background:none;margin-bottom:12px}
 .mat input.lg-zahl{width:92px;flex:0 0 92px;text-align:center;padding:0 6px;height:48px}
 .lg-unter{display:block;font-family:var(--f-data);font-size:12px;color:var(--ink-soft);margin-top:3px}
@@ -2287,6 +2304,10 @@ input.schalter:checked::after{transform:translateX(20px)}
     /* Hervorgehobene Buttons kehren sich um: hell auf dunklem Grund */
     --strong:#A0D241;
     --on-strong:#15180F;
+    /* v1.168: gewählte Tasten und Kacheln hell-neutral; Grün bleibt der einen
+       Hauptaktion und dem "in Ordnung" vorbehalten */
+    --sel:#E9ECE0;
+    --on-sel:#15180F;
     --pe:#A0D241;
     --signal:#E3B23C;
     --fault:#E0685C;
@@ -3523,7 +3544,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.167';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.168';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -5590,6 +5611,9 @@ let feedKabelJetzt = '';                             // letzter echter Wert, fü
 function feedCableMalen(val){
   feedKabelJetzt = val;
   fillMitAndere($('#fCable'), feedCableOptions(), feedCableAlle(), val);
+  /* v1.168: ohne Vorwahl – vorher stand NYM-J 5×10 drin, ohne gewählt zu sein,
+     und ging so ins Protokoll und in die Übersicherungsrechnung. */
+  if(!val) $('#fCable').insertAdjacentHTML('afterbegin', '<option value="" selected>Bitte wählen</option>');
 }
 function feedAndere(){
   andereWaehlen('Kabelart', feedCableAlle(), feedKabelJetzt, v => { feedCableMalen(v); feedModus(); });
@@ -5605,7 +5629,7 @@ function feedOeffnen(){
   feedDraft = JSON.parse(JSON.stringify(PROJ.feed));
   feedDraft.m = feedDraft.m || {}; feedDraft.extras = feedDraft.extras || [];
   const f = feedDraft;
-  feedCableMalen(f.cable || FEED_CABLE_STD);
+  feedCableMalen(f.cable || '');
   /* Ein früher gespeicherter Wert ohne Kennlinie steht sonst nicht mehr in der
      Liste und ginge beim nächsten Speichern still verloren. */
   const abs = [...FEED_FUSES];
@@ -5634,7 +5658,7 @@ function syncFeedUi(){
 function collectFeed(){
   const f = feedDraft;
   f.name   = $('#fName').value.trim() || 'Zuleitung';
-  f.cable  = $('#fCable').value;
+  f.cable  = $('#fCable').value || null;            // v1.168: ohne Wahl nicht erfasst
   f.fuse   = $('#fFuse').value === FEED_FUSE_UNBEKANNT ? '' : $('#fFuse').value;
   f.status = segVal('#segFeedStatus');
   f.reason = f.status === 'nomeasure' ? $('#fReason').value : null;
@@ -5673,7 +5697,10 @@ function feedModus(){
   $('#paneZuleitung').hidden    = mess;
   $('#feedKopf').hidden         = !mess;
   if(mess) $('#feedKopf').innerHTML =
-    `<div><strong>${esc(feedKopfZeile())}</strong></div>`;
+    `<div><strong>${esc(feedKopfZeile())}</strong></div>`
+    + ($('#fCable').value ? '' : `<button class="linkbtn" id="feedKabelWahl">Kabel nicht erfasst – wählen</button>`);
+  const kw = $('#feedKabelWahl');                   // v1.168
+  if(kw) kw.onclick = () => andereWaehlen('Kabelart', feedCableOptions(), '', v => { feedCableMalen(v); feedModus(); });
   samFeedZeigen(mess && !!(PROJ && PROJ.sam));
   /* Im Messen-Modus führt die Zuleitung direkt zum ersten offenen Kreis weiter;
      der schlichte Knopf tritt dann zurück. */
@@ -6204,6 +6231,7 @@ function maxZs(breaker){
   const k = {B:5, C:10, D:20}[m[1].toUpperCase()];
   return 230 / (k * parseInt(m[2], 10));
 }
+const rcdTyp = str => { const m = /Typ\s*(B\+|AC|A|F|B)(?![A-Za-z])/i.exec(str || ''); return m ? m[1].toUpperCase() : ''; };   // v1.168
 function idnRated(str){ const m = /(\d+)\s*mA/i.exec(str || ''); return m ? parseInt(m[1],10) : 30; }
 
 /* --- Grenzwertprüfung: arbeitet auf dem Kreis-Objekt, nicht auf dem Formular,
@@ -6226,7 +6254,12 @@ function checkCircuit(c){
   if(dev !== 'ls'){
     const rated = idnRated(br);
     if(idn != null && idn > rated) w.push(`Auslösestrom ${fmt(idn)} mA über dem Nennfehlerstrom (${rated} mA).`);
-    if(t != null && t > 300)       w.push(`Auslösezeit ${fmt(t)} ms über 300 ms.`);
+    /* v1.168: Grenzwert nach Messart (Prüfpunkt "t_A gemessen bei") und
+       Bauart: unverzögert 300 ms bei IΔn, 40 ms bei 5 × IΔn; selektiv 500/150. */
+    const fuenf = PROJ && chkWert(chkItem('ta')).v === '5';
+    const sel = /(^|[\s/])S([\s/]|$)|selektiv/i.test(br);
+    const tMax = sel ? (fuenf ? 150 : 500) : (fuenf ? 40 : 300);
+    if(t != null && t > tMax) w.push(`Auslösezeit ${fmt(t)} ms über ${tMax} ms (gemessen bei ${fuenf ? '5 × IΔn' : 'IΔn'}).`);
   }
   const rpe = num(m.rpe);
   if(rpe != null && rpe > 1) w.push(`Schutzleiterwiderstand ${fmt(rpe)} Ω über 1 Ω.`);
@@ -9778,6 +9811,8 @@ const kreisNummern = c => {
 function rcdSchutz(){
   const s = new Set();
   circuits().forEach(c => {
+    /* v1.168: Zusatzschutz heißt höchstens 30 mA – ein 300-mA-FI zählt nicht */
+    if(idnRated(c.breaker) > 30) return;
     if(c.device === 'rcbo') kreisNummern(c).forEach(n => s.add(n));
     if(c.device === 'rcd')  coversNummern(c.covers).forEach(n => s.add(n));
   });
@@ -10032,7 +10067,8 @@ const CHECKS = [
     {k:'klemmstellen',     label:'Leiterverbindungen, Klemmstellen, Abzweigdosen', sug:() => 'io'},
     {k:'kennzeichnungNPE', label:'Kennzeichnung N- und PE-Leiter', sug:() => 'io'},
     {k:'bad',              label:'Bad / Dusche nach DIN VDE 0100-701',
-     sug:() => chkBad() ? 'io' : 'nz'},
+     /* v1.168: ein Badkreis ohne FI – dann entscheidet der Prüfer */
+     sug:P => !chkBad() ? 'nz' : rcdOffen(P).some(c => /bad|dusche/i.test(`${c.name || ''} ${c.room || ''}`)) ? null : 'io'},
     /* Eine bestätigte Übersicherung gehört zu den Überstrom-Schutzeinrichtungen –
        die Vorauswahl folgt der Bewertung, nicht dem bloßen Verdacht. */
     {k:'schaltgeraete',    label:'Trenn- und Schaltgeräte, Überstrom-Schutzeinrichtungen',
@@ -10062,8 +10098,11 @@ const CHECKS = [
         Ausgleich über die Haupterdungsschiene vor – und nur daran hängt die
         Norm die Entbehrlichkeit des zusätzlichen Potentialausgleichs. */
      sug:() => 'nichterf'},
+    /* v1.168: nur mit FI. Vorschlag bei IΔn (Jean, QK-Frage F2), danach die
+       zuletzt bestätigte Wahl; der Grenzwert in checkCircuit folgt ihr. */
     {k:'ta', label:'t_A gemessen bei', opts:[['1','1 × IΔn'],['5','5 × IΔn']],
-     sug:P => P.mode === 'wdh' ? '5' : '1'}
+     when:() => chkFis().length > 0,
+     sug:() => CFG.taLetzt === '5' ? '5' : '1'}
   ]},
   {sec:'4 · Bewertung und Abschluss', items:[
     {k:'bewertung', label:'Bewertung', stack:true,
@@ -10126,6 +10165,7 @@ function chkWert(it){
 function chkZustand(it){
   const st = chkStatus(it);
   if(st === 'red') return 'z-bad';
+  if(st === 'green' && chkWert(it).v === 'nio') return 'z-bad z-mangel';   // v1.168: gesetzt, aber ein Mangel
   if(st === 'green') return 'z-ok';
   return it.text ? 'z-open' : 'z-ask';
 }
@@ -10171,7 +10211,7 @@ function renderChecks(){
       const cls  = 'seg' + (it.stack ? ' stack' : (it.wrap ? ' wrap' : ''));
       const zz = chkZustand(it);
       h += `<div class="chk-item ${zz}">
-        <div class="t">${ZST}<span>${esc(it.label)}</span>${zz === 'z-ask' ? '<span class="vs">Vorschlag</span>' : ''}</div>
+        <div class="t">${ZST}<span>${esc(it.label)}</span>${zz === 'z-ask' ? '<span class="vs">Vorschlag</span>' : zz.includes('z-mangel') ? '<span class="vs mangel">Mangel</span>' : ''}</div>
         <div class="${cls}" data-chk="${it.k}">` +
         opts.map(([val, txt]) => {
           const an = Array.isArray(v) ? v.includes(val) : v === val;
@@ -10205,7 +10245,7 @@ function renderChecks(){
 
 /* v1.166: zur ersten Zeile, die noch fehlt, und sie kurz hervorheben */
 function chkZumOffenen(){
-  const el = $('#checkList .chk-item.z-bad'); if(!el) return;
+  const el = $('#checkList .chk-item.z-bad:not(.z-mangel)'); if(!el) return;
   imBild(el);
   el.classList.remove('hinweisen'); void el.offsetWidth; el.classList.add('hinweisen');
 }
@@ -10230,6 +10270,8 @@ $('#view-checks').addEventListener('click', e => {
         PROJ.checksOk = {};
       }
       PROJ.checksDone = true;
+      const ta = chkItem('ta');                      // v1.168: Wahl fürs nächste Projekt merken
+      if(!ta.when || ta.when(PROJ)){ const v = chkWert(ta).v; if(v && v !== CFG.taLetzt){ CFG.taLetzt = v; saveCfg(); } }
     };
     if(PROJ.finishedAt){ festschreiben(); saveProj(); bereichWechseln('abschluss'); return; }   // schon festgeschrieben
     zeitPruefen(ts => { festschreiben(); PROJ.finishedAt = ts; saveProj(); bereichWechseln('abschluss'); });
@@ -10376,13 +10418,16 @@ function protokollBlatt(){
     const m   = c.m || {};
     const bez = (c.name || '') + (c.room ? ' · ' + c.room : '');
     if(bez.length > NM_ZEICHEN) umbrueche++;        // Bezeichnung geht auf zwei Zeilen
-    const rcd = (c.device === 'rcd' || c.device === 'rcbo') ? 'A' : '';   // RCD-Typ
+    /* v1.168: Typ nur, wenn er im Namen steht ("FI 40A / 30mA / Typ A") –
+       vorher stand immer "A", auch bei Typ AC. */
+    const istRcd = c.device === 'rcd' || c.device === 'rcbo';
+    const rcd = istRcd ? rcdTyp(c.breaker) : '';
     const ls  = (c.device === 'ls' || c.device === 'rcbo') ? `${c.char || ''} ${c.rated || ''}`.trim() : '';
     zeilen.push(zeile([
       esc(circuitLabel(c)),
       esc(c.name || '') + (c.room ? ' · ' + esc(c.room) : ''),
       kab(c.cable), v(m.rpe), v(m.iso),
-      rcd, rcd ? String(idnRated(c.breaker)) : '', v(m.idn), v(m.t),
+      rcd, istRcd ? String(idnRated(c.breaker)) : '', v(m.idn), v(m.t),
       esc(ls), v(m.zs),
       ergebnis(c, mangelBez(c))
     ]));
