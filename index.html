@@ -10,6 +10,20 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.172 09.10.2026 Qualitaetskontrolle, Paket 2c: Abschluss und Pflichtangaben.
+                    Neue Einstellungsseite "Pruefung" (fuer alle): Prueffrist
+                    (Vorgabe 4 Jahre) und "kalibriert bis" je Messgeraet; beides
+                    steht im Protokoll, eine abgelaufene Kalibrierung gibt im
+                    Abschluss einen Hinweis, sperrt aber nicht. Die Rueckfrage
+                    zur Pruefdauer kommt erst unter 10 min + 1,5 min je Kreis
+                    (hoechstens 25 min; Jean, F6); die Pruefzeit steht als Zeile im
+                    Abschluss und laesst sich dort aendern. Abschluss in der
+                    Reihenfolge Hinweise, Unterschrift, Dokumente, Fotos,
+                    Auftraggeber; das Ausgabe-Blatt nennt den Pruefer (rot, wenn
+                    es nicht der Angemeldete ist; Jean, F11) und bietet ohne
+                    Unterschrift "Erst unterschreiben". Startseite: solange kein
+                    Pruefer eingetragen ist, eine Karte "Erste Schritte". FI:
+                    Kachel "9-14 uebernehmen" unter "Deckt Kreise ab".
   v1.171 09.10.2026 Qualitaetskontrolle, Paket 2b: Luecken und Messregeln.
                     Ausgegeben wird erst, wenn die Zuleitung erfasst ist und jeder
                     Kreis Werte oder "Keine Messung" mit Grund hat (Jean, F4);
@@ -1791,6 +1805,8 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
 .bereiche em{position:absolute;top:2px;left:calc(50% + 10px);min-width:17px;height:16px;padding:0 4px;border-radius:8px;
   font:600 10px/16px var(--f-data);font-style:normal;letter-spacing:0;text-align:center;background:#5C6355;color:#fff}
 .bereiche em.rot{background:var(--fault)}
+#modalBody .rot{color:var(--fault)}   /* v1.172: Prüfer weicht ab */
+.erste-schritte{border-left:4px solid var(--brand)}
 .bereiche em.ok{background:var(--pe)}
 @media (max-width:359px){ .bereiche button{font-size:11px;letter-spacing:.03em} }
 header h1 small{display:block;font-family:var(--f-body);font-size:11px;font-weight:500;letter-spacing:0;
@@ -3098,6 +3114,7 @@ function nameGross(s){
               <button class="btn" id="btnCoversDash"  style="flex:0 0 56px" aria-label="bis">–</button>
               <button class="btn" id="btnCoversComma" style="flex:0 0 56px" aria-label="und">,</button>
             </div>
+            <div class="chk-grid" id="coversSug" hidden style="margin-top:8px"><button class="sug" type="button"></button></div>
           </div>
           <div class="warn gelb" id="ovZeile" hidden></div>
           <div class="field" id="fldCable"><span>Kabelart</span><div class="chk-grid kacheln" id="kabelKacheln"></div><select id="cCable" hidden></select></div>
@@ -3219,6 +3236,11 @@ function nameGross(s){
     <!-- ========== ABSCHLUSS ========== -->
     <section class="view" id="view-finish">
       <div id="plausiOut"></div>
+      <p class="muted small" id="finZeit" hidden></p>
+      <!-- v1.172: Unterschrift gleich nach den Hinweisen (QK G56) -->
+      <div class="eyebrow">Unterschrift Prüfer</div>
+      <div id="sigVorschau"></div>
+      <button class="btn" id="btnSigOeffnen" type="button">Unterschreiben</button>
       <div class="eyebrow">Dokumente</div>
       <div class="chk-grid" id="docOpts"></div>
       <div id="docActions" style="margin-top:10px"></div>
@@ -3229,10 +3251,6 @@ function nameGross(s){
       <button class="btn ghost" id="btnPhotoFinish" style="margin-top:10px">Foto aufnehmen</button>
       <div class="eyebrow">Auftraggeber</div>
       <p class="muted small" id="agZeile" style="margin-top:0"></p>
-      <!-- v1.161: ohne Schalter Sofort/Später – nicht unterschrieben heißt später -->
-      <div class="eyebrow">Unterschrift Prüfer</div>
-      <div id="sigVorschau"></div>
-      <button class="btn" id="btnSigOeffnen" type="button">Unterschreiben</button>
       <div class="actionbar"><div class="inner">
         <button class="btn primary" id="btnExportDocs">Ausgeben und ablegen</button>
       </div></div>
@@ -3305,6 +3323,7 @@ function nameGross(s){
         <p class="muted small set-hinweis">Messweg: erst Zuleitung, Herd und CEE, dann reine Beleuchtungskreise, danach raumweise; die FI hinter den Kreisen, die sie abdecken. Gilt für „Weiter messen“ und die Liste im Bereich Messen. Die Kamera der App nimmt mit Licht das schärfste aus zehn Bildern; aus = Kamera von iOS.</p>
         <div class="set-gk">Für alle <em>wird abgeglichen</em></div>
         <div class="set-gruppe">
+          <button class="set-zeile" type="button" data-seite="pruefung"><span>Prüffrist und Messgeräte</span><svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
           <button class="set-zeile" type="button" data-seite="adressen"><span>Adressen im Protokoll</span><svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
           <button class="set-zeile" type="button" data-seite="listen"><span>Listen</span><em class="v">Geräte, Kabel, Bauteile</em><svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
           <button class="set-zeile" type="button" data-seite="lager"><span>Lager</span><em class="v" id="setLagerWert"></em><svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
@@ -3320,6 +3339,17 @@ function nameGross(s){
         <p class="muted small">Höchstens drei Zeilen je Feld – mehr zeigt das Protokoll nicht an. Gilt für alle.</p>
         <label class="field"><span>Auftraggeber / Anlagenbetreiber</span><textarea id="setAuftraggeber" rows="3"></textarea></label>
         <label class="field"><span>Auftragnehmer</span><textarea id="setAuftragnehmer" rows="3"></textarea></label>
+      </div>
+
+      <!-- v1.172: Prüffrist und Kalibrierung, für alle (QK G32, G97) -->
+      <div class="set-seite" data-seite="pruefung" hidden>
+        <div class="set-gruppe">
+          <label class="set-zeile"><span>Prüffrist in Jahren</span><input id="setPrueffrist" inputmode="numeric" style="max-width:80px;text-align:right"></label>
+        </div>
+        <p class="muted small set-hinweis">Steht im Protokoll unter „Empfehlung nächste Prüfung“, gerechnet ab dem Prüfdatum.</p>
+        <div class="set-gk">Messgeräte <em>kalibriert bis (MM/JJJJ)</em></div>
+        <div class="set-gruppe" id="setKalib"></div>
+        <p class="muted small set-hinweis">Steht im Protokoll unter „Nächste Nachprüfung des Messgeräts“. Ist das Datum vorbei, weist der Abschluss darauf hin.</p>
       </div>
 
       <div class="set-seite" data-seite="listen" hidden>
@@ -3593,7 +3623,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.171';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.172';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4579,7 +4609,14 @@ function renderHome(){
       homeKollegen ? 'Kollegen einklappen' : `Projekte der Kollegen (${andere.length})`}</button>`;
   }
   if(!alle.length) h += `<div class="rail-empty">Nichts Offenes. Unten ein neues Projekt beginnen.</div>`;
+  /* v1.172 (QK G99): solange kein Prüfer eingetragen ist – sonst steht im
+     Protokoll "Prüfer –" */
+  if(!(CFG.tester || '').trim()) h = `<div class="card erste-schritte"><strong>Erste Schritte</strong>`
+    + `<div class="muted small" style="margin:4px 0 10px">Prüfer eintragen und Messgerät wählen – beides steht in jedem Protokoll. `
+    + `Dann: Erfassen › Messen › Prüfpunkte › Abschluss.</div>`
+    + `<button class="btn primary" id="homeErste">Prüfer eintragen</button></div>` + h;
   $('#homeMain').innerHTML = h;
+  const he = $('#homeErste'); if(he) he.onclick = () => { setSeite = 'start'; go('settings'); setTimeout(() => $('#setTester').focus(), 50); };
   $$('#homeMain [data-open]').forEach(b => b.onclick = () =>
     projektOeffnen(PROJECTS.find(p => p.id === b.dataset.open)));
   const ak = $('#homeAlleKnopf');     if(ak) ak.onclick = () => { homeAlle = !homeAlle; renderHome(); };
@@ -6237,6 +6274,7 @@ function syncCircuitUi(){
 function coversHint(){
   if(abwNr()){                                    // ohne Position kein Vorschlag
     $('#cCovers').placeholder = 'z.B. 1–9';
+    $('#coversSug').hidden = true;
     return;
   }
   const start = noStart();
@@ -6244,6 +6282,11 @@ function coversHint(){
   const anz   = te >= 4 ? 6 : 2;
   const von   = start + te;
   $('#cCovers').placeholder = `z.B. ${von}–${von + anz - 1}`;
+  /* v1.172 (QK G58): der Vorschlag als Kachel, nicht nur als grauer Platzhalter */
+  const sg = $('#coversSug'), txt = `${von}–${von + anz - 1}`;
+  sg.hidden = !!$('#cCovers').value.trim();
+  sg.firstElementChild.textContent = txt + ' übernehmen';
+  sg.firstElementChild.onclick = () => { $('#cCovers').value = txt; syncCoversKeys(); };
 }
 function syncCoversKeys(){
   coversHint();
@@ -6521,7 +6564,11 @@ const zeitZeile = (a, b) => dstr(a) === dstr(b)
 function zeitPruefen(onDone){
   const jetzt = Date.now();
   const min   = Math.round((jetzt - PROJ.startedAt) / 60000);
-  if(min >= DAUER_KURZ && min < DAUER_WARN){ onDone(jetzt); return; }
+  /* v1.172 (Jean, QK-Frage F6): die Grenze nach unten wächst mit der Wohnung –
+     10 min und 1,5 min je Kreis, höchstens DAUER_KURZ. Vorher kam die Frage bei
+     fast jeder kleinen Wohnung und wurde blind weggetippt. */
+  const kurz = Math.min(DAUER_KURZ, 10 + 1.5 * circuits().filter(c => !isSpecial(c)).length);
+  if(min >= kurz && min < DAUER_WARN){ onDone(jetzt); return; }
   resetModal(true);
   $('#modalTitle').textContent = 'Prüfdauer prüfen';
   $('#modalBody').innerHTML =
@@ -7321,8 +7368,7 @@ function renderFinish(){
           + b.opts.map(([val, txt]) => `<button data-bew="${val}"${val === 'keine' && grund ? ' disabled' : ''}>${esc(txt)}</button>`).join('') + `</div>`
         : `<button class="linkbtn" id="finZuPruef">Zu den Prüfpunkten</button>`) + `</div>` + h;
   }
-  if(!h && !ov.length) h = `<div class="warn ok"><strong>Bereit zur Ausgabe</strong>${PROJ.finishedAt
-    ? `Ende ${tstr(PROJ.finishedAt)} · Dauer ${Math.max(0, Math.round((PROJ.finishedAt - PROJ.startedAt) / 60000))} min` : 'Keine offenen Punkte.'}</div>`;
+  if(!h && !ov.length) h = `<div class="warn ok"><strong>Bereit zur Ausgabe</strong>Keine offenen Punkte.</div>`;   // v1.172: Zeit steht darunter
   $('#plausiOut').innerHTML = h;
   /* Offene Übersicherungen (v1.163): hier entscheiden, ausgegeben wird erst danach. */
   if(ov.length) $('#plausiOut').insertAdjacentHTML('afterbegin', `<div class="warn"><strong>Übersicherung zu entscheiden</strong>`
@@ -7334,6 +7380,17 @@ function renderFinish(){
   });
   const zp = $('#finZuPruef'); if(zp) zp.onclick = () => bereichWechseln('pruefpunkte');
   const zd = $('#finZuDaten'); if(zd) zd.onclick = () => projektAendern();
+  /* v1.172: Prüfzeit als Zeile, mit "ändern" statt Rückfrage */
+  const fz = $('#finZeit');
+  fz.hidden = !PROJ.finishedAt;
+  if(PROJ.finishedAt){
+    fz.innerHTML = `Prüfzeit ${esc(tstr(PROJ.startedAt))}–${esc(tstr(PROJ.finishedAt))} · `
+      + `${Math.max(0, Math.round((PROJ.finishedAt - PROJ.startedAt) / 60000))} min · <button class="linkbtn" id="finZeitAendern">ändern</button>`;
+    $('#finZeitAendern').onclick = () => zeitAendern(PROJ.finishedAt, ts => { PROJ.finishedAt = ts; saveProj(); renderFinish(); });
+  }
+  const kal = kalibListe()[PROJ.device];
+  if(kal && kalibAbgelaufen(kal)) $('#plausiOut').insertAdjacentHTML('beforeend',
+    `<div class="warn gelb"><strong>Kalibrierung abgelaufen</strong>${esc(PROJ.device)}: kalibriert bis ${esc(kal)}. Sperrt nicht.</div>`);
   $$('#plausiOut [data-stelle]').forEach(b => b.onclick = () => zurStelle(stellen[+b.dataset.stelle]));
   $$('#plausiOut [data-bew]').forEach(b => b.onclick = () => {
     PROJ.checks = PROJ.checks || {}; PROJ.checks.bewertung = b.dataset.bew; saveProj(); renderFinish();
@@ -10738,7 +10795,7 @@ function protokollBlatt(){
   <tr><td colspan="2" class="sec">3 · Messen</td></tr>
   <tr>
     <td><span class="rl">Messgerät:</span> <span class="f1i">${esc(P.device || '')}</span></td>
-    <td><span class="sm">Nächste Nachprüfung des Messgeräts (DIN VDE 0413)</span></td>
+    <td><span class="sm">Nächste Nachprüfung des Messgeräts (DIN VDE 0413)</span> <span class="f1i">${esc(kalibListe()[P.device] || '')}</span></td>
   </tr>
   <tr>
     <td colspan="2" style="padding-top:5px; padding-bottom:5px">
@@ -10810,7 +10867,7 @@ function protokollBlatt(){
             <td style="border:none; padding:0"><span class="nw">${CB('ausserbetrieb','ja')}Stromkreis / Anlagenteil außer Betrieb genommen</span></td>
           </tr>
         </table></td>
-    <td style="padding-top:5px; padding-bottom:5px"><span class="rl">Empfehlung nächste Prüfung:</span><div class="f1" style="height:16px"></div></td>
+    <td style="padding-top:5px; padding-bottom:5px"><span class="rl">Empfehlung nächste Prüfung:</span><div class="f1" style="height:16px">${esc(naechstePruefung(P))}</div></td>
   </tr>
   <tr>
     <td rowspan="2" style="border-right:none; padding-top:5px"><span class="rl">Festgestellte Mängel, Empfehlungen und Bemerkungen (durchnummeriert):</span><div class="fm" style="height:${maengelHoehe}px">${maengelText}</div></td>
@@ -11182,10 +11239,19 @@ $('#btnExportDocs').onclick = () => {
        buchen ? `Im Lager werden ${buchen} Position${buchen === 1 ? '' : 'en'} abgebucht.` : 'Im Lager wird nichts gebucht.'];
   resetModal(false);
   $('#modalTitle').textContent = archOffen ? 'Erneut ausgeben' : 'Ausgeben und ablegen';
-  $('#modalBody').innerHTML = `<div class="small" style="font-weight:600">Geht hinaus</div>`
+  /* v1.172 (Jean, QK-Frage F11): der Prüfer steht im Blatt – rot, wenn es
+     nicht der Angemeldete ist. Ohne Unterschrift ein Weg zurück zum Feld. */
+  const fremd = (PROJ.tester || '').trim() !== (CFG.tester || '').trim();
+  const sigFehlt = !(PROJ.signature && PROJ.signature.data) && d.protokoll;
+  $('#modalBody').innerHTML = `<div class="${fremd ? 'rot' : ''}" style="margin-bottom:8px">Prüfer im Protokoll: <strong>${esc(PROJ.tester || '–')}</strong> · `
+    + `<button class="linkbtn" id="agPruefer">ändern</button></div>`
+    + `<div class="small" style="font-weight:600">Geht hinaus</div>`
     + geht.map(t => `<div>✓ ${esc(t)}</div>`).join('')
     + `<div class="small" style="font-weight:600;margin-top:10px">Danach</div>`
-    + danach.map(t => `<div class="muted">${esc(t)}</div>`).join('');
+    + danach.map(t => `<div class="muted">${esc(t)}</div>`).join('')
+    + (sigFehlt ? `<button class="btn ghost" id="agSig" style="margin-top:12px">Erst unterschreiben</button>` : '');
+  $('#agPruefer').onclick = () => { $('#modal').hidden = true; pendingAck = null; projektAendern(); };
+  if(sigFehlt) $('#agSig').onclick = () => { $('#modal').hidden = true; pendingAck = null; sigOeffnen(); };
   $('#modalOk').textContent = 'Zum Kurzbefehl';
   $('#modalBack').textContent = 'Abbrechen';
   pendingAck = () => ausgebenJetzt(d);
@@ -11500,7 +11566,7 @@ async function erneutSichern(e, knopf){
    überschrieben wird. Die Listen stehen Zeile für Zeile da statt als Textfeld
    mit Sonderregeln ("erste Zeile ist Vorauswahl", "Hauptschalter, 3"). */
 let setSeite = 'start', setListe = null;
-const SET_TITEL = {start:'Einstellungen', adressen:'Adressen im Protokoll', listen:'Listen', lager:'Lager',
+const SET_TITEL = {start:'Einstellungen', pruefung:'Prüffrist und Messgeräte', adressen:'Adressen im Protokoll', listen:'Listen', lager:'Lager',
   sam:'SAM (Beta)', konto:'Konto und Abgleich', daten:'Daten'};
 const LISTEN = [
   {k:'devices',  t:'Messgeräte',        hw:'Der erste Eintrag ist die Vorgabe für neue Projekte.'},
@@ -11517,6 +11583,10 @@ function renderSettings(still){
   $('#setAuftraggeber').value  = CFG.auftraggeber  || '';
   $('#setAuftragnehmer').value = CFG.auftragnehmer || '';
   fillSelect($('#setDevice'), CFG.devices, meinGeraet());
+  $('#setPrueffrist').value = prueffrist(CFG.prueffrist);
+  const kl = kalibListe();
+  $('#setKalib').innerHTML = CFG.devices.map((d, i) => `<label class="set-zeile"><span>${esc(d)}</span>`
+    + `<input data-kalib="${i}" inputmode="numeric" placeholder="MM/JJJJ" value="${esc(kl[d] || '')}" style="max-width:110px;text-align:right"></label>`).join('');
   $('#setInvHinweis').checked = invAn();
   $('#setInvMonate').value    = invMonate(CFG.invMonate);
   $('#setSam').checked = !!CFG.sam;
@@ -11552,6 +11622,17 @@ function settingsZurueck(){
   return true;
 }
 
+/* v1.172: Prüffrist (Jahre) und Kalibrierung je Messgerät ("Gerät|MM/JJJJ" je Zeile) */
+const prueffrist = v => { const n = parseInt(v, 10); return n >= 1 && n <= 10 ? n : 4; };
+const kalibListe = () => Object.fromEntries(String(CFG.kalibrierung || '').split('\n')
+  .map(z => z.split('|')).filter(t => t.length === 2 && t[0]).map(t => [t[0], t[1]]));
+const kalibNorm = v => { const m = /^(\d{1,2})\D+(\d{2}|\d{4})$/.exec(String(v || '').trim()); if(!m) return '';
+  const mo = +m[1], j = m[2].length === 2 ? 2000 + +m[2] : +m[2];
+  return mo >= 1 && mo <= 12 ? String(mo).padStart(2, '0') + '/' + j : ''; };
+const kalibAbgelaufen = mmjj => { const m = /^(\d{2})\/(\d{4})$/.exec(mmjj || ''); if(!m) return false;
+  return new Date(+m[2], +m[1], 1).getTime() <= Date.now(); };   // gilt bis Ende des Monats
+const naechstePruefung = P => { const d = new Date(P.finishedAt || P.startedAt || Date.now());
+  return String(d.getMonth() + 1).padStart(2, '0') + '/' + (d.getFullYear() + prueffrist(CFG.prueffrist)); };
 const meinGeraet = () => CFG.devices.includes(CFG.meinGeraet) ? CFG.meinGeraet : CFG.devices[0];
 /* Je Feld genau dessen Wert übernehmen. */
 const adrText = el => el.value.split('\n').map(z => z.trim()).join('\n').replace(/\n{2,}/g, '\n').trim();
@@ -11562,6 +11643,7 @@ const SET_FELD = {
   setDevice:        () => { CFG.meinGeraet = $('#setDevice').value; },
   setMessfolge:     () => { CFG.messfolge = $('#setMessfolge').value === 'weg' ? 'weg' : 'nr'; },
   setEigeneKamera:  () => { CFG.eigeneKamera = $('#setEigeneKamera').checked; },
+  setPrueffrist:    () => { CFG.prueffrist = String(prueffrist($('#setPrueffrist').value)); return 'fb:prueffrist'; },
   setAuftraggeber:  () => { CFG.auftraggeber  = adrText($('#setAuftraggeber'));  return 'fb:auftraggeber'; },
   setAuftragnehmer: () => { CFG.auftragnehmer = adrText($('#setAuftragnehmer')); return 'fb:auftragnehmer'; },
   setInvHinweis:    () => { CFG.invHinweis = $('#setInvHinweis').checked; return 'fb:invHinweis'; },
@@ -11575,6 +11657,14 @@ function cfgSichern(art){
   if(art === 'name') fbNameHoch();
 }
 $('#view-settings').addEventListener('change', e => {
+  if(e.target.dataset.kalib != null){                 // v1.172
+    const k = kalibListe(); const d = CFG.devices[+e.target.dataset.kalib];
+    const v = kalibNorm(e.target.value);
+    if(v) k[d] = v; else delete k[d];
+    CFG.kalibrierung = Object.entries(k).map(([g, m]) => g + '|' + m).join('\n');
+    e.target.value = v;
+    cfgSichern('fb:kalibrierung'); toast('Gespeichert'); return;
+  }
   const f = SET_FELD[e.target.id];
   if(!f) return;
   cfgSichern(f());
@@ -11678,7 +11768,7 @@ $('#btnReload').onclick = () => {
    Ohne Netz passiert hier gar nichts; gearbeitet wird aus dem localStorage.
    ============================================================ */
 const FB_LISTEN = ['devices','chars','rated','rcds','specials','cables','material'];
-const FB_TEXTE  = ['auftraggeber','auftragnehmer'];
+const FB_TEXTE  = ['auftraggeber','auftragnehmer','prueffrist','kalibrierung'];   // v1.172: Prüffrist, Kalibrierung
 /* Schalter und Zahlen reisen als Text, damit beide Seiten beim Vergleich
    dasselbe sehen; beim Empfang werden sie zurückverwandelt. */
 const FB_JANEIN = ['invHinweis'];
