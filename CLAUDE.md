@@ -163,8 +163,9 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   main::after`), `feldFreiholen` holt Feld samt Begleiter (`BEGLEITER`: „999“,
   „übernehmen“) über `tastaturKante()` (aus visualViewport, sonst geschätzt);
   `ruheH` = Höhe ohne Fokus; kein `scrollTo(0,0)` während des Tippens; Blätter
-  (`#modal`) bekommen `bottom` in Tastaturhöhe. Test: `qk2/funktion/kblib.cjs`
-  bildet die iOS-Tastatur nach (Fall A/B), `t180.cjs`.
+  (`#modal`) bekommen `bottom` in Tastaturhöhe. Testen: per Init-Skript
+  `window.visualViewport` durch ein Objekt mit setzbarer Höhe ersetzen und `resize`
+  feuern; einmal mit gleichbleibendem, einmal mit mitschrumpfendem `innerHeight`.
 - **Ablage:** `archVorher` hält den Stand vor „Nachbessern“; `go` fragt beim
   Verlassen (`nachbessernAbschluss`: Jetzt ausgeben / Später → `nachOffen` /
   Verwerfen), ohne Änderung kommt der alte Stand samt Unterschrift zurück. Im
