@@ -10,6 +10,20 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.177 09.10.2026 Qualitaetskontrolle, Paket 5a: Ablaeufe und Fachtexte. Liegt
+                    ein Kreis hinter einem FI bis 30 mA, sagt der Zs-Hinweis
+                    "Fehlerschutz ueber RCD gegeben, Kurzschlussschutz pruefen". Im
+                    TT-System wird R_A gegen 50 V / IdeltaN geprueft und das Ergebnis
+                    ins Protokoll geschrieben. Ablage: "Meine" heisst angelegt oder
+                    abgelegt von mir, die Karte nennt den Pruefer; "Erneut ausgeben"
+                    auf der Karte fuehrt durch dasselbe Bestaetigungsblatt wie im
+                    Abschluss. Die Rueckfrage beim Verlassen nennt, worum es geht
+                    ("Kreis 7 - Steckdosen speichern?"). Beim 30-mA-FI springt der
+                    Ausloesestrom nach zwei Ziffern weiter; nach "Naechster Kreis"
+                    kein Hinweis mehr ueber den Raumkacheln. Vorschau ohne zweites
+                    "Zurueck", "Seiten" statt "Blaetter". Uebersicherung einheitlich
+                    "zu entscheiden" bzw. "Mangel / kein Mangel / nicht zu klaeren".
+                    Hinweise nennen die heutigen Orte in den Einstellungen.
   v1.176 09.10.2026 Qualitaetskontrolle, Paket 4b. Die Ueberschriftenschrift
                     (Barlow Condensed) steckt jetzt in der App selbst - ohne Netz
                     fiel sie auf eine breitere Systemschrift zurueck und Kopfzeile
@@ -3292,7 +3306,7 @@ function nameGross(s){
 
     <!-- Rechte Spalte im Zweispalten-Layout, solange nichts gewählt ist -->
     <div id="detailEmpty" hidden>
-      <div class="rail-empty">Links einen Eintrag wählen<br>oder unten einen Stromkreis hinzufügen.</div>
+      <div class="rail-empty">Links einen Eintrag wählen.</div>
     </div>
 
     <!-- ========== MATERIAL ========== -->
@@ -3345,10 +3359,7 @@ function nameGross(s){
       <p class="muted small" id="sheetHint"></p>
       <div id="sheets"><div id="sheetPaper"></div></div>
       <div class="actionbar"><div class="inner">
-        <div class="btn-row">
-          <button class="btn ghost" id="btnSheetBack">Zurück</button>
-          <button class="btn ghost" id="btnSheetZoom">Einpassen</button>
-        </div>
+        <button class="btn ghost" id="btnSheetZoom">Einpassen</button>   <!-- v1.177: Zurück steht oben -->
       </div></div>
     </section>
 
@@ -3700,7 +3711,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.176';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.177';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4631,11 +4642,12 @@ $('#btnBack').onclick = () => {
 const feldStand = sel => [...document.querySelectorAll(sel + ' input, ' + sel + ' select, ' + sel + ' textarea')]
   .map(i => i.type === 'checkbox' ? String(i.checked) : i.value).join('\u0001');
 const SCHUTZ = {
-  circuit:  {stand: () => JSON.stringify(collectCircuit()), speichern: weiter => saveCircuitThen(weiter)},
-  feed:     {stand: () => JSON.stringify(collectFeed()),    speichern: weiter => saveFeedThen(weiter)},
-  material: {stand: () => JSON.stringify(matDraft || {}),
+  circuit:  {stand: () => JSON.stringify(collectCircuit()), speichern: weiter => saveCircuitThen(weiter),
+             titel: () => `${draft && draft.no ? 'Kreis ' + (circuitLabel(draft) || draft.no) : 'Neuer Kreis'}${draft && draft.name ? ' · ' + draft.name : ''} – speichern?`},
+  feed:     {stand: () => JSON.stringify(collectFeed()),    speichern: weiter => saveFeedThen(weiter), titel: () => 'Zuleitung – speichern?'},
+  material: {titel: () => 'Material – speichern?', stand: () => JSON.stringify(matDraft || {}),
              speichern: weiter => { PROJ.material = matDraft; saveProj(); toast('Gespeichert'); weiter(); }},
-  lagerart: {stand: () => ['#lgName','#lgStamm','#lgEinheit','#lgMelde','#lgSoll','#lgVpe','#lgArtnr','#lgStart']
+  lagerart: {titel: () => 'Artikel – speichern?', stand: () => ['#lgName','#lgStamm','#lgEinheit','#lgMelde','#lgSoll','#lgVpe','#lgArtnr','#lgStart']
                .map(id => { const e = $(id); return e ? e.value : ''; }).join('\u0001'),
              speichern: () => $('#btnLagerArtSave').click()},
   /* v1.167: auch beim Anlegen; mit SAM legt "Speichern" ohne Fotos an,
@@ -4643,7 +4655,7 @@ const SCHUTZ = {
   new:      {stand: () => feldStand('#view-new'), knopf: () => projEdit ? 'Speichern' : 'Projekt anlegen',
              speichern: () => projEdit || $('#btnCreateOhne').hidden ? $('#btnCreate').click() : $('#btnCreateOhne').click()},
   settings: {stand: () => setSeite === 'liste' ? $('#listeNeu').value.trim() + '\u0001' + $('#listeNeuTe').value.trim() : '',
-             knopf: () => 'Hinzufügen',
+             knopf: () => 'Hinzufügen', titel: () => 'Neuer Eintrag – hinzufügen?',
              speichern: weiter => { $('#btnListeNeu').click(); weiter(); },
              verwerfen: () => { $('#listeNeu').value = ''; $('#listeNeuTe').value = ''; }}
 };
@@ -4674,7 +4686,7 @@ function waehlDialog(titel, text, wahl){
 function vorVerlassen(weiter){
   if(!schutzGeaendert()){ weiter(); return; }
   const s = SCHUTZ[current];
-  waehlDialog('Änderungen speichern?', 'Hier ist etwas geändert und noch nicht gespeichert.', [
+  waehlDialog(s.titel ? s.titel() : 'Änderungen speichern?', 'Hier ist etwas geändert und noch nicht gespeichert.', [   // v1.177: mit Gegenstand
     {t:s.knopf ? s.knopf() : 'Speichern', cls:'primary', fn:() => s.speichern(weiter)},
     {t:'Verwerfen', cls:'danger',  fn:() => { if(s.verwerfen) s.verwerfen(); else schutzStart = null; if(current === 'new') projEdit = false; weiter(); }},
     {t:'Weiter bearbeiten', cls:'ghost', fn:null}
@@ -5321,7 +5333,7 @@ function renderBoard(){
   weiterMessenKnopf();                               // v1.161
   bereicheZeigen(current);                           // Zähler in der Leiste mitführen
   $('#boardBody').innerHTML = n === 0
-    ? `<div class="rail-empty">Noch kein Stromkreis erfasst.<br>Unten beginnen.</div>`
+    ? `<div class="rail-empty">Noch kein Stromkreis erfasst.<br>${messModus() ? 'Stromkreise legst du unter Erfassen an.' : 'Unten beginnen.'}</div>`
     : listHtml();
   /* v1.167: an der Kennung merken – "Speichern" in der Rückfrage sortiert die
      Liste um, der Platz zeigte danach auf einen anderen Kreis. */
@@ -5397,11 +5409,10 @@ function listHtml(){
       : (REASONS[it.reason] || 'Keine Messung') + (it.note ? ' – ' + it.note : '');
     const u   = uebersicherung(it);
     const ovw = it.over && it.over.wahl;
-    const ov  = !u ? '' : ovw === 'mangel' ? ' · Übersicherung: Mangel'
-      : ovw === 'kein'  ? ' · Übersicherung geprüft'
+    const ov  = !u ? '' : ovw === 'mangel' ? ' · Übersicherung: Mangel'   // v1.177: ein Wortlaut
+      : ovw === 'kein'  ? ' · Übersicherung: kein Mangel'
       : ovw === 'offen' ? ' · Übersicherung: nicht zu klären'
-      : u.stufe === 'gewiss' ? ' · Übersicherung: offen'
-      : ' · mögliche Übersicherung';
+      : ' · Übersicherung: zu entscheiden';
     /* Erfassen zeigt Gerät und Kabel, Messen die Werte (v1.162). */
     const z = mess ? zustand(it, false) : erfassZustand(it, false);
     const fehlt = !mess && z === 'z-ask' ? 'Kabelart fehlt' : '';
@@ -5688,7 +5699,12 @@ messfeldLogik('#fIso', '#fZs', '#fIsoSug');
 /* Auslösestrom und Auslösezeit sind mit einer Nachkommastelle vollständig. */
 ['#mIdn', '#mT'].forEach(sel => {
   const el = $(sel);
-  el.oninput = () => { idnHinweis(); if(nachkomma(el.value) >= 1) messWeiter(el); };
+  el.oninput = () => {
+    idnHinweis();
+    /* v1.177 (QK G59): beim 30-mA-FI ist der Auslösestrom zweistellig ganz */
+    const br = segVal('#segDevice') === 'rcd' ? $('#cBreaker').value : breakerOf(draft);
+    if(nachkomma(el.value) >= 1 || (sel === '#mIdn' && idnRated(br) <= 30 && /^\d{2}$/.test(el.value.trim()))) messWeiter(el);
+  };
 });
 /* v1.171: kein Mangel, nur ein Hinweis */
 function idnHinweis(){
@@ -6258,7 +6274,7 @@ if(window.MutationObserver){
    Blatt; der Schalter springt erst mit der Wahl um. */
 function sonstigesWaehlen(){
   const namen = specialNames();
-  if(!namen.length){ toast('Keine sonstigen Geräte in den Einstellungen'); setSeg('#segDevice', draft.special ? 'other' : draft.device); return; }
+  if(!namen.length){ toast('Keine Einträge unter Einstellungen › Listen › Sonstige Geräte'); setSeg('#segDevice', draft.special ? 'other' : draft.device); return; }
   waehlDialog('Sonstiges Gerät', '', [...namen.map(n => ({t:n, cls: n === draft.special ? 'primary' : 'ghost',
     fn:() => waehleIn($('#cSpecial'), n)})), {t:'Abbrechen', cls:'ghost', fn:null}]);
   setSeg('#segDevice', draft.special ? 'other' : draft.device);
@@ -6295,11 +6311,11 @@ function renderOvZeile(){
   const u = draft ? uebersicherung(draft) : null;
   if(!u){ z.hidden = true; return; }
   const wahl = draft.over && draft.over.wahl;
-  const txt = wahl === 'mangel' ? 'Übersicherung als Mangel bestätigt'
-    : wahl === 'kein'  ? 'Übersicherung geprüft, kein Mangel'
-    : wahl === 'offen' ? 'Übersicherung nicht zu klären'
-    : u.stufe === 'gewiss' ? 'Übersicherung – noch nicht bewertet'
-    : 'Mögliche Übersicherung – noch nicht bewertet';
+  const txt = wahl === 'mangel' ? 'Übersicherung: Mangel'                 // v1.177
+    : wahl === 'kein'  ? 'Übersicherung: kein Mangel'
+    : wahl === 'offen' ? 'Übersicherung: nicht zu klären'
+    : u.stufe === 'gewiss' ? 'Übersicherung: zu entscheiden'
+    : 'Mögliche Übersicherung: zu entscheiden';
   z.hidden = false;
   /* v1.163: als Hinweiskarte; entschieden wird jetzt oder im Abschluss. */
   z.className = 'warn ' + (wahl ? 'info' : 'gelb');
@@ -6623,7 +6639,11 @@ function checkCircuit(c){
   if(iso != null && iso < 1) w.push(`Isolationswiderstand ${fmt(iso)} MΩ liegt unter 1,0 MΩ.`);
   if(zs != null){
     const mx = maxZs(zsRef);
-    if(mx && zs > mx) w.push(`Schleifenimpedanz ${fmt(zs)} Ω über dem Richtwert für ${zsRef} (≈ ${mx.toFixed(2).replace('.',',')} Ω).`);
+    /* v1.177 (QK G29): hinter einem FI bis 30 mA ist der Fehlerschutz über den
+       FI gegeben – der Hinweis sagt das, statt nur den LS-Richtwert zu nennen */
+    const fiSchutz = dev === 'rcbo' || (PROJ && kreisNummern(c).some(n => rcdSchutz().has(n)));
+    if(mx && zs > mx) w.push(`Schleifenimpedanz ${fmt(zs)} Ω über dem Richtwert für ${zsRef} (≈ ${mx.toFixed(2).replace('.',',')} Ω)`
+      + (fiSchutz ? '; Fehlerschutz über RCD gegeben, Kurzschlussschutz prüfen.' : '.'));
   }
   if(dev !== 'ls'){
     const rated = idnRated(br);
@@ -6913,7 +6933,7 @@ function rcdPolFragen(c, fertig){
     + (w.ersatz
         ? `<button class="btn primary" id="rpTyp">Gerät ist ${esc(w.te)}-polig</button>`
         : `<div class="muted small">Ein ${esc(w.te)}-poliger Typ dieser Bauart steht nicht in den `
-          + `Einstellungen unter „FI / RCD".</div>`)
+          + `Einstellungen › Listen › FI-Typen.</div>`)
     + `<button class="btn ghost" id="rpTe" style="margin-top:10px">Breite auf ${esc(w.typPol)} TE ändern</button>`
     + `<button class="btn ghost" id="rpLassen" style="margin-top:10px">So lassen</button>`
     + `</div>`;
@@ -6939,13 +6959,13 @@ function rcdPolFragen(c, fertig){
   $('#rpLassen').onclick = () => { c.polOk = stand; schliessen(); };
   $('#modal').hidden = false;
 }
-function saveCircuitThen(next){
+function saveCircuitThen(next, still){
   const c = collectCircuit();
   const w = checkCircuit(c);
   /* Erst speichern, dann fragen: die Frage bezieht sich auf den Stand mit
      diesem Kreis, und der Weiterlauf wartet auf die Antwort. */
   const done = () => {
-    persistCircuit(); toast('Gespeichert');
+    persistCircuit(); if(!still) toast('Gespeichert');   // v1.177: nach "Nächster Kreis" kein Hinweis über den Kacheln
     /* v1.163: die Übersicherung unterbricht den Messweg nicht mehr – sie steht
        als Hinweis am FI und im Abschluss (Bedienkonzept B15). */
     rcdPolFragen(c, () => nummernPruefen(next));
@@ -6959,7 +6979,7 @@ $('#btnSaveOnly').onclick    = () => {
 };
 $('#btnSaveCircuit').onclick = () => {
   const c = draft;                                 // dasselbe Objekt landet in der Liste
-  saveCircuitThen(() => messModus() ? weiterZumKreis(c) : openCircuit(null));
+  saveCircuitThen(() => messModus() ? weiterZumKreis(c) : openCircuit(null), true);
 };
 $('#btnDelCircuit').onclick  = () => {
   if(editIdx == null) return;
@@ -10877,7 +10897,14 @@ function protokollBlatt(){
   while(zeilen.length < 13) zeilen.push(zeile(Array(12).fill('')));
 
   const ra = String((P.checks || {}).erdRA || '').trim();
-  if(chkOn('netz','tt') && ra) maengel.push(`Netzsystem TT: Erdungswiderstand RA = ${ra} Ω`);
+  if(chkOn('netz','tt') && ra){
+    /* v1.177 (QK G35): R_A · IΔn ≤ 50 V (DIN VDE 0100-410, 411.5.3), mit dem
+       größten Nennfehlerstrom der erfassten FI */
+    const fis = chkFis(), idn = fis.length ? Math.max(...fis.map(c => idnRated(c.breaker))) : null, r = num(ra);
+    const ul = idn != null && r != null ? r * idn / 1000 : null;
+    maengel.push(`Netzsystem TT: Erdungswiderstand RA = ${ra} Ω` + (ul == null ? ' – kein RCD erfasst, Abschaltbedingung prüfen'
+      : `; RA · IΔn = ${fmt(Math.round(ul * 10) / 10)} V ${ul <= 50 ? '≤ 50 V, erfüllt' : '> 50 V, nicht erfüllt'}`));
+  }
   uebersicherungTexte().forEach(t => maengel.push(t));
   const empf = rcdEmpfehlung(P);
   if(empf) maengel.push(empf);
@@ -11219,7 +11246,7 @@ function renderSheets(){
   const bl = blaetterBauen();
   $('#sheetPaper').innerHTML = bl
     .map(b => `<div class="pagewrap"><div class="paper page">${b}</div></div>`).join('');
-  $('#sheetHint').textContent = bl.length === 1 ? '1 Blatt' : `${bl.length} Blätter`;
+  $('#sheetHint').textContent = bl.length === 1 ? '1 Seite' : `${bl.length} Seiten`;   // v1.177
   applySheetZoom();
 }
 function applySheetZoom(){
@@ -11277,7 +11304,7 @@ $('#btnSheetZoom').onclick  = () => {
   }, {passive:false});
   box.addEventListener('touchend', e => { if(e.touches.length < 2) anker = null; }, {passive:true});
 })();
-$('#btnSheetBack').onclick  = () => { const p = stack.pop(); go(p || 'finish', false); };
+
 const zurueckStapel = () => { const p = stack.pop(); if(p) go(p, false); };
 window.addEventListener('resize', () => { if(current === 'sheets') applySheetZoom(); });
 
@@ -11586,7 +11613,7 @@ function archiveNow(){
     abgelegtAm: Date.now(),
     owner: PROJ.owner || null,
     ownerName: PROJ.ownerName || '',
-    ablegerName: CFG.tester || FB.konto || '',
+    ablegerName: CFG.tester || FB.konto || '', ablegerUid: FB.uid || null,
     adresse: PROJ.address || '', wohnung: PROJ.flat || '',
     kreise: (PROJ.items || []).length, fotos: (PROJ.photos || []).length,
     stand: JSON.parse(JSON.stringify(PROJ)),   // vollständig, damit sich der Export wiederholen lässt
@@ -11613,14 +11640,16 @@ function archiveNow(){
    klein. Der volle Stand wird erst geholt, wenn wirklich jemand "Erneut
    sichern" antippt; sonst zöge jede Änderung alles mit.
    ============================================================ */
-const eigenesArch = e => !e.owner || e.owner === FB.uid;
+/* v1.177 (QK G44): "Meine" = von mir angelegt oder abgelegt */
+const eigenesArch = e => !e.owner || e.owner === FB.uid || (!!e.ablegerUid && e.ablegerUid === FB.uid);
 const archTitel = e => ((archAdresse(e) || '').split('\n')[0] || 'Ohne Adresse') + (archWohnung(e) ? ' · ' + flatLabel(archWohnung(e)) : '');
 
 function archKurz(e){
   const st = archStand(e);
   return {
     id: e.id, abgelegtAm: e.abgelegtAm,
-    owner: e.owner || null, ownerName: e.ownerName || '', ablegerName: e.ablegerName || '',
+    owner: e.owner || null, ownerName: e.ownerName || '', ablegerName: e.ablegerName || '', ablegerUid: e.ablegerUid || null,
+    pruefer: (st ? st.tester : null) || e.pruefer || '',   // v1.177
     adresse: e.adresse || (st ? st.address : '') || '',
     wohnung: e.wohnung || (st ? st.flat : '') || '',
     /* v1.169: der Stand zuerst – eine nachträglich geänderte Bewertung soll
@@ -11663,7 +11692,7 @@ function ablageRein(alle){
     /* v1.169: Bewertung, Art und Änderungszeit kommen mit. Ist der Stand oben
        neuer als der hier liegende, wird der hiesige verworfen – "Ansehen" und
        "Erneut ausgeben" holen dann den neuen, statt den alten auszugeben. */
-    ['abgelegtAm','owner','ownerName','ablegerName','adresse','wohnung','kreise','fotos','bewertung','art','geaendertAm']
+    ['abgelegtAm','owner','ownerName','ablegerName','ablegerUid','pruefer','adresse','wohnung','kreise','fotos','bewertung','art','geaendertAm']
       .forEach(s => { if(k[s] !== undefined && e[s] !== k[s]){ e[s] = k[s]; geaendert = true; } });
     if(e.stand && k.geaendertAm && (e.stand.updatedAt || 0) < k.geaendertAm){
       delete e.stand; delete e.bericht; e.hoch = true; geaendert = true;
@@ -11730,7 +11759,8 @@ function renderArchive(){
     const whg = archWohnung(e), fotos = archFotos(e);
     const bew = (archStand(e) && archStand(e).checks ? archStand(e).checks.bewertung : null) || e.bewertung;
     const art = (archStand(e) ? archStand(e).mode || 'wdh' : null) || e.art;
-    const wer = !e.owner ? '' :
+    const prf = (archStand(e) || {}).tester || e.pruefer;           // v1.177: der Prüfer aus dem Protokoll
+    const wer = prf ? `Prüfer: ${esc(prf)} · ` : !e.owner ? '' :
       (eigenesArch(e) ? 'Von dir' : `Von ${esc(nameGross(e.ablegerName || e.ownerName) || 'jemand anderem')}`) + ' · ';
     return `
     <div class="card">
@@ -11746,7 +11776,14 @@ function renderArchive(){
       </div>
     </div>`;
   }).join('');
-  $$('[data-arch]').forEach(b => b.onclick = () => erneutSichern(ARCH[+b.dataset.arch], b));
+  /* v1.177 (QK G50): derselbe Weg wie im Abschluss – mit Bestätigungsblatt und
+     dem damaligen Umfang. Alte Einträge ohne Stand gehen weiter als Datei. */
+  $$('[data-arch]').forEach(b => b.onclick = async () => {
+    const e = ARCH[+b.dataset.arch];
+    if(!archStand(e) && !e.hoch){ erneutSichern(e, b); return; }
+    await archAnsehen(e, b);
+    if(current === 'finish' && archOffen === e.id) $('#btnExportDocs').click();
+  });
   $$('[data-asee]').forEach(b => b.onclick = () => archAnsehen(ARCH[+b.dataset.asee], b));
 }
 /* v1.173: Löschen aus der Ablage steht im Eintrag unter "…", nicht mehr unter
