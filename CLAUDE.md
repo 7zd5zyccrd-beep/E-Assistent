@@ -96,7 +96,8 @@ Umgesetzt nach dem Bedienkonzept vom 08.10.2026 (Artifact „E-Assistent Bedienk
 - **Bereichsleiste** `#bereiche` im Projekt: Erfassen · Messen · Prüfpunkte ·
   Abschluss (`bereichVon`, `bereichWechseln`, `bereicheZeigen`). Erfassen/Messen
   ist weiter `PROJ.modus` ('edit'/'mess'); der alte Schalter `#btnModus` bleibt
-  versteckt. „…“ oben rechts (`#btnMehr`): Projektdaten, SAM, Vorab ausgeben,
+  versteckt. Messen hat seit v1.184 kein eigenes Blau mehr (Jean: nicht nötig);
+  `body[data-modus]` bleibt als Merkmal ohne Farben. „…“ oben rechts (`#btnMehr`): Projektdaten, SAM, Vorab ausgeben,
   Projekt löschen. Titel im Projekt = Adresse (`projektTitel`).
 - **Zurück fragt** bei Ungespeichertem: `SCHUTZ` je Ansicht, `schutzMerken` am
   Ende von `go`, `vorVerlassen(weiter)` vor jedem Verlassen (auch Bereichsleiste,
