@@ -10,6 +10,25 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.166 09.10.2026 Qualitaetskontrolle, Paket 1a: Unterschrift und Abschluss.
+                    Drehen des Geraets beim Unterschreiben leert das Feld nicht
+                    mehr (ein alter Waechter baute es neu auf, "Fertig" sicherte
+                    dann ein leeres Bild); "Fertig" ohne Strich im Feld sichert
+                    nichts. Das Vollbild heisst "Unterschrift Pruefer" mit Namen,
+                    denn im Protokoll steht das Bild im Feld des Pruefers (Jean:
+                    der Pruefer unterschreibt jedes Mal selbst). Pruefpunkte
+                    gelten erst mit der bestaetigten Pruefzeit als bestaetigt.
+                    "Keine Maengel" ist gesperrt, solange ein Pruefpunkt n.i.O.
+                    ist, ein Messwert fehlt oder ueber dem Grenzwert liegt, eine
+                    Nullung oder Uebersicherung als Mangel besteht; kommt so etwas
+                    nach dem Bestaetigen dazu, faellt nur die Bewertung weg und
+                    der Abschluss fragt sie neu ab. Vorschlag "ohne unmittelbare
+                    Gefahr" nur noch, wenn die Nullung der einzige Mangel ist.
+                    Der Abschluss sperrt die Ausgabe ohne Pruefer oder Adresse,
+                    fehlende Messwerte und Grenzwerte (jetzt rot) fuehren per
+                    Tipp zum Kreis, "Noch 1 Pruefpunkt fehlt" rollt hin.
+                    Rueckmeldung nach der Ausgabe: "Ausgegeben - liegt in der
+                    Ablage".
   v1.165 08.10.2026 Bedienkonzept, Etappe 7: Finden. Lager und Ablage haben ein
                     Suchfeld (Lager: Name und Art.-Nr.; Ablage: Adresse und
                     Wohnung), die Ablage dazu "Meine / Alle". Die Karte in der
@@ -1714,7 +1733,9 @@ header h1.tippbar{cursor:pointer}
 #sigView .sv-kopf small{display:block;font-family:var(--f-body);font-size:13px;letter-spacing:0;text-transform:none;color:#B9C2AE;font-weight:500;margin-top:2px}
 #sigView .sv-text{font-size:14px;color:#B9C2AE;margin:10px 0 14px;line-height:1.45}
 #sigView .sv-feld{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:0}
-#sigView .sigwrap{width:100%;max-width:900px}
+/* v1.166: quer auf dem iPhone ist die Höhe knapp – das 3:1-Feld wird dann
+   schmaler, statt über Text und Knöpfe zu wachsen */
+#sigView .sigwrap{width:min(100%, 900px, calc((100vh - 210px) * 3))}
 #sigView #sigpad{max-width:none;border-color:#5C6355}
 #sigView .sv-quer{font-size:13px;color:#96A088;margin-top:10px;text-align:center}
 @media (orientation:landscape){ #sigView .sv-quer{display:none} #sigView .sv-text{margin:4px 0 8px} }
@@ -1751,6 +1772,10 @@ header h1.tippbar{cursor:pointer}
 .chk-item .t{display:flex;gap:8px;align-items:flex-start}
 .chk-item .t .zst{width:18px;height:18px;flex-basis:18px;margin-top:1px}
 .chk-item .t .vs{margin-left:auto;font-size:12px;font-weight:600;color:var(--signal-ink);white-space:nowrap}
+/* v1.166: "Keine Mängel" gesperrt; die gesuchte rote Zeile blinkt kurz auf */
+.seg button[disabled]{opacity:.4;cursor:default}
+.chk-item.hinweisen{animation:chkHin 1.2s ease-out}
+@keyframes chkHin{0%,40%{box-shadow:0 0 0 3px var(--fault)}100%{box-shadow:0 0 0 0 transparent}}
 #btnSamBoard[hidden] + .eyebrow{margin-top:0}
 /* v1.164: Einstellungen als gegliederte Liste wie in den iOS-Einstellungen */
 .set-gk{display:flex;justify-content:space-between;align-items:baseline;margin:22px 4px 8px;
@@ -3122,9 +3147,9 @@ function nameGross(s){
       <div class="eyebrow">Auftraggeber</div>
       <p class="muted small" id="agZeile" style="margin-top:0"></p>
       <!-- v1.161: ohne Schalter Sofort/Später – nicht unterschrieben heißt später -->
-      <div class="eyebrow">Unterschrift</div>
+      <div class="eyebrow">Unterschrift Prüfer</div>
       <div id="sigVorschau"></div>
-      <button class="btn" id="btnSigOeffnen" type="button">Unterschreiben lassen</button>
+      <button class="btn" id="btnSigOeffnen" type="button">Unterschreiben</button>
       <div class="actionbar"><div class="inner">
         <button class="btn primary" id="btnExportDocs">Ausgeben und ablegen</button>
       </div></div>
@@ -3316,7 +3341,7 @@ function nameGross(s){
 
 <!-- v1.161: Unterschrift im Vollbild – nichts scrollt, nichts anderes lässt sich antippen -->
 <div id="sigView" hidden>
-  <div class="sv-kopf">Unterschrift<small>Auftraggeber / Anlagenbetreiber</small></div>
+  <div class="sv-kopf">Unterschrift Prüfer<small id="sigWer"></small></div>
   <p class="sv-text" id="sigText"></p>
   <div class="sv-feld">
     <div class="sigwrap"><canvas id="sigpad"></canvas></div>
@@ -3483,8 +3508,8 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.165';                    // siehe Änderungsliste im Dateikopf
-const BUILD        = VERSION + ' · 08.10.2026';
+const VERSION      = 'v1.166';                    // siehe Änderungsliste im Dateikopf
+const BUILD        = VERSION + ' · 09.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
 const DAUER_WARN   = 100;                        // zu lang: unplausibel im Protokoll
@@ -7091,23 +7116,61 @@ function boardExportFragen(){
   };
   $('#modal').hidden = false;
 }
+/* v1.166: Was die Ausgabe sperrt – Prüfpunkte mit Prüfzeit, Prüfer und
+   Adresse, offene Übersicherung, eine Bewertung, die nicht mehr passt. */
+function ausgabeSperre(){
+  if(!PROJ.checksDone || !PROJ.finishedAt) return 'pruefpunkte';
+  if(!(PROJ.tester || '').trim()) return 'pruefer';
+  if(!(PROJ.address || '').trim()) return 'adresse';
+  if(offeneUebersicherungen().length) return 'uebersicherung';
+  if(chkOffen()) return 'bewertung';
+  return '';
+}
+/* v1.166: aus dem Abschluss direkt zum Kreis im Messen; Zurück führt in die Liste */
+function zurStelle(o){
+  if(PROJ.modus !== 'mess'){ PROJ.modus = 'mess'; saveProj(); }
+  stack = archOffen ? ['home', 'archive'] : ['home'];
+  go('board', false);
+  if(o === PROJ.feed) feedOeffnen(); else openCircuit(PROJ.items.indexOf(o));
+}
 function renderFinish(){
   const f = PROJ.feed || blankFeed();
   const noVals  = circuits().filter(c => missingValues(c));
   const overLim = circuits().filter(c => checkCircuit(c).length);
   const feedOpen = f.cable == null;
-  if(!feedOpen && missingValues(f)) noVals.unshift({no:'', name: f.name || 'Zuleitung'});
+  if(!feedOpen && missingValues(f)) noVals.unshift(PROJ.feed);
+  if(!feedOpen && checkCircuit(f).length) overLim.unshift(PROJ.feed);
+  const stellen = [];
+  const zeile = c => { stellen.push(c); const fe = c === PROJ.feed;
+    return `<div><button class="linkbtn" data-stelle="${stellen.length - 1}">${fe ? esc(c.name || 'Zuleitung')
+      : (c.no ? 'Kreis ' + esc(circuitLabel(c)) + ' · ' : '') + esc(c.name || 'ohne Bezeichnung')}</button></div>`; };
   let h = '';
-  if(feedOpen) h += `<div class="warn"><strong>Zuleitung noch nicht erfasst</strong></div>`;
-  if(noVals.length) h += `<div class="warn"><strong>Unvollständige Messwerte</strong>` +
-    noVals.map(c => `<div>${c.no ? 'Kreis ' + esc(circuitLabel(c)) + ' · ' : ''}${esc(c.name || 'ohne Bezeichnung')}</div>`).join('') + `</div>`;
-  if(overLim.length) h += `<div class="warn info"><strong>Grenzwert-Hinweise</strong>` +
-    overLim.map(c => `<div>${c.no ? 'Kreis ' + esc(circuitLabel(c)) + ' · ' : ''}${esc(c.name || 'ohne Bezeichnung')}</div>`).join('') + `</div>`;
+  /* v1.166: Ohne Prüfer und Adresse ist das Protokoll nicht zuzuordnen. */
+  const ohne = [!(PROJ.tester || '').trim() ? 'Prüfer' : null, !(PROJ.address || '').trim() ? 'Adresse' : null].filter(Boolean);
+  if(ohne.length) h += `<div class="warn"><strong>${ohne.join(' und ')} ${ohne.length > 1 ? 'fehlen' : 'fehlt'}</strong>`
+    + `Ohne lässt sich nicht ausgeben. <button class="linkbtn" id="finZuDaten">Projektdaten</button></div>`;
+  if(feedOpen) h += `<div class="warn"><strong>Zuleitung noch nicht erfasst</strong>`
+    + `<button class="linkbtn" data-stelle="${stellen.push(PROJ.feed) - 1}">Zur Zuleitung</button></div>`;
+  if(noVals.length) h += `<div class="warn"><strong>Unvollständige Messwerte</strong>` + noVals.map(zeile).join('') + `</div>`;
+  /* v1.166: rot wie in der Liste (vorher blau); sperrt nicht, der Wert steht
+     so im Protokoll. */
+  if(overLim.length) h += `<div class="warn"><strong>Grenzwert überschritten</strong>`
+    + `<div class="muted small">Wird so ins Protokoll übernommen.</div>` + overLim.map(zeile).join('') + `</div>`;
   /* v1.161: der Abschluss ist jederzeit erreichbar. Ausgegeben wird aber
      erst nach bestätigten Prüfpunkten – damit steht das Ende der Prüfung fest. */
   const ov = offeneUebersicherungen();               // v1.163
-  if(!PROJ.checksDone) h = `<div class="warn gelb"><strong>Prüfpunkte noch nicht bestätigt</strong>`
+  if(!PROJ.checksDone || !PROJ.finishedAt) h = `<div class="warn gelb"><strong>Prüfpunkte noch nicht bestätigt</strong>`
     + `Erst danach lässt sich ausgeben. <button class="linkbtn" id="finZuPruef">Zu den Prüfpunkten</button></div>` + h;
+  else if(chkOffen()){
+    /* v1.166: Nach dem Bestätigen kam ein Mangel dazu – "keine Mängel" gilt
+       nicht mehr. Hier neu bewerten, ohne die Prüfpunkte erneut zu bestätigen. */
+    const b = chkItem('bewertung'), grund = keineGesperrt();
+    h = `<div class="warn"><strong>${chkWert(b).v == null ? 'Bewertung neu wählen' : 'Prüfpunkt fehlt'}</strong>`
+      + (chkWert(b).v == null
+        ? `${grund ? '„Keine Mängel“ passt nicht mehr: ' + esc(grund) + '.' : ''}<div class="seg stack" style="margin-top:8px">`
+          + b.opts.map(([val, txt]) => `<button data-bew="${val}"${val === 'keine' && grund ? ' disabled' : ''}>${esc(txt)}</button>`).join('') + `</div>`
+        : `<button class="linkbtn" id="finZuPruef">Zu den Prüfpunkten</button>`) + `</div>` + h;
+  }
   if(!h && !ov.length) h = `<div class="warn ok"><strong>Bereit zur Ausgabe</strong>${PROJ.finishedAt
     ? `Ende ${tstr(PROJ.finishedAt)} · Dauer ${Math.max(0, Math.round((PROJ.finishedAt - PROJ.startedAt) / 60000))} min` : 'Keine offenen Punkte.'}</div>`;
   $('#plausiOut').innerHTML = h;
@@ -7120,14 +7183,19 @@ function renderFinish(){
     uebersicherungDialog(o.fi, o.u, o.stand, wahl => { if(wahl) saveProj(); renderFinish(); });
   });
   const zp = $('#finZuPruef'); if(zp) zp.onclick = () => bereichWechseln('pruefpunkte');
+  const zd = $('#finZuDaten'); if(zd) zd.onclick = () => projektAendern();
+  $$('#plausiOut [data-stelle]').forEach(b => b.onclick = () => zurStelle(stellen[+b.dataset.stelle]));
+  $$('#plausiOut [data-bew]').forEach(b => b.onclick = () => {
+    PROJ.checks = PROJ.checks || {}; PROJ.checks.bewertung = b.dataset.bew; saveProj(); renderFinish();
+  });
   docsVorwahl(); renderDocs(); renderPhotos();   // der Streifen steht auch hier
   renderAuftraggeber();
   const sig = PROJ.signature && PROJ.signature.data;
   $('#sigVorschau').innerHTML = sig ? `<div class="sig-vorschau"><img src="${sig}" alt="Unterschrift"></div>` : '';
-  $('#btnSigOeffnen').textContent = sig ? 'Unterschrift ändern' : 'Unterschreiben lassen';
+  $('#btnSigOeffnen').textContent = sig ? 'Unterschrift ändern' : 'Unterschreiben';
   const ex = $('#btnExportDocs');
   ex.textContent = archOffen ? 'Erneut ausgeben' : 'Ausgeben und ablegen';
-  ex.disabled = !PROJ.checksDone || ov.length > 0;
+  ex.disabled = !!ausgabeSperre();
 }
 
 /* --- Unterschrift im Vollbild (v1.161) ---
@@ -7142,6 +7210,9 @@ function sigOeffnen(){
   const erg = w ? ((b.opts.find(o => o[0] === w) || [])[1] || '') : '';
   $('#sigText').textContent = `Prüfprotokoll ${((PROJ.address || '').split('\n')[0] || '')}${PROJ.flat ? ', ' + flatLabel(PROJ.flat) : ''}`
     + ` · Prüfung vom ${dstr(PROJ.startedAt)}${erg ? ' · ' + erg : ''}`;
+  /* v1.166: Im Protokoll steht das Bild im Feld "Unterschrift Prüfer" – also
+     unterschreibt der Prüfer, jedes Mal selbst (Jean, QK-Frage F1). */
+  $('#sigWer').textContent = (PROJ.tester || '').trim() || 'Prüfer nicht eingetragen';
   sigGezeichnet = false; sigGeleert = false;
   sigMode = 'now';
   $('#sigView').hidden = false;
@@ -7150,7 +7221,11 @@ function sigOeffnen(){
 function sigSchliessen(){ $('#sigView').hidden = true; drawing = false; if(current === 'finish') renderFinish(); }
 $('#btnSigOeffnen').onclick = sigOeffnen;
 $('#btnSigAbbr').onclick = sigSchliessen;
-window.addEventListener('resize', () => { if(!$('#sigView').hidden && !sigGezeichnet) initPad(); });
+/* v1.166: Auch nach dem ersten Strich neu bemessen – initPad überträgt die
+   Tinte. Vorher blieb das Feld beim Drehen in der alten Größe stehen, und ein
+   zweiter, älterer Wächter (für die frühere Unterschrift im Abschluss) leerte
+   es ganz; "Fertig" sicherte dann ein leeres Bild als Unterschrift. */
+window.addEventListener('resize', () => { if(!$('#sigView').hidden) initPad(); });
 
 /* --- Auftraggeber für den Einzelfall ---
    Normalerweise steht er in den Einstellungen und gilt für alle Prüfungen.
@@ -7192,6 +7267,13 @@ function initPad(){
   const w = Math.max(1, Math.round(r.width  * dpr));
   const h = Math.max(1, Math.round(r.height * dpr));
   const resized = (cv.width !== w || cv.height !== h);
+  /* v1.166: Beim Drehen mitten im Unterschreiben das Gezeichnete mitnehmen.
+     Das Feld bleibt 3:1, das Bild wird nur auf die neue Größe gezogen. */
+  let alt = null;
+  if(resized && sigGezeichnet && cv.width > 1){
+    alt = document.createElement('canvas'); alt.width = cv.width; alt.height = cv.height;
+    alt.getContext('2d').drawImage(cv, 0, 0);
+  }
   if(resized){ cv.width = w; cv.height = h; }        // setzt den Inhalt zurück, daher nur wenn nötig
   padCtx = cv.getContext('2d');                      // muss immer gesetzt sein, sonst reagiert das Feld nicht
   padCtx.setTransform(dpr,0,0,dpr,0,0);
@@ -7201,6 +7283,8 @@ function initPad(){
      beim Übernehmen in dessen Daten. Deshalb immer leeren und nur die
      Unterschrift zeichnen, die zu diesem Projekt gehört. */
   padCtx.clearRect(0, 0, r.width, r.height);
+  if(sigGezeichnet){ if(alt) padCtx.drawImage(alt, 0, 0, r.width, r.height); return; }   // eigene Tinte bleibt
+  if(sigGeleert) return;                             // gelöscht bleibt gelöscht, auch nach dem Drehen
   if(PROJ && PROJ.signature && PROJ.signature.data){
     const img = new Image(); img.onload = () => padCtx.drawImage(img, 0, 0, r.width, r.height); img.src = PROJ.signature.data;
   }
@@ -7226,7 +7310,17 @@ $('#btnSigClear').onclick = () => {
   const cv = $('#sigpad'); if(padCtx) padCtx.clearRect(0, 0, cv.width, cv.height);
   sigGezeichnet = false; sigGeleert = true;
 };
+/* v1.166: Steht nach einem Strich wirklich etwas im Feld? Ein Tippen ohne
+   Bewegung oder ein geleertes Feld ergibt keine Unterschrift. */
+function sigHatTinte(){
+  const cv = $('#sigpad'); if(!cv.width || !cv.height) return false;
+  const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+  let n = 0;
+  for(let i = 3; i < d.length; i += 4) if(d[i] > 40 && ++n > 30) return true;
+  return false;
+}
 $('#btnSigSave').onclick = () => {
+  if(sigGezeichnet && !sigHatTinte()){ toast('Das Feld ist leer – bitte unterschreiben'); return; }
   if(sigGezeichnet){
     PROJ.signature = {mode:'now', at: Date.now(), data: $('#sigpad').toDataURL('image/png')};
     saveProj(); toast('Unterschrift übernommen');
@@ -9939,8 +10033,11 @@ const CHECKS = [
         findet, stuft selbst hoch. Die Nullung steht hier zuerst: seit sie die
         Schutzleiter-Zeile nicht mehr auf n.i.O. zieht, käme sonst "keine
         Mängel" heraus, während die Messtabelle den Mangel weiter führt. */
-     sug:() => chkNullung().length ? 'ohne'
-             : (!chkMessMaengel() && !chkNio()) ? 'keine' : null},
+     /* v1.166: Grenzwert, fehlender Wert oder n.i.O. bekommen keinen
+        Vorschlag – ob Gefahr besteht, entscheidet der Prüfer. Vorher stand
+        die Nullung vorn und schlug "ohne" auch bei Zs 12 Ω an B16 vor. */
+     sug:() => (chkMessMaengel() || chkNio() || uebersicherungMangel()) ? null
+             : chkNullung().length ? 'ohne' : 'keine'},
     {k:'ausserbetrieb', label:'Stromkreis / Anlagenteil außer Betrieb genommen', opts:JN_OPTS,
      sug:() => 'nein'},
     /* Freier Text für alles, wofür es keine eigene Zeile gibt. Er steht am Ende
@@ -9957,9 +10054,22 @@ function chkNio(){
   return chkItems().some(it => it.k !== 'bewertung' && chkWert(it).v === 'nio');
 }
 
+/* v1.166: Warum "keine Mängel" gerade nicht stimmen kann – leer, wenn es geht. */
+function keineGesperrt(){
+  const g = [];
+  if(chkNio()) g.push('ein Prüfpunkt ist n.i.O.');
+  if(chkMessMaengel()) g.push('Messwerte fehlen oder liegen über dem Grenzwert');
+  if(chkNullung().length) g.push('klassische Nullung');
+  if(uebersicherungMangel()) g.push('Übersicherung als Mangel');
+  return g.join(', ');
+}
 /* Gültiger Wert: was gesetzt wurde, sonst der Vorschlag. user sagt, woher er kommt. */
 function chkWert(it){
   const u = (PROJ.checks || {})[it.k];
+  /* v1.166: Ein "keine Mängel", das nicht mehr stimmt (danach ein schlechter
+     Messwert oder ein n.i.O.), gilt als nicht gesetzt. Die Zeile wird rot, die
+     Ausgabe sperrt, bis neu bewertet ist; Prüfpunkte und Endzeit bleiben. */
+  if(it.k === 'bewertung' && u === 'keine' && keineGesperrt()) return {v:null, user:false};
   const leer = u == null || (Array.isArray(u) && !u.length);
   if(!leer) return {v:u, user:true};
   return {v: it.sug ? (it.sug(PROJ) || null) : null, user:false};
@@ -9997,6 +10107,7 @@ const chkOffen = () => chkItems().filter(it => chkStatus(it) === 'red').length;
 
 function renderChecks(){
   const scroll = bildY();
+  const gesperrt = keineGesperrt();                  // v1.166
   let h = '';
   CHECKS.forEach(g => {
     const items = g.items.filter(it => !it.when || it.when(PROJ));
@@ -10022,8 +10133,11 @@ function renderChecks(){
         <div class="${cls}" data-chk="${it.k}">` +
         opts.map(([val, txt]) => {
           const an = Array.isArray(v) ? v.includes(val) : v === val;
-          return `<button data-v="${val}" aria-pressed="${an}">${esc(txt)}</button>`;
-        }).join('') + `</div></div>`;
+          const aus = it.k === 'bewertung' && val === 'keine' && gesperrt;
+          return `<button data-v="${val}" aria-pressed="${an}"${aus ? ' disabled' : ''}>${esc(txt)}</button>`;
+        }).join('') + `</div>` + (it.k === 'bewertung' && gesperrt
+          ? `<div class="muted small" style="margin-top:6px">„Keine Mängel“ geht nicht: ${esc(gesperrt)}.</div>` : '')
+        + `</div>`;
     });
   });
   $('#checkList').innerHTML = h;
@@ -10038,15 +10152,24 @@ function renderChecks(){
   $('#checkCount').innerHTML = offen
     ? `<div class="warn"><strong>${offen === 1 ? 'Ein Prüfpunkt fehlt' : offen + ' Prüfpunkte fehlen'}</strong>Die rot markierten Zeilen (!) müssen gesetzt werden. Bernstein (?) ist ein Vorschlag und wird beim Bestätigen übernommen.</div>`
     : `<div class="warn ok"><strong>Vollständig</strong>Liste durchgehen und unten bestätigen.</div>`;
-  $('#checkFoot').innerHTML = `<div class="eyebrow">Abschluss</div>` + (offen
-    ? `<button class="btn" disabled>Noch ${offen} offen</button>`
+  /* v1.166: Ohne Überschrift "Abschluss" (so heißt der Bereich daneben); was
+     fehlt, ist ein Knopf, der zur ersten roten Zeile rollt. */
+  $('#checkFoot').innerHTML = (offen
+    ? `<button class="btn" data-chkzu="1">Noch ${offen === 1 ? '1 Prüfpunkt fehlt' : offen + ' Prüfpunkte fehlen'} – zeigen</button>`
     : `<button class="btn primary" data-chkgo="1">Prüfpunkte bestätigen</button>`) +
     `<p class="muted small">Die Prüfpunkte werden so in das Protokoll übernommen, wie sie hier stehen.</p>`;
   bildNach(scroll);
 }
 
+/* v1.166: zur ersten Zeile, die noch fehlt, und sie kurz hervorheben */
+function chkZumOffenen(){
+  const el = $('#checkList .chk-item.z-bad'); if(!el) return;
+  imBild(el);
+  el.classList.remove('hinweisen'); void el.offsetWidth; el.classList.add('hinweisen');
+}
 /* Tippen auf eine Auswahl */
 $('#view-checks').addEventListener('click', e => {
+  if(e.target.closest('[data-chkzu]')){ chkZumOffenen(); return; }
   const go1 = e.target.closest('[data-chkgo]');
   /* Mit dem Bestätigen der Angaben ist die Beurteilung abgeschlossen – das gilt
      als Ende der Prüfung. Nur die erste Bestätigung zählt: ein späteres Nach-
@@ -10055,14 +10178,19 @@ $('#view-checks').addEventListener('click', e => {
   if(go1){
     /* Jetzt festschreiben: bis hierher folgten bestätigte Zeilen dem Verteiler,
        ab jetzt steht im Protokoll, was hier stand. */
-    if(!PROJ.checksDone){
-      PROJ.checks = PROJ.checks || {};
-      chkItems().forEach(it => { const {v} = chkWert(it); if(v != null) PROJ.checks[it.k] = v; });
-      PROJ.checksOk = {};
-    }
-    PROJ.checksDone = true;
-    if(PROJ.finishedAt){ saveProj(); bereichWechseln('abschluss'); return; }   // schon festgeschrieben
-    zeitPruefen(ts => { PROJ.finishedAt = ts; saveProj(); bereichWechseln('abschluss'); });
+    /* v1.166: Bestätigt ist erst mit festgelegter Prüfzeit. Vorher galt es
+       schon vor der Rückfrage zur Dauer; wer sie abbrach, konnte ohne Endzeit
+       ausgeben. */
+    const festschreiben = () => {
+      if(!PROJ.checksDone){
+        PROJ.checks = PROJ.checks || {};
+        chkItems().forEach(it => { const {v} = chkWert(it); if(v != null) PROJ.checks[it.k] = v; });
+        PROJ.checksOk = {};
+      }
+      PROJ.checksDone = true;
+    };
+    if(PROJ.finishedAt){ festschreiben(); saveProj(); bereichWechseln('abschluss'); return; }   // schon festgeschrieben
+    zeitPruefen(ts => { festschreiben(); PROJ.finishedAt = ts; saveProj(); bereichWechseln('abschluss'); });
     return;
   }
   const b = e.target.closest('.seg button'); if(!b) return;
@@ -10822,12 +10950,12 @@ async function ablegen(wahl, nochmal, zwischen){
      ab und setzt kein Abschlussdatum; er hält nur fest, was hinausging. */
   if(zwischen){ saveProj(); renderBoardDocs(); }
   else if(!nochmal){ await archLadenP; archiveNow(); }   // erst wenn die Ablage geladen ist
-  toast(zwischen ? 'Dokumente ausgegeben' : (nochmal ? 'Erneut gesichert' : 'Daten exportiert'));
+  toast(zwischen ? 'Vorab ausgegeben' : (nochmal ? 'Erneut ausgegeben' : 'Ausgegeben – liegt in der Ablage'));   // v1.166
 }
 /* Im Abschluss ist die Auswahl schon in der Ansicht getroffen – der Export
    nimmt sie unverändert und legt die Projektdaten immer mit dazu. */
 $('#btnExportDocs').onclick = () => {
-  if(!PROJ || !PROJ.checksDone) return;
+  if(!PROJ || ausgabeSperre()) return;
   saveProj();
   const d = PROJ.docs || {};
   /* v1.161: vorher sagt ein Blatt, was hinausgeht und was danach passiert –
@@ -12651,7 +12779,6 @@ function lagerLiefern(o, mengen, schliessen){
 lagerLaden();
 ablageLaden().catch(() => { archBereit = true; if(archLoeser) archLoeser(ARCH); });
 fotosUmziehen().catch(() => {});      // Altfotos aus dem localStorage in den Bildspeicher
-window.addEventListener('resize', () => { if(current === 'finish') initPad(); });
 renderHome();
 go('home', false);
 </script>
