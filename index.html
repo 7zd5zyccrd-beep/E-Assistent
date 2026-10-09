@@ -10,6 +10,17 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.174 09.10.2026 Qualitaetskontrolle, Paket 3b: Betrieb. Geloeschte offene
+                    Projekte liegen 30 Tage im Papierkorb (Einstellungen > Daten
+                    > Wiederherstellen; auf dem Geraet, das geloescht hat). Bauteile,
+                    die die App selbst rechnet, tragen in der Liste ein Schloss und
+                    lassen sich nicht umbenennen - sonst stoppte die Lagerbuchung.
+                    Listen sagen "Gilt sofort fuer alle Kollegen"; nach einer
+                    Aenderung steht "Gespeichert - Rueckgaengig" fuenf Sekunden
+                    da. Die Wolke ist beim Start grau, bis die Verbindung bestaetigt
+                    ist, ohne Netz grau durchgestrichen. Bernstein nur noch fuer
+                    "bitte ansehen": Bestellkarte im Lager und von der App
+                    gerechnetes Material sind grau.
   v1.173 09.10.2026 Qualitaetskontrolle, Paket 3a: abgelegte Pruefungen. "Ansehen"
                     oeffnet im Abschluss und nur zum Lesen; ein Streifen oben nennt
                     das Datum. Aendern erst nach "Nachbessern": bei einem
@@ -1482,8 +1493,12 @@ header .kopf-ico{width:34px;height:34px;flex:0 0 34px;padding:0;border:0;backgro
   display:flex;align-items:center;justify-content:center;color:#C9D2BD;position:relative}
 header .kopf-ico::before{content:"";position:absolute;inset:-6px}
 #btnWolke{color:var(--brand)}
+/* v1.174: bis die Verbindung bestätigt ist grau ohne Haken; ohne Netz grau
+   durchgestrichen (Bernstein heißt nur "bitte ansehen") */
+body:not([data-netz]) #btnWolke{color:var(--neutral)}
+body:not([data-netz]) #btnWolke .an{display:none}
 #btnWolke .ab{display:none}
-body[data-netz="ab"] #btnWolke{color:var(--signal)}
+body[data-netz="ab"] #btnWolke{color:var(--neutral)}
 body[data-netz="ab"] #btnWolke .an{display:none}
 body[data-netz="ab"] #btnWolke .ab{display:inline}
 header.start h1{margin-left:44px}           /* Titel mittig trotz zweier Symbole rechts */
@@ -2088,7 +2103,7 @@ input.schalter:checked::after{transform:translateX(20px)}
 .mat.zero{opacity:.55}
 /* Gelb wie in der Angabenliste: die Zeile trägt eine Menge, die das Programm
    selbst eingetragen hat – gezählt oder gerechnet. */
-.mat.auto{border-left:5px solid var(--signal);background:var(--sig-bg);padding-left:6px}
+.mat.auto{border-left:5px solid var(--neutral);background:var(--neutral-bg);padding-left:6px}   /* v1.174: grau statt gelb */
 .mat .cnt em{font-style:normal;font-family:var(--f-body);font-size:12px;
   font-weight:400;color:var(--ink-soft);margin-left:2px}
 
@@ -2104,7 +2119,7 @@ input.schalter:checked::after{transform:translateX(20px)}
 .lg-menge{font-family:var(--f-data);font-size:18px;font-weight:600;white-space:nowrap}
 .lg-menge em,.lg-bestand em{font-style:normal;font-family:var(--f-body);font-size:13px;
   font-weight:400;color:var(--ink-soft);margin-left:4px}
-.lg-best{border-left:5px solid var(--signal)}
+.lg-best{border-left:5px solid var(--neutral)}   /* v1.174 */
 .lg-kopf.state-red{border-left:5px solid var(--fault);background:var(--warn-bg)}
 .lg-kopf.state-grau{border-left:5px solid var(--neutral);background:var(--neutral-bg)}
 .lg-name{font-weight:700;font-size:18px}
@@ -2137,6 +2152,9 @@ input.schalter:checked::after{transform:translateX(20px)}
   opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:90vw;text-align:center;
 }
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.aktiv{pointer-events:auto;white-space:nowrap}                  /* v1.174: "Rückgängig" */
+#toast .toast-knopf{background:none;border:0;color:inherit;font:inherit;font-weight:700;text-decoration:underline;padding:6px 2px}
+.le-schloss{flex:0 0 auto;display:inline-flex;align-self:center;opacity:.6;margin-right:4px}
 
 /* ---------- SAM: nächstes Foto (v1.125) ----------
    Dunkel wie der Bildbetrachter, damit der Wechsel aus der Kamera ruhig
@@ -3431,6 +3449,8 @@ function nameGross(s){
         <p class="muted small">Weitergabe-Dateien aus der Zeit vor dem Abgleich lassen sich hier noch einlesen.</p>
         <button class="btn ghost" id="btnImport" style="margin-bottom:14px">Projektdatei einlesen</button>
         <input type="file" id="importFile" accept=".json,application/json" hidden>
+        <div class="set-gk">Papierkorb <em>30 Tage, auf diesem Gerät</em></div>
+        <div class="set-gruppe" id="setKorb"></div>
       </div>
     </section>
   </main>
@@ -3637,7 +3657,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.173';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.174';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 09.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4088,8 +4108,16 @@ function toastSetzen(){
   });
   t.style.bottom = h ? `${Math.round(h) + 12}px` : '';
 }
+/* v1.174: Hinweis mit einem Knopf, fünf Sekunden lang antippbar */
+function toastAktion(msg, knopf, fn){
+  const t = $('#toast');
+  t.innerHTML = `${esc(msg)} · <button type="button" class="toast-knopf">${esc(knopf)}</button>`;
+  toastSetzen(); t.classList.add('show', 'aktiv');
+  t.querySelector('button').onclick = () => { t.classList.remove('show', 'aktiv'); fn(); };
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show', 'aktiv'), 5000);
+}
 function toast(msg){
-  const t = $('#toast'); t.textContent = msg;
+  const t = $('#toast'); t.textContent = msg; t.classList.remove('aktiv');
   toastSetzen();
   t.classList.add('show');
   clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 2200);
@@ -4707,6 +4735,32 @@ function homeTickerSetzen(an){
 }
 
 /* Löschen eines offenen Projekts – seit v1.160 im Projekt selbst. */
+/* v1.174 (QK G40): Papierkorb für 30 Tage, auf diesem Gerät. Die Fotos oben
+   bleiben so lange liegen und gehen erst mit dem Leeren. */
+const KORB_TAGE = 30;
+const korbHolen = () => Store.get('papierkorb', []);
+function korbAufraeumen(){
+  const grenze = Date.now() - KORB_TAGE * 864e5;
+  const k = korbHolen(), alt = k.filter(x => x.am < grenze);
+  if(!alt.length) return;
+  alt.forEach(x => fbProjWeg(x.p.id, true));
+  Store.set('papierkorb', k.filter(x => x.am >= grenze));
+}
+function korbWiederherstellen(id){
+  const k = korbHolen(), x = k.find(y => y.p.id === id); if(!x) return;
+  if(!PROJECTS.some(p => p.id === id)){ PROJECTS.push(x.p); saveProjects(); fbProjHoch(x.p); }
+  Store.set('papierkorb', k.filter(y => y !== x));
+  toast('Wiederhergestellt'); renderKorb();
+}
+function renderKorb(){
+  const box = $('#setKorb'); if(!box) return;
+  const k = korbHolen();
+  box.innerHTML = k.length ? k.map(x => `<div class="set-zeile"><span>${esc((x.p.address || '').split('\n')[0] || 'Ohne Adresse')}`
+      + `${x.p.flat ? ' · ' + esc(flatLabel(x.p.flat)) : ''}<small class="muted" style="display:block">gelöscht ${dstr(x.am)}</small></span>`
+      + `<button class="linkbtn" data-korb="${esc(x.p.id)}">Wiederherstellen</button></div>`).join('')
+    : '<div class="set-zeile"><span class="muted">Leer.</span></div>';
+  $$('#setKorb [data-korb]').forEach(b => b.onclick = () => korbWiederherstellen(b.dataset.korb));
+}
 function projektLoeschen(p){
   if(!p) return;
   /* v1.169: Wohnung, Prüfer und Stand nennen; sitzt ein Kollege gerade daran,
@@ -4715,15 +4769,19 @@ function projektLoeschen(p){
   showDialog({title:'Projekt löschen?',
     body:`„${(p.address || '').split('\n')[0] || 'Ohne Adresse'}${p.flat ? ' · ' + flatLabel(p.flat) : ''}“`
       + ` (${[p.tester, (p.items || []).length + ' Kreise', st.bereich + ' ' + st.fertig + ' von ' + st.gesamt].filter(Boolean).join(', ')})`
-      + ` wird endgültig entfernt`
-      + (eigenes(p) ? ' – auf allen Geräten, samt Fotos.' : ` – auch bei ${nameGross(p.ownerName) || 'dem Kollegen'}, dem es gehört.`)
+      + ` wird gelöscht`
+      + (eigenes(p) ? ' – auf allen Geräten.' : ` – auch bei ${nameGross(p.ownerName) || 'dem Kollegen'}, dem es gehört.`)
+      + ' Auf diesem Gerät bleibt es 30 Tage im Papierkorb (Einstellungen › Daten).'
       + (f ? ` ${nameGross(f.name) || 'Ein Kollege'} sitzt gerade daran (${seitWann(f.zeit)}); was dort eingegeben wird, geht verloren.` : ''),
     ok:'Löschen', danger:true,
     onOk:() => {
+      const korb = korbHolen().filter(x => x.p.id !== p.id);          // v1.174
+      korb.unshift({am: Date.now(), p: JSON.parse(JSON.stringify(p))});
+      Store.set('papierkorb', korb);
       PROJECTS = PROJECTS.filter(x => x.id !== p.id); saveProjects();
-      fbProjWeg(p.id, true);                // gilt für alle Geräte, Fotos mit
+      fbProjWeg(p.id, false);               // gilt für alle Geräte; Fotos erst beim Leeren des Papierkorbs
       PROJ = null; stack = []; go('home', false);
-      toast('Gelöscht');
+      toast('Gelöscht – 30 Tage im Papierkorb');
     }});
 }
 
@@ -7114,7 +7172,7 @@ function renderMaterial(){
       tally.map(t => `<div class="mat${t.auto ? ' auto' : ''}">
         <span class="nm">${esc(t.name)}</span><span class="cnt">${matZahl(t.count, t.name, true)}</span>
       </div>`).join('') +
-      `<p class="muted small">Gelb zählt oder rechnet die App selbst, sobald du Kreise,
+      `<p class="muted small">Grau hinterlegt zählt oder rechnet die App selbst, sobald du Kreise,
        Verteiler oder Komponenten änderst.</p>`
     : (PROJ.mode || 'wdh') !== 'neu' ? ''
     : `<div class="eyebrow">Bisher erfasst</div>
@@ -7154,7 +7212,7 @@ function renderMaterial(){
         const sel = window.getSelection();     // eine begonnene Markierung wieder aufheben
         if(sel) sel.removeAllRanges();
         const n = b.dataset.m;
-        showDialog({title:'Aus der Liste entfernen?', body:n, ok:'Entfernen', danger:true,   // v1.167: showDialog maskiert selbst
+        showDialog({title:'Aus den Bauteilen entfernen?', body:`„${n}“ – gilt sofort für alle Kollegen.`, ok:'Entfernen', danger:true,   // v1.167/v1.174
           onOk:() => {
             CFG.material = CFG.material.filter(x => x !== n);   // bleibt gestrichen, auch künftig
             saveCfg(); fbHoch('material');
@@ -11688,6 +11746,7 @@ function seiteZeigen(seite, still){
   const l = LISTEN.find(x => x.k === setListe);
   $('#title').textContent = seite === 'liste' && l ? l.t : (SET_TITEL[seite] || 'Einstellungen');
   if(seite === 'liste') renderListe();
+  if(seite === 'daten') renderKorb();               // v1.174
   if(!still) bildNach(0);
 }
 $$('#view-settings [data-seite]').forEach(b => { if(b.tagName === 'BUTTON') b.onclick = () => seiteZeigen(b.dataset.seite); });
@@ -11749,25 +11808,42 @@ $('#view-settings').addEventListener('change', e => {
 });
 
 /* --- Eine Liste bearbeiten --- */
+/* v1.174 (QK G41): Bauteile, die die App selbst rechnet oder aus den Kreisen
+   zählt. Ihr Name steht im Code – umbenannt fände die Lagerbuchung sie nicht. */
+const matGerechnet = n => MAT_GERECHNET.has(n) || n === MAT_SPD_2 || n === MAT_SPD_4
+  || /^(LS-Schalter|Sicherung|RCD|FI\s*\/\s*LS)\b/i.test(n);
+/* Listenänderung mit "Rückgängig" (v1.174, QK G42) */
+let listeVorher = null;
+function listeMerken(k){ listeVorher = {k, arr: (CFG[k] || []).slice()}; }
+function listeGespeichert(){
+  const v = listeVorher; if(!v) return;
+  toastAktion('Gespeichert', 'Rückgängig', () => {
+    CFG[v.k] = v.arr; saveCfg(); fbHoch(v.k); listeVorher = null;
+    if(current === 'settings' && setSeite === 'liste') renderListe();
+    toast('Zurückgenommen');
+  });
+}
 function renderListe(){
   const l = LISTEN.find(x => x.k === setListe); if(!l) return;
   const arr = CFG[l.k] || [];
-  $('#listeHinweis').textContent = l.hw + ' Gilt für alle Geräte.';
+  $('#listeHinweis').textContent = l.hw + ' Gilt sofort für alle Kollegen.';   // v1.174
   $('#listeNeuTe').hidden = !l.te;
   $('#listeText').hidden = !l.text;
   $('#listeTextFeld').hidden = true;
   $('#listeEditor').innerHTML = arr.length ? arr.map((z, i) => {
     const sp = l.te ? parseSpecial(z) : null;
+    const zu = l.k === 'material' && matGerechnet(z);   // v1.174: rechnet die App – Name fest
     return `<div class="le-zeile">
-      <input data-i="${i}" value="${esc(sp ? sp.name : z)}" aria-label="Eintrag ${i + 1}">
+      ${zu ? '<span class="le-schloss" title="Rechnet die App – Name fest" aria-label="fest"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9.5" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>' : ''}<input data-i="${i}" value="${esc(sp ? sp.name : z)}" aria-label="Eintrag ${i + 1}"${zu ? ' readonly' : ''}>
       ${l.te ? `<input class="te" data-te="${i}" inputmode="numeric" placeholder="TE" value="${esc(sp.te || '')}" aria-label="Breite in TE">` : ''}
       ${i === 0 && l.k !== 'material' && l.k !== 'specials' && l.k !== 'rcds' ? '<span class="le-vor">Vorauswahl</span>'
         : `<button type="button" data-hoch="${i}" aria-label="nach oben"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>`}
       <button type="button" class="weg" data-weg="${i}" aria-label="entfernen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button></div>`;
   }).join('') : '<div class="le-zeile"><span class="muted">Noch leer.</span></div>';
-  const sichern = () => { saveCfg(); fbHoch(l.k); };
+  const sichern = () => { saveCfg(); fbHoch(l.k); listeGespeichert(); };
   $$('#listeEditor input[data-i], #listeEditor input[data-te]').forEach(inp => inp.onchange = () => {
     const i = +(inp.dataset.i ?? inp.dataset.te);
+    listeMerken(l.k);
     const name = $(`#listeEditor input[data-i="${i}"]`).value.trim();
     if(!name){ renderListe(); return; }
     const alt = arr[i];
@@ -11775,19 +11851,20 @@ function renderListe(){
       const te = ($(`#listeEditor input[data-te="${i}"]`).value || '').replace(/\D/g, '');
       arr[i] = te ? `${name}, ${te}` : name;
     } else arr[i] = name;
-    sichern(); toast('Gespeichert');
+    sichern();
     if(l.k === 'material' && alt !== name) lagerUmbenennenFragen(alt, name);
   });
   $$('#listeEditor [data-hoch]').forEach(b => b.onclick = () => {
     const i = +b.dataset.hoch; if(i < 1) return;
+    listeMerken(l.k);
     [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
     sichern(); renderListe();
   });
   $$('#listeEditor [data-weg]').forEach(b => b.onclick = () => {
     const i = +b.dataset.weg;
-    showDialog({title:'Eintrag entfernen', danger:true, ok:'Entfernen',
-      body:`„${arr[i]}“ aus der Liste entfernen? Schon erfasste Kreise und Projekte behalten ihren Wert.`,
-      onOk:() => { arr.splice(i, 1); sichern(); renderListe(); toast('Entfernt'); }});
+    showDialog({title:'Eintrag entfernen?', danger:true, ok:'Entfernen',
+      body:`„${arr[i]}“ aus der Liste entfernen? Gilt sofort für alle Kollegen. Schon erfasste Kreise und Projekte behalten ihren Wert.`,
+      onOk:() => { listeMerken(l.k); arr.splice(i, 1); sichern(); renderListe(); }});
   });
 }
 $('#btnListeNeu').onclick = () => {
@@ -11795,17 +11872,23 @@ $('#btnListeNeu').onclick = () => {
   const name = $('#listeNeu').value.trim(); if(!name) return;
   const te = l.te ? ($('#listeNeuTe').value || '').replace(/\D/g, '') : '';
   CFG[l.k] = CFG[l.k] || [];
+  listeMerken(l.k);
   CFG[l.k].push(te ? `${name}, ${te}` : name);
   $('#listeNeu').value = ''; $('#listeNeuTe').value = '';
-  saveCfg(); fbHoch(l.k); renderListe(); toast('Hinzugefügt');
+  saveCfg(); fbHoch(l.k); renderListe(); listeGespeichert();
 };
 $('#btnListeText').onclick = () => {
   $('#setMaterial').value = (CFG.material || []).join('\n');
   $('#listeTextFeld').hidden = !$('#listeTextFeld').hidden;
 };
 $('#btnListeTextOk').onclick = () => {
+  listeMerken('material');
   CFG.material = $('#setMaterial').value.split('\n').map(z => z.trim()).filter(Boolean);
-  saveCfg(); fbHoch('material'); renderListe(); toast('Übernommen');
+  /* v1.174: gerechnete Bauteile bleiben – ihr Name hängt am Code */
+  const weg = listeVorher.arr.filter(n => matGerechnet(n) && !CFG.material.includes(n));
+  if(weg.length){ CFG.material.push(...weg); }
+  saveCfg(); fbHoch('material'); renderListe();
+  if(weg.length) toast('Gerechnete Bauteile bleiben in der Liste'); else listeGespeichert();
 };
 /* Ein Bauteil, das im Lager geführt wird, hängt dort am Namen. Beim Umbenennen
    wird gefragt, ob der Lagerartikel mitgeht – sonst verlöre er die Verbindung
@@ -13180,6 +13263,7 @@ function lagerLiefern(o, mengen, schliessen){
 lagerLaden();
 ablageLaden().catch(() => { archBereit = true; if(archLoeser) archLoeser(ARCH); });
 fotosUmziehen().catch(() => {});      // Altfotos aus dem localStorage in den Bildspeicher
+korbAufraeumen();                                  // v1.174
 renderHome();
 go('home', false);
 </script>
