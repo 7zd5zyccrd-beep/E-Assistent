@@ -91,8 +91,10 @@ GitHub Pages aus `main` ausgeliefert. Nutzer ist Jean, Elektriker, kein Entwickl
 
 Umgesetzt nach dem Bedienkonzept vom 08.10.2026 (Artifact „E-Assistent Bedienkonzept“).
 - **Startseite:** offene Projekte direkt als Karten (`renderHome`, `projektKarte`,
-  `projektStand`); Zahnrad rechts (`#btnZahnrad`), links das Logo; Wolke `#btnWolke`
-  zeigt den Abgleich. Die Ansichten „Auswahl“ und „Fortsetzen“ gibt es nicht mehr.
+  `projektStand`); links das Logo; Wolke `#btnWolke` zeigt den Abgleich und
+  steht seit v1.186 in jeder Ansicht ganz rechts, Zahnrad (`#btnZahnrad`) bzw. „…“
+  links daneben. Stromkreis und Zuleitung tragen die Wohnung als zweite Zeile
+  (`projektOrt`). Die Ansichten „Auswahl“ und „Fortsetzen“ gibt es nicht mehr.
 - **Bereichsleiste** `#bereiche` im Projekt: Erfassen · Messen · Prüfpunkte ·
   Abschluss (`bereichVon`, `bereichWechseln`, `bereicheZeigen`). Erfassen/Messen
   ist weiter `PROJ.modus` ('edit'/'mess'); der alte Schalter `#btnModus` bleibt

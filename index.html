@@ -10,6 +10,12 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.186 13.10.2026 Knoepfe (Jean, "1 ja, 2 ja, 3 ja"): die Wolke steht in
+                    jeder Ansicht ganz rechts, "..." und Zahnrad links daneben.
+                    Stromkreis und Zuleitung zeigen Wohnung und Strasse als
+                    zweite Zeile; die Kopfleiste springt beim Oeffnen eines
+                    Kreises nicht mehr. Im Abschluss stehen "Material" und
+                    "Vorschau" halb breit nebeneinander.
   v1.185 13.10.2026 Tastatur (Jean, iPhone, Lager "Zaehlen" -> Notiz): die Seite
                     rutschte samt Kopfleiste nach oben weg, unten blieb eine
                     leere Flaeche und das Feld war abgeschnitten. Meldet iOS die
@@ -2117,6 +2123,8 @@ input.schalter:checked::after{transform:translateX(20px)}
 .fld-x > .x::after{content:"";position:absolute;inset:-10px}   /* Trefferfläche bleibt daumengroß */
 .btn-row{display:flex;gap:10px}
 .btn-row .btn{margin-top:0}
+.fin-knoepfe{margin-top:10px}
+.fin-knoepfe .btn{flex:1 1 0;min-width:0;width:auto}   /* v1.185 */
 .row .btn + .btn{margin-top:0}      /* Knöpfe in einer Zeile bleiben auf Höhe */
 
 /* ---------- Segmentierte Auswahl (Status, Gerätetyp) ---------- */
@@ -3055,13 +3063,14 @@ function nameGross(s){
             aria-label="Messen-Modus einschalten"></button>
     <span class="tag" id="tag" hidden></span>
     <button class="sam-stand" id="samStand" type="button" hidden></button>
+    <button class="kopf-ico" id="btnZahnrad" type="button" aria-label="Einstellungen" hidden></button>
+    <button class="kopf-ico" id="btnMehr" type="button" aria-label="Mehr" hidden><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12h.1M12 12h.1M18 12h.1" stroke-width="3"/></svg></button>
+    <!-- v1.185 (Jean): die Wolke steht in jeder Ansicht ganz rechts -->
     <button class="kopf-ico" id="btnWolke" type="button" aria-label="Abgleich">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"
         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M7 18.5h10a4.2 4.2 0 0 0 .6-8.4A5.6 5.6 0 0 0 6.8 9.6 4.5 4.5 0 0 0 7 18.5z"/>
         <path class="an" d="M9.5 14l2 2 3.8-3.8"/><path class="ab" d="M4 4l16 16"/></svg></button>
-    <button class="kopf-ico" id="btnZahnrad" type="button" aria-label="Einstellungen" hidden></button>
-    <button class="kopf-ico" id="btnMehr" type="button" aria-label="Mehr" hidden><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12h.1M12 12h.1M18 12h.1" stroke-width="3"/></svg></button>
   </header>
   <!-- v1.161: die vier Bereiche eines Projekts (Bedienkonzept E2) -->
   <nav class="bereiche" id="bereiche" hidden>
@@ -3414,8 +3423,11 @@ function nameGross(s){
       <button class="btn" id="btnSigOeffnen" type="button">Unterschreiben</button>
       <div class="eyebrow">Dokumente</div>
       <div class="chk-grid" id="docOpts"></div>
-      <div id="docActions" style="margin-top:10px"></div>
-      <button class="btn ghost" id="btnSheets" style="margin-top:10px">Vorschau</button>
+      <!-- v1.185 (Jean): Material und Vorschau halb breit nebeneinander -->
+      <div class="btn-row fin-knoepfe">
+        <div id="docActions" style="display:contents"></div>
+        <button class="btn ghost" id="btnSheets">Vorschau</button>
+      </div>
       <!-- Der Verteiler wird oft erst nach Messung und Prüfung im fertigen
            Zustand dokumentiert – die Fotos entstehen dann hier. -->
       <div class="eyebrow">Fotos</div>   <!-- v1.183 -->
@@ -3798,7 +3810,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.185';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.186';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 13.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4690,6 +4702,10 @@ function projektTitel(){
   t.innerHTML = `${esc(gross)}<small>${esc(klein)}</small>`;
   t.classList.add('tippbar');
 }
+function projektOrt(){
+  const str = ((PROJ.address || '').split('\n')[0] || 'Ohne Adresse').replace(/straße\b/i, 'str.');
+  return PROJ.flat ? flatLabel(PROJ.flat) + ' · ' + str : str;
+}
 $('#title').onclick = () => {
   if($('#title').classList.contains('tippbar') && PROJ && !archOffen) vorVerlassen(projektAendern);
 };
@@ -4761,6 +4777,9 @@ function go(name, push = true){
   if(name === 'new' && projEdit) $('#title').textContent = 'Projektdaten';   // v1.178
   $('#title').classList.remove('tippbar');
   if(PROJ && ['board','checks','finish'].includes(name)) projektTitel();
+  /* v1.185 (Jean): auch im Stromkreis und in der Zuleitung die Wohnung als
+     zweite Zeile – die Kopfleiste bleibt so gleich hoch, und man sieht, wo man ist */
+  if(PROJ && ['circuit','feed'].includes(name)) $('#title').innerHTML = `${esc(TITLES[name])}<small>${esc(projektOrt())}</small>`;
   $('#btnMehr').hidden = !(PROJ && ['board','checks','finish'].includes(name)) || !!(archOffen && !PROJ.sam);
   if(name === 'circuit'){ kachelnBegrenzen($('#nameSug')); kachelnBegrenzen($('#roomOpts')); }
   if($('#toast').classList.contains('show')) toastSetzen();   // neue Ansicht, neue Leistenhöhe
@@ -7738,7 +7757,9 @@ function renderDocGroup(optsSel, actSel, liste, nurAktionen){
   /* Nur noch Knöpfe, die in eine Ansicht führen. Das frühere "… ausgeben" ist
      entfallen: die Ausgabe läuft über das Ablegen beziehungsweise den Export. */
   $(actSel).innerHTML = liste.filter(d => d.view)          // unabhängig vom Kästchen
-    .map(d => `<button class="btn ghost" data-go="${d.view}">${esc(d.btn)}</button>`).join('');
+    /* v1.186: im Abschluss halb breit neben "Vorschau" – dort nur "Material",
+       sonst brach die Beschriftung auf dem iPhone um */
+    .map(d => `<button class="btn ghost" data-go="${d.view}" aria-label="${esc(d.btn)}">${esc(actSel === '#docActions' && d.view === 'material' ? 'Material' : d.btn)}</button>`).join('');
 }
 /* Bei der Wiederholungsprüfung stehen alle drei Dokumente beisammen im
    Abschluss. Nur die Neuinstallation zeigt Verteilerbeschreibung und
