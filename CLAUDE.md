@@ -179,6 +179,19 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   „Rückgängig“ (8 s); SAM-Zeichen als Abzeichen an der Wolke; FI-Typ als Kacheln
   (`#typKacheln`); `--fault-fill` für rote Flächen.
 
+## Nach QK (v1.184–v1.189)
+
+- **Lager:** Name des angemeldeten Kontos (`lagerWer`), neue Einträge mit `vonUid`;
+  `lagerWerNachziehen` schreibt alte Einträge mit dem Prüfernamen des Geräts aufs
+  Konto um (Jean: jeder hatte sein eigenes Gerät).
+- **Tastatur (v1.185):** Meldet iOS die Tastatur (`--app-h` gesetzt), bleibt die
+  Seite oben (`scrollTo(0,0)` auch beim Tippen), sonst rutschte die Kopfleiste weg.
+- **Trafo-LS (v1.189):** `trafoLs`/`ohneMessung` – LS mit „Trafo“ im Namen wie ein
+  sonstiges Gerät: keine Messung, nicht in der Messtabelle, sperrt nicht.
+- **Dateinamen Neuinstallation (v1.189):** Datum vorn = Projektbeginn (Ordner des
+  Kurzbefehls); an einem späteren Tag trägt der Typ das Ausgabedatum (`expTeil`,
+  „Protokoll 26-10-13“). Projektdatei ohne Zusatz. Materialblatt ohne Anzahl 0.
+
 ## SAM (Beta)
 
 - Die Erkennung kommt aus dem privaten Repository `sam-werkstatt`

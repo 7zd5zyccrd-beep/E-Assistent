@@ -10,6 +10,15 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.189 13.10.2026 Trafo (Jean): ein LS mit "Trafo" in der Bezeichnung wird
+                    nicht gemessen, sperrt die Ausgabe nicht und steht nicht in
+                    der Messtabelle des Protokolls - wie ein sonstiges Geraet. In
+                    der Verteilerbeschreibung bleibt er. Im Stromkreis weicht der
+                    Messteil einem Hinweis.
+                    Neuinstallation: Dokumente, die nicht am Tag des Projektbeginns
+                    hinausgehen, tragen hinter der Art das Datum der Ausgabe
+                    ("Beschreibung 26-10-13"). Das Datum vorn bleibt der
+                    Projektbeginn, der Ordner beim Kurzbefehl bleibt derselbe.
   v1.188 13.10.2026 Materialaufwand (Jean): Bauteile, deren Anzahl auf 0
                     korrigiert wurde, stehen nicht mehr auf dem ausgegebenen
                     Blatt; in der Bearbeitung bleiben sie zum Wiederhochzaehlen.
@@ -3310,6 +3319,7 @@ function nameGross(s){
             <div class="chk-grid sam-kabel" id="samKabelWahl"></div>
           </div>
           <div class="eyebrow">Messwerte</div>
+          <p class="muted small" id="trafoHinweis" hidden>LS für den Trafo: wird nicht gemessen und steht nicht in der Messtabelle des Protokolls.</p>
           <div class="seg" id="segStatus" style="margin-bottom:14px">
             <button data-v="measured" aria-pressed="true">Gemessen</button>
             <button data-v="nomeasure" aria-pressed="false">Keine Messung</button>
@@ -3817,7 +3827,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.188';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.189';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 13.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4928,7 +4938,7 @@ const HOME_EIGENE = 5, HOME_KOLLEGEN = 3;
 /* Fortschritt einer Prüfung: Zuleitung und alle Kreise mit Messung; erledigt
    ist, was gemessen oder bewusst ohne Messung ist und keinen Grenzwert reißt. */
 function projektStand(p){
-  const zu = [p.feed || blankFeed(), ...(p.items || []).filter(c => c.kind === 'circuit' && !isSpecial(c))];
+  const zu = [p.feed || blankFeed(), ...(p.items || []).filter(c => c.kind === 'circuit' && !ohneMessung(c))];
   const fertig = zu.filter((o, i) => ['z-ok', 'z-none'].includes(zustand(o, i === 0))).length;
   const bereich = p.checksDone ? 'Abschluss' : p.modus === 'mess' ? 'Messen' : 'Erfassen';
   return {fertig, gesamt: zu.length, bereich};
@@ -5454,13 +5464,18 @@ const specialList  = () => CFG.specials.map(parseSpecial);
 const specialNames = () => specialList().map(x => x.name);
 function isSpecial(o){ return !!(o && o.special); }   // SPD, Hauptschalter, Stromstoßschalter …
 function devOf(o){ return o.device || 'ls'; }   // Zuleitung verhält sich wie ein LS-Kreis
+/* v1.189 (Jean): ein LS mit „Trafo“ in der Bezeichnung sichert einen Trafo ab.
+   Er wird nicht gemessen und steht nicht in der Messtabelle des Protokolls –
+   wie ein sonstiges Gerät; in der Verteilerbeschreibung bleibt er. */
+function trafoLs(o){ return !!o && o.kind === 'circuit' && !isSpecial(o) && (o.device || 'ls') === 'ls' && /trafo/i.test(o.name || ''); }
+function ohneMessung(o){ return isSpecial(o) || trafoLs(o); }
 
 /* Einheitlicher Kachelzustand für Zuleitung und Stromkreise */
 /* v1.162: Messzustand mit Zeichen (siehe Zustände im Stil). "Offen" heißt:
    noch kein Wert da; "fehlt" (rot) erst, wenn etwas eingetragen ist und der
    Rest fehlt, oder ein Grenzwert überschritten ist. */
 function zustand(o, isFeed){
-  if(isSpecial(o))                      return 'z-ok';
+  if(ohneMessung(o))                    return 'z-ok';   // v1.189: auch Trafo-LS
   if(isFeed && o.cable == null)         return 'z-open';
   if(o.status !== 'measured')           return grundFehlt(o) ? 'z-bad' : 'z-none';   // v1.171
   if(checkCircuit(o).length)            return 'z-bad';
@@ -5549,7 +5564,7 @@ const grundFehlt = c => c.status !== 'measured' && c.reason === 'other' && !Stri
    Die Zuleitung hat kein eigenes Feld dafür. */
 const rpePflicht = c => !!PROJ && PROJ.mode === 'neu' && c !== PROJ.feed && devOf(c) !== 'rcd';
 function missingValues(c){
-  if(isSpecial(c)) return false;
+  if(ohneMessung(c)) return false;                 // v1.189
   if(c.sam && devOf(c) !== 'rcd' && !c.cable) return true;   // SAM: Kabelart noch offen
   if(c.status !== 'measured') return grundFehlt(c);
   const need = [];
@@ -5590,7 +5605,7 @@ function listHtml(){
       const r = rowOf(it);
       if(r !== lastRow){ out += `<div class="row-head">Reihe ${r}</div>`; lastRow = r; }
     }
-    const vals = isSpecial(it) ? 'Ohne Messung erfassbar'
+    const vals = isSpecial(it) ? 'Ohne Messung erfassbar' : trafoLs(it) ? 'Trafo · ohne Messung'
       : it.status === 'measured'
       ? [it.m.iso != null && it.m.iso !== '' ? `ISO ${fmt(it.m.iso)} MΩ` : null,
          it.m.zs  != null && it.m.zs  !== '' ? `Zs ${fmt(it.m.zs)} Ω`   : null,
@@ -5609,7 +5624,7 @@ function listHtml(){
     const offen = mess && z === 'z-open' ? 'offen' : '';
     /* v1.175 (QK G83): im Messen nur Werte, Zs zuerst, Fehlendes vorn – Gerät
        und Kabel stehen im Erfassen; auf dem iPhone war der Zs abgeschnitten. */
-    const mv = isSpecial(it) ? vals : it.status !== 'measured' ? vals
+    const mv = ohneMessung(it) ? vals : it.status !== 'measured' ? vals
       : [it.m.zs  != null && it.m.zs  !== '' ? `Zs ${fmt(it.m.zs)} Ω`   : null,
          it.m.iso != null && it.m.iso !== '' ? `ISO ${fmt(it.m.iso)}`   : null,
          it.m.idn != null && it.m.idn !== '' ? `IΔ ${fmt(it.m.idn)} mA` : null,
@@ -6169,6 +6184,7 @@ $('#cName').oninput = () => {            // Checkboxen folgen der Bezeichnung
   if(cableFilter){ cableFilter = null; paintCableList(draft.cable, true); }
   if(ratedFilter){ ratedFilter = null; paintRatedList(draft.rated); }
   renderRoomOpts();
+  messteilZeigen();                      // v1.189: „Trafo“ blendet die Messung aus
 };
 
 /* ---------- Zuleitung: eigene, schlanke Maske ---------- */
@@ -6674,7 +6690,7 @@ const istLicht = c => /beleucht|licht/i.test(c.name || '')
    gehen dann vorweg – auch bei der Einstellung „Nummernfolge“, die ohne
    tragende Nummern nichts mehr zu ordnen hätte. */
 function messFolge(){
-  const alle = (PROJ ? PROJ.items : []).filter(c => !isSpecial(c));
+  const alle = (PROJ ? PROJ.items : []).filter(c => !ohneMessung(c));   // v1.189
   const cs   = alle.filter(c => devOf(c) !== 'rcd');          // die Kreise
   const fis  = alle.filter(c => devOf(c) === 'rcd');          // die FI messen zuletzt
   const zahlen = !abwNr() && cs.every(c => isFinite(parseInt(c.no, 10)));
@@ -6729,6 +6745,20 @@ function weiterZumKreis(ref){
   openCircuit(i);
 }
 
+/* v1.189 (Jean): ein LS mit „Trafo“ in der Bezeichnung wird nicht gemessen –
+   der Messteil weicht einem Hinweis, schon während der Name getippt wird. */
+function trafoEntwurf(){
+  return !!draft && !draft.special && segVal('#segDevice') === 'ls' && /trafo/i.test($('#cName').value || '');
+}
+function messteilZeigen(){
+  if(!draft) return;
+  const st = segVal('#segStatus'), trafo = trafoEntwurf(), ohne = !!draft.special || trafo;
+  $('#segStatus').hidden = ohne;
+  $('#fldReason').hidden = ohne || st !== 'nomeasure';
+  $('#fldNote').hidden   = ohne || !(st === 'nomeasure' && $('#cReason').value === 'other');
+  $('#measBlock').style.display = (!ohne && st === 'measured') ? '' : 'none';
+  $('#trafoHinweis').hidden = !trafo;
+}
 function syncCircuitUi(){
   const dev = segVal('#segDevice'), st = segVal('#segStatus');
   const sp  = !!draft.special;              // Sonstiges Gerät gewählt
@@ -6762,10 +6792,7 @@ function syncCircuitUi(){
   $('#cNo').pattern   = abwNr() ? '.*'  : '[0-9]*';
   $('#isoZsRow').hidden  = dev === 'rcd';
   $('#rcdRow').hidden    = dev === 'ls';
-  $('#segStatus').hidden = sp;
-  $('#fldReason').hidden = sp || st !== 'nomeasure';
-  $('#fldNote').hidden   = sp || !(st === 'nomeasure' && $('#cReason').value === 'other');
-  $('#measBlock').style.display = (!sp && st === 'measured') ? '' : 'none';
+  messteilZeigen();                                  // v1.189: auch beim Trafo-LS
   /* Im Messen-Modus steht die Kachel "999" schon da, bevor das Feld den Fokus
      bekommt; im Bearbeiten-Modus nur, solange dort getippt wird. */
   /* Beim FI gibt es keine Isolationsmessung – dann geht die Kachel mit ihrer
@@ -6773,7 +6800,7 @@ function syncCircuitUi(){
   $('#isoSug').hidden = dev === 'rcd' || (!mess && document.activeElement !== $('#mIso'));
   renderOvZeile();
   if(sp) $('#nameSug').hidden = true;
-  if(!sp) renderRpe();
+  if(!sp && !trafoEntwurf()) renderRpe();
   syncCoversKeys();
   kachelnMalen();                                    // v1.163
 }
@@ -7103,7 +7130,7 @@ function zeitPruefen(onDone){
   /* v1.172 (Jean, QK-Frage F6): die Grenze nach unten wächst mit der Wohnung –
      10 min und 1,5 min je Kreis, höchstens DAUER_KURZ. Vorher kam die Frage bei
      fast jeder kleinen Wohnung und wurde blind weggetippt. */
-  const kurz = Math.min(DAUER_KURZ, 10 + 1.5 * circuits().filter(c => !isSpecial(c)).length);
+  const kurz = Math.min(DAUER_KURZ, 10 + 1.5 * circuits().filter(c => !ohneMessung(c)).length);
   if(min >= kurz && min < DAUER_WARN){ onDone(jetzt); return; }
   resetModal(true);
   $('#modalTitle').textContent = 'Prüfdauer prüfen';
@@ -10738,7 +10765,7 @@ const uebersicherungMangel = () =>
 /* Mängel aus den Messungen — dieselbe Logik wie die Ergebnis-Spalte */
 function chkMessMaengel(){
   return [PROJ.feed, ...circuits()].some(o => {
-    if(!o || isSpecial(o)) return false;
+    if(!o || ohneMessung(o)) return false;
     if(o.status !== 'measured') return grundFehlt(o);   // v1.171: "Andere" mit Grund ist eine Einschränkung
     return checkCircuit(o).length > 0 || missingValues(o);
   });
@@ -11093,7 +11120,7 @@ function protokollBlatt(){
     return (kopf + name + ort) || 'Kreis ohne Nummer';
   };
   function ergebnis(o, bez){
-    if(isSpecial(o)) return '–';
+    if(ohneMessung(o)) return '–';
     /* Ein zweiadriger Kreis kommt in die Mängelliste, auch wenn die Messwerte
        stimmen. Die Spalte trägt dann die Mangel-Nummer statt ✓, F oder n.z.;
        dass nicht gemessen wurde, steht ohnehin im Feld über der Tabelle. */
@@ -11150,8 +11177,9 @@ function protokollBlatt(){
   cs.forEach(c => {
     /* Sonstige Geräte – Überspannungsableiter, Hauptschalter, Klingeltrafo –
        haben keine Messwerte und belegen sonst nur eine Zeile. Sie stehen in der
-       Verteilerbeschreibung, nicht in der Messtabelle. */
-    if(isSpecial(c)) return;
+       Verteilerbeschreibung, nicht in der Messtabelle. Ebenso ein LS für den
+       Trafo (v1.189, Jean). */
+    if(ohneMessung(c)) return;
     const m   = c.m || {};
     const bez = (c.name || '') + (c.room ? ' · ' + c.room : '');
     if(bez.length > NM_ZEICHEN) umbrueche++;        // Bezeichnung geht auf zwei Zeilen
@@ -11216,7 +11244,7 @@ function protokollBlatt(){
   if(f.cable != null && f.status !== 'measured')
     nichtPruef.push(`${f.name || 'Zuleitung'} – ${grundText(f)}`);
   cs.forEach(c => {
-    if(isSpecial(c) || c.status === 'measured') return;
+    if(ohneMessung(c) || c.status === 'measured') return;
     const bez = (c.name || '').trim();
     const nr = String(circuitLabel(c) || '').trim();
     nichtPruef.push(`${nr ? 'Kreis ' + nr : 'Kreis ohne Nummer'}${bez ? ' ' + bez : ''} – ${grundText(c)}`);
@@ -11631,6 +11659,16 @@ const expOrdner = p => {
 const expZweig = p => (p.mode || 'wdh') === 'neu' ? 'Montage & Protokolle' : 'Wiederholungsprüfungen';
 const expName = (p, teil, endung) =>
   [expDatum(p), expZweig(p), teil, expOrdner(p)].join('_') + endung;
+/* v1.189 (Jean): bei der Neuinstallation gehen Beschreibung, Material und Fotos
+   oft vorab hinaus, das Protokoll erst am Ende. Das Datum vorn bleibt der
+   Projektbeginn – daraus und aus dem letzten Abschnitt baut der Kurzbefehl den
+   Ordner. Was an einem späteren Tag hinausgeht, trägt hinter der Art das Datum
+   der Ausgabe: "Protokoll 26-10-13". Die Projektdatei bleibt ohne Zusatz. */
+function expTeil(p, teil){
+  if((p.mode || 'wdh') !== 'neu') return teil;
+  const heute = expDatum({startedAt: Date.now()});
+  return heute === expDatum(p) ? teil : teil + ' ' + heute;
+}
 
 /* Ein Blatt als eigenständige HTML-Datei: die Gestaltung der App wird
    mitgegeben, damit der Kurzbefehl daraus dasselbe Bild als PDF erzeugt. */
@@ -11740,7 +11778,7 @@ async function ablegen(wahl, nochmal, zwischen){
   }
   const blatt = (k, teil) => {
     const html = blattDatei(k, teil);
-    if(html) dateien.push(alsDatei(html, expName(p, teil, '.html'), 'text/html'));
+    if(html) dateien.push(alsDatei(html, expName(p, expTeil(p, teil), '.html'), 'text/html'));
   };
   if(wahl.protokoll)    blatt('protokoll',    'Protokoll');
   if(wahl.beschriftung) blatt('beschriftung', 'Beschreibung');
@@ -11755,7 +11793,7 @@ async function ablegen(wahl, nochmal, zwischen){
       if(!blob) continue;                    // liegt auf einem anderen Gerät
       /* Die Fotonummer sitzt im Typ, nicht am Ende: so bleibt der Ordnername
          auch bei Fotos der letzte Abschnitt. */
-      const name = expName(p, `Foto${i + 1}`, ENDUNG[blob.type] || '.jpeg');
+      const name = expName(p, expTeil(p, `Foto${i + 1}`), ENDUNG[blob.type] || '.jpeg');
       dateien.push(new File([blob], name, {type: blob.type || 'image/jpeg'}));
     }
   }
