@@ -10,6 +10,10 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.190 13.10.2026 Verteilerbeschreibung (Jean: lange Beschreibung brach bei der
+                    Ausgabe auf eine zweite Seite um): passt sie nicht auf ein
+                    Blatt, werden Zeilen und Schrift stufenweise kleiner, bis sie
+                    passt. Kurze Beschreibungen bleiben gross wie bisher.
   v1.189 13.10.2026 Trafo (Jean): ein LS mit "Trafo" in der Bezeichnung wird
                     nicht gemessen, sperrt die Ausgabe nicht und steht nicht in
                     der Messtabelle des Protokolls - wie ein sonstiges Geraet. In
@@ -2456,6 +2460,14 @@ input.ungueltig{border-color:var(--fault)!important;color:var(--fault)}   /* v1.
    sonst nur rund 40 % der Seite. Bis etwa zwanzig Kreise bleibt es ein Blatt.
    Der Materialaufwand behält die alte Größe, dort stehen mehr Zeilen. */
 .paper table.besch th,.paper table.besch td{font-size:13pt;padding:16px 10px}
+/* v1.190 (Jean: lange Beschreibung brach beim Ausgeben auf eine zweite Seite
+   um): passt sie nicht auf ein Blatt, werden Zeilen und Schrift stufenweise
+   kleiner (beschStufe misst, welche Stufe reicht) */
+.paper table.besch.s1 th,.paper table.besch.s1 td{font-size:12.5pt;padding:11px 9px}
+.paper table.besch.s2 th,.paper table.besch.s2 td{font-size:12pt;padding:7px 8px}
+.paper table.besch.s3 th,.paper table.besch.s3 td{font-size:11pt;padding:4px 7px}
+.paper table.besch.s4 th,.paper table.besch.s4 td{font-size:10pt;padding:2px 6px}
+.paper table.besch.s5 th,.paper table.besch.s5 td{font-size:9pt;padding:1px 5px;line-height:1.15}
 /* Das Protokoll bringt seinen Rand aus der Vorlage mit, die übrigen Blätter nicht */
 .paper .sheet{padding:var(--sheet-pad,8mm)}
 
@@ -3827,7 +3839,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.189';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.190';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 13.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -11498,7 +11510,7 @@ function blaetterBauen(nur){
   if(docs.beschriftung){
     blaetter.push(`<h2>Verteilerbeschreibung</h2>
       <div class="meta klein">${objektKurz(PROJ)}</div>
-      <table class="besch"><thead><tr><th style="width:90px">Nr.</th><th>Bezeichnung</th><th style="width:39%">Ort</th></tr></thead><tbody>` +
+      <table class="besch BESCH_STUFE"><thead><tr><th style="width:90px">Nr.</th><th>Bezeichnung</th><th style="width:39%">Ort</th></tr></thead><tbody>` +
       cs.map(c => `<tr><td>${esc(circuitLabel(c))}</td><td>${esc(beschrName(c))}</td><td>${esc(c.room)}</td></tr>`).join('') +
       `</tbody></table>` +
       /* Das Blatt bleibt am Verteiler, deshalb der Prüfhinweis darunter – nur
@@ -11533,7 +11545,31 @@ function blaetterBauen(nur){
       <i class="f"></i><i class="o"></i><i></i><i class="f"></i></span></span>`;
   const seite = b => /class="prot"/.test(b)                    // Protokoll bringt Kopf und Rand selbst mit
     ? b : `<div class="sheet">${b.replace('</h2>', kopf + '</h2>')}</div>`;
-  return blaetter.map(seite);
+  return blaetter.map(seite).map(b => b.includes('BESCH_STUFE') ? beschStufe(b) : b);
+}
+
+/* v1.190: Die Verteilerbeschreibung soll auf EIN Blatt passen. Gemessen wird
+   das fertige Blatt unsichtbar in voller Breite (1024 px); die erste Stufe,
+   bei der es nicht höher wird als eine A4-Seite in der Ausgabe, gilt. Auf A4
+   stehen bei 1130 px Seitenbreite rund 1598 px zur Verfügung (siehe
+   blattDatei), abzüglich Rand oben; die Reserve fängt ab, dass die Schrift im
+   Kurzbefehl etwas anders laufen kann als in der App. */
+const BESCH_MAX_H = 1480;
+function beschStufe(b){
+  let box = null;
+  try {
+    box = document.createElement('div');
+    box.className = 'paper';
+    box.style.cssText = 'position:absolute;left:-10000px;top:0;width:1024px;visibility:hidden';
+    document.body.appendChild(box);
+    for(let k = 0; k <= 5; k++){
+      const html = b.replace('BESCH_STUFE', k ? 's' + k : '');
+      box.innerHTML = html;
+      if(k === 5 || box.firstElementChild.offsetHeight <= BESCH_MAX_H) return html;
+    }
+  } catch(e){}
+  finally { if(box) box.remove(); }
+  return b.replace('BESCH_STUFE', '');
 }
 
 /* --- Ausdruck: alle Blätter untereinander, Seitenumbruch dazwischen --- */
