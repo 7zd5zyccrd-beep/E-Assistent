@@ -179,7 +179,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   „Rückgängig“ (8 s); SAM-Zeichen als Abzeichen an der Wolke; FI-Typ als Kacheln
   (`#typKacheln`); `--fault-fill` für rote Flächen.
 
-## Nach QK (v1.184–v1.189)
+## Nach QK (v1.184–v1.190)
 
 - **Lager:** Name des angemeldeten Kontos (`lagerWer`), neue Einträge mit `vonUid`;
   `lagerWerNachziehen` schreibt alte Einträge mit dem Prüfernamen des Geräts aufs
@@ -191,6 +191,9 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **Dateinamen Neuinstallation (v1.189):** Datum vorn = Projektbeginn (Ordner des
   Kurzbefehls); an einem späteren Tag trägt der Typ das Ausgabedatum (`expTeil`,
   „Protokoll 26-10-13“). Projektdatei ohne Zusatz. Materialblatt ohne Anzahl 0.
+- **Verteilerbeschreibung auf ein Blatt (v1.190):** `beschStufe` misst das Blatt
+  unsichtbar (1024 px) und nimmt die erste Stufe `s1`–`s5` (Zeilen/Schrift kleiner)
+  unter `BESCH_MAX_H`; von Jean auf dem Gerät bestätigt.
 
 ## SAM (Beta)
 
