@@ -179,7 +179,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   „Rückgängig“ (8 s); SAM-Zeichen als Abzeichen an der Wolke; FI-Typ als Kacheln
   (`#typKacheln`); `--fault-fill` für rote Flächen.
 
-## Nach QK (v1.184–v1.193)
+## Nach QK (v1.184–v1.195)
 
 - **Lager:** Name des angemeldeten Kontos (`lagerWer`), neue Einträge mit `vonUid`;
   `lagerWerNachziehen` schreibt alte Einträge mit dem Prüfernamen des Geräts aufs
@@ -209,6 +209,21 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **K-Nummern (v1.193):** `kNummernSetzen` läuft in `saveProj` – Stromstoßschalter
   (`istStromstoss`) bekommen „K1 …“ nach Lage, nur Projekte mit `kNr` (neu ab v1.193,
   bestehende unverändert). Wiederholung: K vom Blatt (SAM) oder von Hand → `kFest`.
+
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.195, 14.10.2026)
+
+- **Vorab ausgeben bei der Neuinstallation an einem späteren Tag (v1.189):** Ordner
+  beim Kurzbefehl stimmt; mit unterschiedlichen Daten (Typ „Protokoll JJ-MM-TT“)
+  noch nicht getestet.
+- **FI im Messen (v1.191):** öffnet die Tastatur beim Auslösestrom auch über „Weiter →“
+  und aus der Liste? Hier nicht prüfbar.
+- **Neuausgabe zeigte alten Inhalt:** liegt nach Jeans Versuch (Umbenennen) an
+  iCloud/Dateien-App, nicht an der App. Empfohlen: im Kurzbefehl bei „Datei sichern“
+  „Ersetzen“ an, nicht vorher von Hand löschen. Jeans Antwort, ob „Ersetzen“ an ist,
+  steht aus. Falls es bleibt: Uhrzeit im Dateinamen als Ausweg (nur nach Rückfrage).
+- Bestätigt von Jean: Tastatur-Darstellung (v1.185), Lager-Namen (v1.187),
+  Verteilerbeschreibung auf einem Blatt (v1.190), Zusammenlegen ohne Markierung
+  (v1.194), Ziehen gleitend (v1.195, „sehr schön“).
 
 ## SAM (Beta)
 
