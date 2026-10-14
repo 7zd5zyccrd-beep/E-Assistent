@@ -203,7 +203,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   1,5 mm² → B10); Liste zeigt „Ohne Nummer“; `refreshNoField` vergibt einer Leitung
   keine Nummer. `ordnen`/`ordnenWahl` (nur `planBar()`, nur in der Liste, `go` setzt
   zurück): Ziehen am Griff per Pointer-Ereignissen (`ordnenZiehen`, Rand rollt mit),
-  Zusammenlegen mit `teile` (Trennen), `+ FI` (`ordnenFiTyp`), Entfernen mit
+  Ziehen gleitend (v1.195: Zeile am Finger, andere rücken per transform), Zusammenlegen mit `teile` (Trennen), `+ FI` (`ordnenFiTyp`), Entfernen mit
   Rückgängig, `nummernPlan` nummeriert nach TE und setzt `covers` jedes FI;
   Rückfrage, wenn sich vergebene Nummern ändern. Jean: Ziehen ggf. später ersetzen.
 - **K-Nummern (v1.193):** `kNummernSetzen` läuft in `saveProj` – Stromstoßschalter
