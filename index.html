@@ -10,6 +10,8 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.194 14.10.2026 Leitungen planen (Jean): nach dem Zusammenlegen ist der neue
+                    Kreis nicht mehr markiert.
   v1.193 14.10.2026 Stromstossschalter (Jean): in der Bezeichnung steht vorn K mit
                     fortlaufender Nummer ("K1 Beleuchtung"), gezaehlt nach der Lage
                     im Verteiler und bei jeder Aenderung neu; ein 2-fach-Geraet
@@ -3897,7 +3899,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.193';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.194';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 14.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -5978,7 +5980,7 @@ $('#btnPlanZus').onclick = () => {
   neu.breaker = breakerOf(neu);
   PROJ.items.splice(PROJ.items.indexOf(sel[0]), 1, neu);
   sel.slice(1).forEach(c => PROJ.items.splice(PROJ.items.indexOf(c), 1));
-  ordnenWahl.clear(); ordnenWahl.add(neu.cid);
+  ordnenWahl.clear();                              // v1.194 (Jean): danach nichts mehr markiert
   saveProj(); renderBoard(); toast(`${sel.length} Leitungen zusammengelegt`);
 };
 $('#btnPlanWeg').onclick = () => {
