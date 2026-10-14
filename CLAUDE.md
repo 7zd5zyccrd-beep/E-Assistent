@@ -179,7 +179,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   „Rückgängig“ (8 s); SAM-Zeichen als Abzeichen an der Wolke; FI-Typ als Kacheln
   (`#typKacheln`); `--fault-fill` für rote Flächen.
 
-## Nach QK (v1.184–v1.192)
+## Nach QK (v1.184–v1.193)
 
 - **Lager:** Name des angemeldeten Kontos (`lagerWer`), neue Einträge mit `vonUid`;
   `lagerWerNachziehen` schreibt alte Einträge mit dem Prüfernamen des Geräts aufs
@@ -206,6 +206,9 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Zusammenlegen mit `teile` (Trennen), `+ FI` (`ordnenFiTyp`), Entfernen mit
   Rückgängig, `nummernPlan` nummeriert nach TE und setzt `covers` jedes FI;
   Rückfrage, wenn sich vergebene Nummern ändern. Jean: Ziehen ggf. später ersetzen.
+- **K-Nummern (v1.193):** `kNummernSetzen` läuft in `saveProj` – Stromstoßschalter
+  (`istStromstoss`) bekommen „K1 …“ nach Lage, nur Projekte mit `kNr` (neu ab v1.193,
+  bestehende unverändert). Wiederholung: K vom Blatt (SAM) oder von Hand → `kFest`.
 
 ## SAM (Beta)
 

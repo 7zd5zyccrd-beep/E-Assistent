@@ -10,6 +10,12 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.193 14.10.2026 Stromstossschalter (Jean): in der Bezeichnung steht vorn K mit
+                    fortlaufender Nummer ("K1 Beleuchtung"), gezaehlt nach der Lage
+                    im Verteiler und bei jeder Aenderung neu; ein 2-fach-Geraet
+                    ist eine Nummer. In der Wiederholungspruefung bleibt eine
+                    K-Nummer vom Blatt oder von Hand stehen. Nur neue Projekte -
+                    bestehende bleiben, wie sie sind.
   v1.192 14.10.2026 Leitungen planen (Jean, Neuinstallation: bisher Zettel in der
                     Notizen-App): im Erfassen "+ Leitung" - Zweck, Raum und Kabel
                     antippen, die Leitung steht ohne Nummer in der Liste, die
@@ -3891,7 +3897,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.192';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.193';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 14.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4284,6 +4290,7 @@ let archLesen = false;          // v1.173: abgelegt und noch nicht zum Nachbesse
 let archVorher = null;          // v1.181: Stand vor dem Nachbessern, bis ausgegeben oder entschieden
 const saveProj = () => {
   if(!PROJ) return true;
+  if(!(archOffen && archLesen)) kNummernSetzen();   // v1.193
   /* v1.173: Im Lesemodus wird nichts geändert. Was doch geändert wurde, fällt
      auf den abgelegten Stand zurück – nur Bereich und Dokumentwahl bleiben, sie
      sind Ansicht, nicht Inhalt. */
@@ -5365,6 +5372,7 @@ function anlegen(mitFotos){
     id: neueKennung('P'),
     owner: FB.uid || null, ownerName: $('#npTester').value.trim() || FB.konto || '',
     mode: newMode,
+    kNr: true,                       // v1.193: Stromstoßschalter mit K-Nummer (nur neue Projekte)
     docs: Object.assign({}, MODES[newMode].docs),
     address: $('#npAddress').value.trim(),
     flat: $('#npFlat').value.trim(),
@@ -6021,6 +6029,36 @@ $('#btnPlanFertig').onclick = () => {
     {t:'Weiter ordnen', cls:'ghost', fn:null}
   ]);
 };
+
+/* ============================================================
+   K-NUMMERN DER STROMSTOSSSCHALTER (v1.193)
+   Jean: bei Stromstoßschaltern steht in der Bezeichnung vorn stets K mit
+   fortlaufender Nummer ("K1 Beleuchtung", "K2 Beleuchtung"). Gezählt wird nach
+   der Lage im Verteiler (Kreisnummern, ohne Nummer in der Reihenfolge der Liste)
+   und bei jeder Änderung neu – keine Lücken, keine doppelten. Ein 2-fach-Gerät
+   ist eine Nummer. In der Wiederholungsprüfung bleiben K-Nummern vom Blatt oder
+   von Hand stehen (kFest), die übrigen zählen um sie herum. Nur Projekte ab
+   v1.193 (kNr) – bestehende bleiben, wie sie sind.
+   ============================================================ */
+function istStromstoss(c){ return !!c && isSpecial(c) && /^Stromsto/i.test(String(c.special)); }
+function kTeil(name){ const m = String(name || '').match(/^K\s*(\d+)\b/i); return m ? m[1] : ''; }
+function kNummernSetzen(P){
+  P = P || PROJ;
+  if(!P || !P.kNr || !Array.isArray(P.items)) return;
+  const ss = P.items.filter(c => c.kind === 'circuit' && istStromstoss(c));
+  if(!ss.length) return;
+  const lage = c => { const n = parseInt(c.no, 10); return P.abwNr || !isFinite(n) ? Infinity : n; };
+  const folge = ss.map((c, i) => ({c, i})).sort((a, b) => (lage(a.c) - lage(b.c)) || (a.i - b.i)).map(x => x.c);
+  const fest = new Set(folge.filter(c => c.kFest && kTeil(c.name)).map(c => +kTeil(c.name)));
+  let n = 1;
+  folge.forEach(c => {
+    if(c.kFest && kTeil(c.name)) return;
+    while(fest.has(n)) n++;
+    const rest = String(c.name || '').replace(/^K\s*\d+\b\s*/i, '').trim();
+    c.name = 'K' + n + (rest ? ' ' + rest : '');
+    n++;
+  });
+}
 
 function kreisKennung(idx){
   const c = PROJ.items[idx]; if(!c) return null;
@@ -7374,6 +7412,13 @@ function noteFirstMeasure(o){                         // Neuinstallation: Beginn
 }
 function persistCircuit(){
   const c = collectCircuit();
+  /* v1.193: in der Wiederholungsprüfung bleibt eine von Hand eingetragene
+     K-Nummer stehen (am Gerät steht oft schon eine Kennzeichnung) */
+  if(PROJ.kNr && (PROJ.mode || 'wdh') !== 'neu' && istStromstoss(c)){
+    const alt = editIdx != null ? PROJ.items[editIdx] : null, kNeu = kTeil(c.name);
+    if(!kNeu) c.kFest = false;
+    else if(!alt || kNeu !== kTeil(alt.name)) c.kFest = true;
+  }
   if(editIdx == null) PROJ.items.push(c); else PROJ.items[editIdx] = c;
   sortCircuits();                                     // eingefügte Kreise rutschen an ihre Position
   noteFirstMeasure(c);
@@ -10803,6 +10848,8 @@ $('#samUebernehmen').onclick = () => {
     if(umstellen) abwNrUmschalten(true);
     const frei = abwNr();
     const kreise = rs.map(z => samKreis(z, frei));
+    /* v1.193: eine K-Nummer vom Blatt bleibt, wie sie dasteht */
+    kreise.forEach(c => { if(istStromstoss(c) && kTeil(c.name)) c.kFest = true; });
     rs.forEach(z => { z.uebernommen = true; });
     PROJ.items = (PROJ.items || []).concat(kreise);
     sortCircuits();
