@@ -216,8 +216,8 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   und aus der Liste? Hier nicht prüfbar.
 - **Neuausgabe zeigte alten Inhalt:** liegt nach Jeans Versuch (Umbenennen) an
   iCloud/Dateien-App, nicht an der App. Empfohlen: im Kurzbefehl bei „Datei sichern“
-  „Ersetzen“ an, nicht vorher von Hand löschen. Jeans Antwort, ob „Ersetzen“ an ist,
-  steht aus. Falls es bleibt: Uhrzeit im Dateinamen als Ausweg (nur nach Rückfrage).
+  „Ersetzen“ an, nicht vorher von Hand löschen. „Ersetzen“ ist an (Jean, 14.10.2026);
+  offen, ob der alte Inhalt seitdem noch vorkommt. Falls es bleibt: Uhrzeit im Dateinamen als Ausweg (nur nach Rückfrage).
 - Bestätigt von Jean: v1.196 (Protokoll ohne Umbruch: rechte Spalte neben dem
   Mängelfeld gibt mit `rechtsOben` nach; Ordner der Neuinstallation nach
   `angelegt` statt `startedAt`, das bei der ersten Messung rückt), Tastatur-Darstellung (v1.185), Lager-Namen (v1.187),
