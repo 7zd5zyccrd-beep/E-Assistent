@@ -179,7 +179,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   „Rückgängig“ (8 s); SAM-Zeichen als Abzeichen an der Wolke; FI-Typ als Kacheln
   (`#typKacheln`); `--fault-fill` für rote Flächen.
 
-## Nach QK (v1.184–v1.191)
+## Nach QK (v1.184–v1.192)
 
 - **Lager:** Name des angemeldeten Kontos (`lagerWer`), neue Einträge mit `vonUid`;
   `lagerWerNachziehen` schreibt alte Einträge mit dem Prüfernamen des Geräts aufs
@@ -198,6 +198,14 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   `openCircuit`, nicht verzögert – sonst keine Tastatur auf iOS); `mIdn`/`mT` springen
   erst nach der ersten Nachkommastelle (Sonderfall 30 mA aus v1.177 entfällt).
   R_PE ist freiwillig: kein Teil von `missingValues`/`mangelText` mehr (F7 überholt).
+- **Leitungen planen (v1.192, Neuinstallation):** Block „LEITUNGEN PLANEN“. `+ Leitung`
+  (`leitungBlatt`, `leitungBauen`: Kreis mit `no:''`, Absicherung aus dem Zweck,
+  1,5 mm² → B10); Liste zeigt „Ohne Nummer“; `refreshNoField` vergibt einer Leitung
+  keine Nummer. `ordnen`/`ordnenWahl` (nur `planBar()`, nur in der Liste, `go` setzt
+  zurück): Ziehen am Griff per Pointer-Ereignissen (`ordnenZiehen`, Rand rollt mit),
+  Zusammenlegen mit `teile` (Trennen), `+ FI` (`ordnenFiTyp`), Entfernen mit
+  Rückgängig, `nummernPlan` nummeriert nach TE und setzt `covers` jedes FI;
+  Rückfrage, wenn sich vergebene Nummern ändern. Jean: Ziehen ggf. später ersetzen.
 
 ## SAM (Beta)
 
