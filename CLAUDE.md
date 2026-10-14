@@ -238,8 +238,13 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - Ablauf (v1.125): „Erfassung beginnen“ öffnet die Kamera für die
   Beschreibung. Danach Zwischenseite `#samNaechst` („Jetzt fotografieren –
   Verteiler“), ein Tipp öffnet die Kamera wieder. iOS öffnet die Kamera nur aus
-  einer Berührung heraus und lässt nichts in die Kamera schreiben – eine eigene
-  Kamera (getUserMedia) hat Jean abgelehnt.
+  einer Berührung heraus und lässt nichts in die iOS-Kamera schreiben. Seit v1.143
+  gibt es deshalb die Kamera der App (`samKamOeffnen`, getUserMedia, voreingestellt,
+  `CFG.eigeneKamera`); Jean fotografiert damit (14.10.2026). Hinweise im Sucher sind
+  dort möglich, die iOS-Kamera bleibt Ersatzweg.
+- **Umbau (14.10.2026):** SAM wird nach `sam-werkstatt/docs/umbau/KONZEPT.md`
+  überarbeitet (ehrliche Markierung, Mehrfachlesung, später Kern-Umbau). Ältestes
+  Gerät der Kollegen: iPhone 13 Pro.
 - Trainingsordner und Probelauf: Einstellungen › SAM (Beta) › Werkstatt ›
   „Trainingsordner öffnen“, Foto antippen, „Durchspielen“ (v1.121).
 - Verknüpfung mit dem Verteiler (v1.134–v1.155): `samAusrichten` ordnet die
