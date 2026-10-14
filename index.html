@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.191 14.10.2026 Messen (Jean): beim FI steht der Cursor gleich im Feld
+                    Ausloesestrom; weiter geht es erst nach der ersten
+                    Nachkommastelle, auch beim 30-mA-FI (vorher nach zwei
+                    Ziffern). Neuinstallation: ein leerer R_PE gilt nicht mehr als
+                    fehlender Wert und sperrt die Ausgabe nicht.
   v1.190 13.10.2026 Verteilerbeschreibung (Jean: lange Beschreibung brach bei der
                     Ausgabe auf eine zweite Seite um): passt sie nicht auf ein
                     Blatt, werden Zeilen und Schrift stufenweise kleiner, bis sie
@@ -3839,8 +3844,8 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.190';                    // siehe Änderungsliste im Dateikopf
-const BUILD        = VERSION + ' · 13.10.2026';
+const VERSION      = 'v1.191';                    // siehe Änderungsliste im Dateikopf
+const BUILD        = VERSION + ' · 14.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
 const DAUER_WARN   = 100;                        // zu lang: unplausibel im Protokoll
@@ -5511,7 +5516,6 @@ function mangelText(c){
   if(c.sam && dev !== 'rcd' && !c.cable) f.push('Kabelart');
   if(grundFehlt(c)) return 'Grund fehlt';           // v1.171
   if(c.status === 'measured'){
-    if(rpePflicht(c) && leer(m.rpe)) f.push('R_PE');
     if(dev !== 'rcd' && leer(m.iso)) f.push('ISO');
     if(dev !== 'rcd' && leer(m.zs))  f.push('Zs');
     if(dev !== 'ls'  && leer(m.idn)) f.push('IΔ');
@@ -5572,16 +5576,15 @@ function renderBoard(){
 /* --- fehlende Pflichtwerte: Grundlage für die Rot-Markierung --- */
 /* v1.171: "Andere" ohne Beschreibung ist eine Lücke (Jean, QK-Frage F4). */
 const grundFehlt = c => c.status !== 'measured' && c.reason === 'other' && !String(c.note || '').trim();
-/* v1.171: Neuinstallation – R_PE je Kreis Pflicht (DIN VDE 0100-600, 6.4.3.2).
-   Die Zuleitung hat kein eigenes Feld dafür. */
-const rpePflicht = c => !!PROJ && PROJ.mode === 'neu' && c !== PROJ.feed && devOf(c) !== 'rcd';
+/* v1.191 (Jean): R_PE ist freiwillig – ein leeres Feld fehlt nicht und sperrt
+   die Ausgabe nicht mehr (v1.171 war es bei der Neuinstallation Pflicht).
+   Angeboten wird das Feld weiter in renderRpe. */
 function missingValues(c){
   if(ohneMessung(c)) return false;                 // v1.189
   if(c.sam && devOf(c) !== 'rcd' && !c.cable) return true;   // SAM: Kabelart noch offen
   if(c.status !== 'measured') return grundFehlt(c);
   const need = [];
   const dev = devOf(c);
-  if(rpePflicht(c)) need.push(c.m.rpe);
   if(dev !== 'rcd'){ need.push(c.m.iso, c.m.zs); }
   if(dev !== 'ls'){  need.push(c.m.idn, c.m.t); }
   return need.some(v => v == null || v === '');
@@ -5853,6 +5856,10 @@ function openCircuit(idx){
      die Gerätewahl ohnehin auf LS. Beim FI und bei sonstigen Geräten gibt es
      nichts zu wählen, dort bleibt die Leiste zu. */
   if(!draft.special && (draft.device === 'rcbo' || draft.device === 'ls')) showNameSug();
+  /* v1.191 (Jean): beim FI im Messen gleich in den Auslösestrom. Direkt im
+     Antippen gesetzt, nicht verzögert – iOS öffnet die Tastatur nur dann. */
+  if(messModus() && !(archOffen && archLesen) && draft.device === 'rcd' && draft.status === 'measured'
+     && !$('#mIdn').value.trim()) $('#mIdn').focus({preventScroll:true});
 }
 /* Erstes sichtbares und noch leeres Messfeld, in der Reihenfolge des Formulars.
    Ausgeblendete Zeilen (beim FI die Isolation, beim LS die Auslösewerte) und der
@@ -5915,14 +5922,14 @@ function messfeldLogik(isoSel, zsSel, sugSel){
 }
 messfeldLogik('#mIso', '#mZs', '#isoSug');
 messfeldLogik('#fIso', '#fZs', '#fIsoSug');
-/* Auslösestrom und Auslösezeit sind mit einer Nachkommastelle vollständig. */
+/* Auslösestrom und Auslösezeit sind mit einer Nachkommastelle vollständig.
+   v1.191 (Jean): auch beim 30-mA-FI erst nach der Nachkommastelle weiter –
+   der Sprung nach zwei Ziffern (v1.177) entfällt. */
 ['#mIdn', '#mT'].forEach(sel => {
   const el = $(sel);
   el.oninput = () => {
     idnHinweis();
-    /* v1.177 (QK G59): beim 30-mA-FI ist der Auslösestrom zweistellig ganz */
-    const br = segVal('#segDevice') === 'rcd' ? $('#cBreaker').value : breakerOf(draft);
-    if(nachkomma(el.value) >= 1 || (sel === '#mIdn' && idnRated(br) <= 30 && /^\d{2}$/.test(el.value.trim()))) messWeiter(el);
+    if(nachkomma(el.value) >= 1) messWeiter(el);
   };
 });
 /* v1.182 (QK D10): Grenz- und Richtwerte schon beim Tippen – solange der Wert

@@ -179,7 +179,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   „Rückgängig“ (8 s); SAM-Zeichen als Abzeichen an der Wolke; FI-Typ als Kacheln
   (`#typKacheln`); `--fault-fill` für rote Flächen.
 
-## Nach QK (v1.184–v1.190)
+## Nach QK (v1.184–v1.191)
 
 - **Lager:** Name des angemeldeten Kontos (`lagerWer`), neue Einträge mit `vonUid`;
   `lagerWerNachziehen` schreibt alte Einträge mit dem Prüfernamen des Geräts aufs
@@ -194,6 +194,10 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **Verteilerbeschreibung auf ein Blatt (v1.190):** `beschStufe` misst das Blatt
   unsichtbar (1024 px) und nimmt die erste Stufe `s1`–`s5` (Zeilen/Schrift kleiner)
   unter `BESCH_MAX_H`; von Jean auf dem Gerät bestätigt.
+- **Messen (v1.191):** FI im Messen öffnet mit Fokus auf `#mIdn` (direkt in
+  `openCircuit`, nicht verzögert – sonst keine Tastatur auf iOS); `mIdn`/`mT` springen
+  erst nach der ersten Nachkommastelle (Sonderfall 30 mA aus v1.177 entfällt).
+  R_PE ist freiwillig: kein Teil von `missingValues`/`mangelText` mehr (F7 überholt).
 
 ## SAM (Beta)
 
