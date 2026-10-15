@@ -1,7 +1,19 @@
 <!DOCTYPE html>
 <!--
   PaddleOCR-Test · Verteilerbeschreibung
-  v0.54 · 03.10.2026
+  v0.55 · 14.10.2026
+
+  v0.55: Ehrlicher Zweifel-Vermerk (Umbau Etappe 2, docs/umbau/KONZEPT.md).
+  Im Robustheits-Prüfstand (werkzeuge/robust.mjs) trugen bei v0.54 drei von
+  vier falschen Zeilen keinen Vermerk und landeten in der App ohne Bernstein.
+  Bernstein wird jetzt auch: eine umgedeutete Nummer (Verwechslung,
+  Weiterzählen, Klammer, Kreuzprobe), eine doppelte oder außer der Reihe
+  stehende Nummer, eine Zeile ohne Text, ein Wort, das auf keiner Liste steht
+  oder zusammengeklebt bzw. mit Ziffern verlesen ist, und eine fehlende
+  Absicherung, wo die Spalte sonst gefüllt ist. Gelesene Werte bleiben, wie
+  sie sind; der Bericht nennt die Gründe („Zweifel-Vermerk“). Dazu: eine
+  Ziffernkette über 12 Zeichen in der Nummernspalte ist unlesbar statt
+  durchprobiert – IMG_7795 mit Kunstlicht rechnete sonst über 20 Minuten.
 
   v0.54: Jeans Verteiler aus etwas Abstand (03.10.2026, als STEIN7B in den
   Proben). Das Blatt hing mitten auf der Tür; die Nummern standen nicht im
@@ -902,7 +914,7 @@ pre.abgleich.gut{background:#EAF5DC;border-color:#8FBE36}
 
   <header>
     <h1>PaddleOCR-Test · Verteilerbeschreibung</h1>
-    <span class="ver">v0.54 · 03.10.2026</span>
+    <span class="ver">v0.55 · 14.10.2026</span>
   </header>
 
   <div class="karte">
@@ -1089,7 +1101,7 @@ const MODELLE = {
   latin: {name:'v5 lateinisch',  konstante:'V5_LATIN_MOBILE_MODEL'}
 };
 
-const VERSION = 'v0.54 · 03.10.2026';
+const VERSION = 'v0.55 · 14.10.2026';
 
 /* ==================== Schrittliste ==================== */
 
@@ -2774,6 +2786,12 @@ function nummerDeuten(roh, erwartet, sprung){
   if(fremd.length >= 2)
     return {roh, text: saeubern(roh) || '—', geaendert:false, unklar:true, luecke:0, a:null, b:null};
   const t = nurNummer(roh);
+  /* v0.55: keine Kreisnummer ist länger als „123-124“. Eine lange Ziffernkette
+     (IMG_7795 mit Kunstlicht im Robustheits-Prüfstand) ließ die Suche nach
+     Verwechslungen weit über 20 Minuten rechnen – jede Ziffer bekam ihre
+     Ersatzzeichen, jede Probe wurde mit der Länge teurer. Solche Zellen sind
+     unlesbar, nicht durchzuprobieren. */
+  if(t.length > 12) return {roh, text: saeubern(roh).slice(0, 20) || '—', geaendert:false, unklar:true, luecke:0, a:null, b:null};
   const erg = {roh, text: t || '—', geaendert:false, unklar:false, luecke:0, a:null, b:null};
   /* v0.17: erst die saubere Lesung im ganzen Fenster, DANN Verwechslungen.
      Vorher lief die Suche Zahl für Zahl und probierte bei jeder gleich die
@@ -6111,9 +6129,13 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
   /* v0.43: je Feld ein Zweifel-Vermerk für die Übernahmeliste im E-Assistenten.
      Der Abgleich liest nur nr, bez, ort, sich und bleibt davon unberührt. */
   const zw = f => !!(f && !f.leer && (f.unklar || f.herkunft === 'frei' || f.herkunft === 'unklar'));
-  const ist = reihen.map(r => ({nr: r.n.text || '', bez: r.bez.leer ? '' : r.bez.text,
+  const zweifelListe = zweifelBestimmen(reihen, zeigeSich, zw);
+  const ist = reihen.map((r, k) => ({nr: r.n.text || '', bez: r.bez.leer ? '' : r.bez.text,
     ort: (r.ort && !r.ort.leer) ? r.ort.text : '', sich: (r.sich && !r.sich.leer) ? r.sich.text : '',
-    zweifel: {nr: !!(r.abgeleitet || r.n.unklar), bez: zw(r.bez), ort: zw(r.ort), sich: zw(r.sich)}}));
+    zweifel: zweifelListe[k]}));
+  const zweifelZahl = zweifelListe.filter(z => z.nr || z.bez || z.ort || z.sich).length;
+  text += 'Zweifel-Vermerk (v0.55): ' + zweifelZahl + ' von ' + reihen.length + ' Zeilen' +
+    (zweifelListe.gruende.length ? ' – ' + zweifelListe.gruende.join(', ') : '') + '\n';
   return {knoten: huelle, text, zuB, zuO, zweifel, ist, klammerBericht: klammerBericht.length ? klammerBericht : null, geraeteBericht, fussBericht, folgeBericht, nummerBezBericht, anhangBericht};
 }
 
@@ -6129,6 +6151,68 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
    abgeleitet gekennzeichnet (in der App bernsteinfarben). Nicht bei halben
    Teilungseinheiten (dort belegt jeder Eintrag zwei Nummern) und nicht über
    Zeilen ohne Zahl ("Q1") hinweg. */
+/* v0.55 (Umbau Etappe 2, Jean 14.10.2026: „still falsch ist schlimmer als ein
+   unnötiges Bernstein“): ehrlicher Zweifel-Vermerk je Feld. Bis v0.54 galt
+   nur eine geratene Nummer oder ein Wort ohne Listentreffer als zweifelhaft;
+   im Robustheits-Prüfstand trugen drei von vier falschen Zeilen keinen
+   Vermerk (docs/umbau/4-pruefstand.md). Belegt ist jetzt nur noch, was so
+   gelesen und in die Folge passt; alles Umgebogene, Erschlossene oder
+   Fremde wird bernstein. Die Werte selbst bleiben unverändert. */
+const ZWEIFEL_WOERTER = (function(){
+  const s = new Set(['und','für','mit','ohne','an','am','im','in','zu','zur','vom','von','der','die','das','nachfolgende',
+    'stromkreis','stromkreise','wohnräume','fi','rcd','schutzschalter','fi-schutzschalter','reserve','frei','allgemein',
+    'außen','innen','licht','herd','e-herd','sd','q1','q2','q3','q4','q5','q6','q7','q8','q9']);
+  const rein = w => String(w).toLowerCase().split(/[\s\/,;:()+.]+/).forEach(x => { if(x) s.add(x); });
+  BEZEICHNUNGEN.forEach(rein); WORTSCHATZ.forEach(rein); ORTE.forEach(rein);
+  Object.keys(ABKUERZUNGEN).forEach(k => rein(ABKUERZUNGEN[k]));
+  return s;
+})();
+function fremdesWort(text){
+  /* "(für 5–6)" und Bereiche sind Schema, keine Wörter */
+  const t = String(text || '').replace(/\(für[^)]*\)/gi, ' ').replace(/\(n\)/g, '');
+  for(const w of t.split(/[\s\/,;:()+]+/)){
+    if(!w || /^[–—-]+$/.test(w) || /^\d{1,2}([–-]\d{1,2})?\.?$/.test(w)) continue;
+    /* zusammengeklebt ("SteckdoseKüche") oder Buchstaben mit Ziffern ("1inks", "10A") */
+    if(/[a-zäöüß][A-ZÄÖÜ]/.test(w) || (/\d/.test(w) && /[A-Za-zÄÖÜäöüß]/.test(w))) return w;
+    const k = w.toLowerCase().replace(/\.$/, '');
+    if(ZWEIFEL_WOERTER.has(k)) continue;
+    if(k.includes('-') && k.split('-').every(x => !x || ZWEIFEL_WOERTER.has(x))) continue;
+    return w;
+  }
+  return null;
+}
+function zweifelBestimmen(reihen, sichSpalte, zw){
+  const gruende = [], grund = g => { if(gruende.indexOf(g) < 0) gruende.push(g); };
+  const zahl = r => r.n && typeof r.n.a === 'number' && typeof r.n.b === 'number';
+  /* Absicherung erwartet, wenn die Spalte da ist und die meisten Zeilen eine tragen */
+  const mitSich = reihen.filter(r => r.sich && !r.sich.leer).length;
+  const sichErwartet = sichSpalte && mitSich >= Math.max(2, reihen.length * 0.6);
+  const liste = reihen.map(function(r, k){
+    const z = {nr: !!(r.abgeleitet || r.n.unklar), bez: zw(r.bez), ort: zw(r.ort), sich: zw(r.sich)};
+    /* Nummer umgebogen (Verwechslung, Weiterzählen, Klammer, Kreuzprobe) */
+    if(r.n.geaendert || r.n.herkunft === 'korrigiert'){ z.nr = true; grund('Nummer umgedeutet'); }
+    if(zahl(r)){
+      /* doppelt vergeben oder außer der Reihe */
+      const doppelt = reihen.some((q, j) => j !== k && zahl(q) && q.n.a <= r.n.b && r.n.a <= q.n.b);
+      let vor = null, nach = null;
+      for(let j = k - 1; j >= 0 && !vor; j--) if(zahl(reihen[j])) vor = reihen[j];
+      for(let j = k + 1; j < reihen.length && !nach; j++) if(zahl(reihen[j])) nach = reihen[j];
+      if(doppelt){ z.nr = true; grund('Nummer doppelt'); }
+      else if((vor && r.n.a <= vor.n.b) || (nach && r.n.b >= nach.n.a)){ z.nr = true; grund('Nummer außer der Reihe'); }
+    }
+    const leerB = !r.bez || r.bez.leer || !saeubern(r.bez.text);
+    const leerO = !r.ort || r.ort.leer || !saeubern(r.ort.text);
+    /* Nummer ohne jeden Text: der Inhalt ist verloren gegangen */
+    if(leerB && leerO){ z.bez = true; grund('Zeile ohne Text'); }
+    if(!leerB && fremdesWort(r.bez.text)){ z.bez = true; grund('fremdes Wort'); }
+    if(!leerO && fremdesWort(r.ort.text)){ z.ort = true; grund('fremdes Wort'); }
+    if(sichErwartet && (!r.sich || r.sich.leer)){ z.sich = true; grund('Absicherung fehlt'); }
+    return z;
+  });
+  liste.gruende = gruende;
+  return liste;
+}
+
 function nummernfolgePruefen(reihen){
   if(halbeTEPruefen(reihen).ja) return ['halbe Teilungseinheiten, nicht geprüft'];
   const zahl = r => r.n && typeof r.n.b === 'number';
