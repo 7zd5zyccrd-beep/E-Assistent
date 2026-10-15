@@ -10,6 +10,9 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.201 15.10.2026 Pruefvermerk (Jean): zwei Linien ohne die Woerter "Datum" und
+                    "Unterschrift", in gleichem Abstand - mehr Platz zum Schreiben,
+                    wie beim Aufkleber fuer die Wiederholungspruefung.
   v1.200 15.10.2026 Pruefvermerk (Jean): die Datumslinie rueckt naeher an die
                     Unterschrift, zur gruenen Linie bleibt mehr Abstand.
   v1.199 15.10.2026 Pruefvermerk (Jean): Datum und Unterschrift bekommen gleich viel
@@ -2550,17 +2553,16 @@ input.ungueltig{border-color:var(--fault)!important;color:var(--fault)}   /* v1.
   padding:5px 7px 3px;display:flex;flex-direction:column}
 .paper .pvk{display:flex;justify-content:space-between;align-items:flex-start;gap:4px;
   padding-bottom:4px;border-bottom:3px solid #A0D241;print-color-adjust:exact;-webkit-print-color-adjust:exact}
-.paper .pvk b,.paper .pvf span{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em}
+.paper .pvk b{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em}
 .paper .pvk b{font-size:8.5pt;line-height:1;font-weight:700}
 .paper .pv .brand{margin:0;display:block}
 .paper .pv .brand .wm{display:block;width:34px;height:13px;background-position:right top}
 /* v1.199 (Jean: Datum hatte in der Höhe wenig Platz): Kopf knapper.
    v1.200 (Jean): Datum näher an die Unterschrift, mehr Luft zur grünen Linie –
    beide Felder sitzen unten, der freie Raum bleibt über dem Datum. */
-.paper .pvf{display:flex;flex-direction:column}
-.paper .pvk + .pvf{margin-top:auto}
-.paper .pvf i{display:block;border-bottom:1px solid #000;height:17px}
-.paper .pvf span{font-size:6pt;line-height:1.2;padding-top:1px}
+/* v1.201 (Jean): Linien ohne Beschriftung, in gleichem Abstand ab der grünen
+   Linie; unten bleibt Luft zum Rahmen (wie beim Aufkleber) */
+.paper .pvf{display:block;border-bottom:1px solid #000;height:26px;flex:none}
 .paper table{width:100%;border-collapse:collapse;margin-bottom:20px}
 .paper th,.paper td{border:1px solid #000;padding:5px 6px;text-align:left;font-size:10pt}
 .paper th{background:#eee;font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em}
@@ -3959,7 +3961,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.200';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.201';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 15.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -12026,8 +12028,7 @@ function blaetterBauen(nur){
     blaetter.push(`<div class="kopfz"><div><h2>Verteilerbeschreibung</h2>
       <div class="meta klein">${objektKurz(PROJ)}</div></div>
       <div class="pv"><div class="pvk"><b>Anlage<br>geprüft</b><span class="brand"><span class="wm"></span></span></div>
-        <div class="pvf"><i></i><span>Datum</span></div>
-        <div class="pvf"><i></i><span>Unterschrift</span></div></div></div>
+        <div class="pvf"></div><div class="pvf"></div></div></div>
       <table class="besch BESCH_STUFE"><thead><tr><th style="width:90px">Nr.</th><th>Bezeichnung</th><th style="width:39%">Ort</th></tr></thead><tbody>` +
       cs.map(c => `<tr><td>${esc(circuitLabel(c))}</td><td>${esc(beschrName(c))}</td><td>${esc(c.room)}</td></tr>`).join('') +
       `</tbody></table>` +
