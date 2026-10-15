@@ -195,6 +195,10 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **Verteilerbeschreibung auf ein Blatt (v1.190):** `beschStufe` misst das Blatt
   unsichtbar (1024 px) und nimmt die erste Stufe `s1`–`s5` (Zeilen/Schrift kleiner)
   unter `BESCH_MAX_H`; von Jean auf dem Gerät bestätigt.
+- **Prüfvermerk (v1.198):** Verteilerbeschreibung mit Kopf `.kopfz`, rechts fest der
+  Vermerk `.pv` (108 px = 20 mm, Plakette Ø 30 mm deckt ihn ab): „Anlage geprüft“,
+  BDS-Logo, Linien Datum und Unterschrift (Jean: nicht „Kürzel“), keine nächste
+  Prüfung. Die Punkte in der Überschrift entfallen dort (`seite` in `blaetterBauen`).
 - **Messen (v1.191):** FI im Messen öffnet mit Fokus auf `#mIdn` (direkt in
   `openCircuit`, nicht verzögert – sonst keine Tastatur auf iOS); `mIdn`/`mT` springen
   erst nach der ersten Nachkommastelle (Sonderfall 30 mA aus v1.177 entfällt).
@@ -211,8 +215,9 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   (`istStromstoss`) bekommen „K1 …“ nach Lage, nur Projekte mit `kNr` (neu ab v1.193,
   bestehende unverändert). Wiederholung: K vom Blatt (SAM) oder von Hand → `kFest`.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.197, 15.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.198, 15.10.2026)
 
+- **Prüfvermerk (v1.198):** am Ausdruck prüfen – Größe 20 × 20 mm, Platz zum Schreiben.
 - **FI im Messen (v1.191):** öffnet die Tastatur beim Auslösestrom auch über „Weiter →“
   und aus der Liste? Hier nicht prüfbar.
 - **Neuausgabe zeigte alten Inhalt:** liegt nach Jeans Versuch (Umbenennen) an
