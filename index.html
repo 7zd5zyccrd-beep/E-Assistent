@@ -10,6 +10,10 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.197 15.10.2026 Neuinstallation (Jean): spaeter ausgegebene Dokumente tragen
+                    kein Ausgabedatum mehr im Namen ("Protokoll" statt
+                    "Protokoll 26-10-14") - der Name war zu lang. Eine spaetere
+                    Ausgabe ersetzt die fruehere im Projektordner.
   v1.197 15.10.2026 SAM mit Werkstatt-Stand v0.55 (Umbau Etappe 2): unsichere
                     Stellen werden ehrlicher bernstein - auch eine umgedeutete,
                     doppelte oder ausser der Reihe stehende Nummer, ein Wort, das
@@ -12178,13 +12182,10 @@ const expName = (p, teil, endung) =>
 /* v1.189 (Jean): bei der Neuinstallation gehen Beschreibung, Material und Fotos
    oft vorab hinaus, das Protokoll erst am Ende. Das Datum vorn bleibt der
    Projektbeginn – daraus und aus dem letzten Abschnitt baut der Kurzbefehl den
-   Ordner. Was an einem späteren Tag hinausgeht, trägt hinter der Art das Datum
-   der Ausgabe: "Protokoll 26-10-13". Die Projektdatei bleibt ohne Zusatz. */
-function expTeil(p, teil){
-  if((p.mode || 'wdh') !== 'neu') return teil;
-  const heute = expDatum({startedAt: Date.now()});
-  return heute === expDatum(p) ? teil : teil + ' ' + heute;
-}
+   Ordner. v1.197 (Jean: Name zu lang): kein Ausgabedatum mehr hinter der Art –
+   eine spätere Ausgabe ersetzt die frühere im selben Ordner ("Ersetzen" im
+   Kurzbefehl), es bleibt die neueste Fassung. */
+const expTeil = (p, teil) => teil;
 
 /* Ein Blatt als eigenständige HTML-Datei: die Gestaltung der App wird
    mitgegeben, damit der Kurzbefehl daraus dasselbe Bild als PDF erzeugt. */

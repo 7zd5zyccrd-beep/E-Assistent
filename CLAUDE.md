@@ -189,8 +189,9 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **Trafo-LS (v1.189):** `trafoLs`/`ohneMessung` – LS mit „Trafo“ im Namen wie ein
   sonstiges Gerät: keine Messung, nicht in der Messtabelle, sperrt nicht.
 - **Dateinamen Neuinstallation (v1.189):** Datum vorn = Projektbeginn (Ordner des
-  Kurzbefehls); an einem späteren Tag trägt der Typ das Ausgabedatum (`expTeil`,
-  „Protokoll 26-10-13“). Projektdatei ohne Zusatz. Materialblatt ohne Anzahl 0.
+  Kurzbefehls; seit v1.196 nach `angelegt`). Das Ausgabedatum hinter dem Typ
+  (v1.189) ist seit v1.197 wieder weg (Jean: Name zu lang) – spätere Ausgabe ersetzt
+  die frühere. Projektdatei ohne Zusatz. Materialblatt ohne Anzahl 0.
 - **Verteilerbeschreibung auf ein Blatt (v1.190):** `beschStufe` misst das Blatt
   unsichtbar (1024 px) und nimmt die erste Stufe `s1`–`s5` (Zeilen/Schrift kleiner)
   unter `BESCH_MAX_H`; von Jean auf dem Gerät bestätigt.
@@ -210,7 +211,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   (`istStromstoss`) bekommen „K1 …“ nach Lage, nur Projekte mit `kNr` (neu ab v1.193,
   bestehende unverändert). Wiederholung: K vom Blatt (SAM) oder von Hand → `kFest`.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.196, 14.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.197, 15.10.2026)
 
 - **FI im Messen (v1.191):** öffnet die Tastatur beim Auslösestrom auch über „Weiter →“
   und aus der Liste? Hier nicht prüfbar.
