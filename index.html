@@ -10,6 +10,9 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.199 15.10.2026 Pruefvermerk (Jean): Datum und Unterschrift bekommen gleich viel
+                    Platz zum Schreiben, der Kopf mit "Anlage geprueft" ist etwas
+                    knapper.
   v1.198 15.10.2026 Verteilerbeschreibung (Jean): Pruefvermerk oben rechts im Kopf,
                     immer an derselben Stelle - "Anlage geprueft" mit BDS-Logo und
                     Linien fuer Datum und Unterschrift, von Hand vor Ort
@@ -2542,15 +2545,17 @@ input.ungueltig{border-color:var(--fault)!important;color:var(--fault)}   /* v1.
 .paper .kopfz h2{margin-bottom:6px}
 .paper .kopfz .meta{margin-bottom:0}
 .paper .pv{flex:none;width:108px;height:108px;box-sizing:border-box;border:2px solid #000;
-  padding:6px 7px 4px;display:flex;flex-direction:column;justify-content:space-between}
+  padding:5px 7px 3px;display:flex;flex-direction:column}
 .paper .pvk{display:flex;justify-content:space-between;align-items:flex-start;gap:4px;
-  padding-bottom:5px;border-bottom:3px solid #A0D241;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+  padding-bottom:4px;border-bottom:3px solid #A0D241;print-color-adjust:exact;-webkit-print-color-adjust:exact}
 .paper .pvk b,.paper .pvf span{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em}
-.paper .pvk b{font-size:9pt;line-height:1.05;font-weight:700}
+.paper .pvk b{font-size:8.5pt;line-height:1;font-weight:700}
 .paper .pv .brand{margin:0;display:block}
 .paper .pv .brand .wm{display:block;width:34px;height:13px;background-position:right top}
-.paper .pvf{display:flex;flex-direction:column}
-.paper .pvf i{display:block;border-bottom:1px solid #000;height:13px}
+/* v1.199 (Jean: Datum hatte in der Höhe wenig Platz): Kopf knapper, die beiden
+   Schreibfelder teilen sich den Rest zu gleichen Teilen, Linie jeweils unten */
+.paper .pvf{flex:1;display:flex;flex-direction:column;justify-content:flex-end}
+.paper .pvf i{display:block;border-bottom:1px solid #000}
 .paper .pvf span{font-size:6pt;line-height:1.2;padding-top:1px}
 .paper table{width:100%;border-collapse:collapse;margin-bottom:20px}
 .paper th,.paper td{border:1px solid #000;padding:5px 6px;text-align:left;font-size:10pt}
@@ -3950,7 +3955,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.198';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.199';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 15.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
