@@ -1,7 +1,16 @@
 <!DOCTYPE html>
 <!--
   PaddleOCR-Test · Verteilerbeschreibung
-  v0.58 · 15.10.2026
+  v0.59 · 16.10.2026
+
+  v0.59: Nummernspalte, erster Schritt der Umbau-Etappe 5 (Jean, iPhone,
+  IMG_8259: Zeile 3 fehlte in der App ganz). Ein Rest der Kopfzeile über der
+  ersten gelesenen Nummer („Hinweise“) wird kein Eintrag 1* mehr, wenn darunter
+  sauber die 1 steht. Folgeprobe: eine sauber gelesene Zahl wird nicht
+  umgedeutet, wenn die nächsten zwei gelesenen Nummern von ihr aus
+  weiterzählen (aus 1, 2 wurden sonst 4 und 7). Dazu trennt ein angehängter
+  Schrägstrich wie das Komma („Schlafzimmer/ Beleuchtung“), auch ohne
+  Lücke („Schlafzimmer/Beleuchtung“).
 
   v0.58: Fehlerbehebung an v0.55 – Relais, Stromstoßschalter, Trafo,
   Hauptschalter, Überspannungsableiter und Steuersicherung lösen „Absicherung
@@ -929,7 +938,7 @@ pre.abgleich.gut{background:#EAF5DC;border-color:#8FBE36}
 
   <header>
     <h1>PaddleOCR-Test · Verteilerbeschreibung</h1>
-    <span class="ver">v0.58 · 15.10.2026</span>
+    <span class="ver">v0.59 · 16.10.2026</span>
   </header>
 
   <div class="karte">
@@ -1117,7 +1126,7 @@ const MODELLE = {
   latin: {name:'v5 lateinisch',  konstante:'V5_LATIN_MOBILE_MODEL'}
 };
 
-const VERSION = 'v0.58 · 15.10.2026';
+const VERSION = 'v0.59 · 16.10.2026';
 
 /* ==================== Schrittliste ==================== */
 
@@ -4744,6 +4753,8 @@ function verarbeite(erg, arbeit, winkel, leseDauer, nachleseBericht){
     tabellenText = gebaut.text;
     letzteReihen = gebaut.ist || null;
     if(gebaut.klammerBericht) mess.push('Klammern zusammengefasst: ' + gebaut.klammerBericht.join('; '));
+    /* v0.59: Folgeprobe meldet sich immer, auch wenn sie nichts tat */
+    if(gebaut.folgeBehalten) mess.push('Folgeprobe: ' + (gebaut.folgeBehalten.length ? 'gegen die Erwartung gelesen behalten ' + gebaut.folgeBehalten.join(', ') : 'keine Nummer gegen die Erwartung behalten'));
     mess.push('Nummernfolge: ' + (gebaut.folgeBericht && gebaut.folgeBericht.length ? gebaut.folgeBericht.join('; ') : 'keine Nummer außer der Reihe'));
     if(gebaut.fussBericht && gebaut.fussBericht.length) mess.push('Unter der Tabelle, nicht als Eintrag gezählt: ' + gebaut.fussBericht.map(t => '„' + t + '"').join('; '));
     if(letzteHalbeTE) mess.push('Halbe Teilungseinheiten: ' + letzteHalbeTE.text);
@@ -5451,6 +5462,10 @@ function bezUndOrt(roh){
      "Bel.Flur", "Std.+ Bel.Bad" - Blatt IMG_6744); "+" und "/" werden eigene
      Trennzeichen, damit Räume und Bezeichnungen dazwischen einzeln zählen */
   let t = nummerierteRaeume(klebeLoesen(saeubern(roh)));
+  /* v0.59: ein Schrägstrich zwischen zwei Wörtern ohne Lücke trennt ebenso –
+     „Steckdose Schlafzimmer/Beleuchtung“ (IMG_8259 leicht gedreht) behielt
+     sonst Schlafzimmer in der Bezeichnung, ohne Ort und ohne Bernstein */
+  t = t.replace(/([A-Za-zÄÖÜäöüß]{2,})\/(?=[A-Za-zÄÖÜäöüß]{2,})/g, '$1 / ');
   /* v0.42: auch vor Kleinbuchstaben, die Erkennung schreibt Kürzel oft klein
      ("Bel.Reinig.Steckd.sz/Wz/Küch", schupa-Karte IMG_6014) */
   if(/[A-Za-zäöüß]\.[A-Za-zÄÖÜäöüß+\/]|\.\s*\+/.test(t))
@@ -5472,8 +5487,11 @@ function bezUndOrt(roh){
   let ersetzt = false, trenner = false;
   let steckIdx = -1, steckOrte = 0, steckOffen = false, reinigung = false;
   woerter.forEach(function(w, i){
-    if(w === '+' || w === '/'){ if(bezW.length) trenner = true; return; }
-    const rein = w.replace(/[,;.]+$/,'');
+    /* v0.59: ein Schrägstrich zwischen zwei Orten trennt nur die Orte, nicht die
+       Bezeichnung – „Licht Flur/Küche DA“ (IMG_6674) bleibt „Licht DA“ */
+    const ortDanach = j => { const n = (woerter[j] || '').replace(/[,;.\/]+$/,''); return !!n && istOrtsteil(n); };
+    if(w === '+' || w === '/'){ if(bezW.length && !(w === '/' && ortW.length && i > 0 && istOrtsteil(woerter[i-1].replace(/[,;.\/]+$/,'')) && ortDanach(i + 1))) trenner = true; return; }
+    const rein = w.replace(/[,;.\/]+$/,'');
     if(!rein) return;
     /* v0.42: "Reinig." vor der Steckdose fällt weg - eine Reinigungssteckdose
        ist eine Steckdose (Jean: "Bel.Reinig.Steckd." -> "Beleuchtung,
@@ -5489,11 +5507,13 @@ function bezUndOrt(roh){
        eines Paares - "Beleuchtung Flur/Bad/Küche, Steckdose Flur" ist
        "Beleuchtung, Steckdose", "Waschmaschine Bad, Spiegelschrank" ist
        "Waschmaschine, Spiegelschrank" (Jüngling-Blatt) */
-    if(i > 0 && !alsAbk && istOrtsteil(rein)){ ortW.push(rein); if(/,$/.test(w) && bezW.length) trenner = true; return; }
+    /* v0.59: ein angehängter Schrägstrich trennt wie das Komma – „Steckdose
+       Schlafzimmer/ Beleuchtung“ (IMG_8259) wurde sonst „Steckdose Beleuchtung“ */
+    if(i > 0 && !alsAbk && istOrtsteil(rein)){ ortW.push(rein); if((/,$/.test(w) || (/\/$/.test(w) && !ortDanach(i + 1))) && bezW.length) trenner = true; return; }
     if(trenner){ bezW.push('/'); trenner = false; }
     /* v0.37: auch zwischen zwei Bezeichnungen trennt das Komma ein Paar -
        "Dunstabzugshaube, Kühlschrank" (Hofmann) */
-    if(/,$/.test(w)) trenner = true;
+    if(/[,\/]$/.test(w)) trenner = true;
     const ab = kuerzel(rein);
     const wort = (ab && BEZEICHNUNGEN.indexOf(ab) >= 0) ? ab : rein;
     /* v0.42: auf Beleuchtung oder Licht folgt kein Beiwort, sondern das zweite
@@ -5974,6 +5994,20 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
     }
     return false;
   };
+  /* v0.59: zählen die nächsten zwei gelesenen Nummern von x aus weiter? */
+  const folgeBehalten = [];
+  const folgeBestaetigt = function(lk, x){
+    let gesehen = 0, treffer = 0;
+    for(let k = lk + 1; k < reihenListe.length && gesehen < 2; k++){
+      const zk = reihenListe[k].zi;
+      if(zk < 0) continue;
+      gesehen++;
+      /* die Nachbarn dürfen ein Anhängsel tragen („3 S“ bei IMG_8259) */
+      const zz = /^\s*(\d{1,2})(?![\d\/\-–])/.exec(nr[zk].text || '');
+      if(zz && +zz[1] === x + (k - lk)) treffer++;
+    }
+    return treffer === 2;
+  };
   reihenListe.forEach(function(eintrag, lk){
     const zi = eintrag.zi, r = eintrag.r;
     let n;
@@ -6006,6 +6040,17 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
       if(nach && n.geaendert){
         const sp = nummerDeuten(t, erwartet, true);
         if(typeof sp.b === 'number' && sp.a !== n.a && sprungBestaetigt(lk, sp.b)) n = sp;
+      }
+      /* v0.59 (Umbau Etappe 5, erster Schritt): eine sauber gelesene Zahl wird
+         nicht umgedeutet, wenn die nächsten zwei gelesenen Nummern genau von ihr
+         aus weiterzählen – dann irrt die Erwartung, nicht die Lesung. Bei IMG_8259
+         wurde die 1 zur 4 und die 2 zur 7, obwohl darunter 3, 4, 5 standen. */
+      if(nach && n.geaendert){
+        const zs = /^\s*(\d{1,2})\s*$/.exec(t);
+        if(zs && +zs[1] !== n.a && folgeBestaetigt(lk, +zs[1])){
+          folgeBehalten.push(zs[1] + ' statt ' + n.text);
+          n = {text: zs[1], roh: t, geaendert: false, unklar: false, luecke: 0, a: +zs[1], b: +zs[1]};
+        }
       }
       n.herkunft = n.geaendert ? 'korrigiert' : 'gelesen';
       /* v0.47 (aus #13): eine Nummer über der erwarteten, auf die die erwartete + 1
@@ -6064,6 +6109,16 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
          dem iPhone: "Prüftaste ... monatlich betätigen" wurde Zeile 11*) */
       if(!q && HINWEIS.test(rollenMitText.map(k => roh[k]).join(' '))){
         fussBericht.push('Hinweis: ' + rollenMitText.map(k => saeubern(roh[k])).join(' ').slice(0, 60));
+        return;
+      }
+      /* v0.59: über der ersten gelesenen Nummer, und die nächste gelesene ist
+         genau die erwartete – dann ist es ein Rest der Kopfzeile, kein Eintrag.
+         Bei IMG_8259 (Jüngling, quer fotografiert) rutschte „Hinweise“ unter den
+         Kopfschnitt und wurde 1*; danach galt die 2 als erwartet, aus der
+         sauber gelesenen 1 wurde über eine Verwechslung die 4, aus der 2 die 7,
+         und Zeile 3 fiel weg. */
+      if(!q && nach && lk < ersteNr && naechsteNr(lk) === erwartet){
+        fussBericht.push('Kopfrest über der ersten Nummer: ' + rollenMitText.map(k => saeubern(roh[k])).join(' ').slice(0, 60));
         return;
       }
       if(!q && reihen.length >= 3 && reihen.slice(-3).every(leer)){
@@ -6366,7 +6421,7 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
   const zweifelZahl = zweifelListe.filter(z => z.nr || z.bez || z.ort || z.sich).length;
   text += 'Zweifel-Vermerk (v0.55): ' + zweifelZahl + ' von ' + reihen.length + ' Zeilen' +
     (zweifelListe.gruende.length ? ' – ' + zweifelListe.gruende.join(', ') : '') + '\n';
-  return {knoten: huelle, text, zuB, zuO, zweifel, ist, klammerBericht: klammerBericht.length ? klammerBericht : null, geraeteBericht, fussBericht, folgeBericht, nummerBezBericht, anhangBericht};
+  return {knoten: huelle, text, zuB, zuO, zweifel, ist, klammerBericht: klammerBericht.length ? klammerBericht : null, geraeteBericht, fussBericht, folgeBericht, folgeBehalten: nach ? folgeBehalten : null, nummerBezBericht, anhangBericht};
 }
 
 /* v0.44 (Jean, 25.09.2026, sein eigener Verteiler, zurückgehalten und nur
