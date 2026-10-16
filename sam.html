@@ -1,7 +1,14 @@
 <!DOCTYPE html>
 <!--
   PaddleOCR-Test · Verteilerbeschreibung
-  v0.59 · 16.10.2026
+  v0.60 · 16.10.2026
+
+  v0.60: Klammer ohne Strich (Jean, IMG_8276, Münch): „13 | 14 Hauptschalter
+  | 15“, der dünne Klammerstrich wurde nicht gelesen, und es blieb still
+  „14 Hauptschalter“. Ein mehrpoliges Gerät (Hauptschalter, E-Herd,
+  Überspannungsableiter, FI) mit leeren Einzelnummern direkt darüber und
+  darunter wird ein Eintrag über alle, immer bernstein (leereKlammer).
+  Jean: nicht auf einzelne Blätter anpassen – gilt nur für dieses Muster.
 
   v0.59: Nummernspalte, erster Schritt der Umbau-Etappe 5 (Jean, iPhone,
   IMG_8259: Zeile 3 fehlte in der App ganz). Ein Rest der Kopfzeile über der
@@ -938,7 +945,7 @@ pre.abgleich.gut{background:#EAF5DC;border-color:#8FBE36}
 
   <header>
     <h1>PaddleOCR-Test · Verteilerbeschreibung</h1>
-    <span class="ver">v0.59 · 16.10.2026</span>
+    <span class="ver">v0.60 · 16.10.2026</span>
   </header>
 
   <div class="karte">
@@ -1126,7 +1133,7 @@ const MODELLE = {
   latin: {name:'v5 lateinisch',  konstante:'V5_LATIN_MOBILE_MODEL'}
 };
 
-const VERSION = 'v0.59 · 16.10.2026';
+const VERSION = 'v0.60 · 16.10.2026';
 
 /* ==================== Schrittliste ==================== */
 
@@ -4761,6 +4768,8 @@ function verarbeite(erg, arbeit, winkel, leseDauer, nachleseBericht){
     mess.push('Anhängsel in der Bezeichnung: ' + (gebaut.anhangBericht && gebaut.anhangBericht.length ? gebaut.anhangBericht.join('; ') : 'keine'));
     mess.push('Nummer in der Bezeichnung: ' + (gebaut.nummerBezBericht && gebaut.nummerBezBericht.length ? 'entfernt bei ' + gebaut.nummerBezBericht.join(', ') : 'keine'));
     if(gebaut.geraeteBericht && gebaut.geraeteBericht.length) mess.push('Gleiche Geräte zusammengefasst: ' + gebaut.geraeteBericht.join('; '));
+    /* v0.60: meldet sich immer */
+    if(gebaut.leerKlammerBericht) mess.push('Klammer ohne Strich: ' + (gebaut.leerKlammerBericht.length ? gebaut.leerKlammerBericht.join('; ') : 'keine'));
     /* v0.27: ergänzen statt ersetzen - sonst fällt der gefundene Nummernstreifen
        heraus (daran scheiterten v0.23 und v0.26 auf dem Münch-Blatt) */
     rueck = Object.assign(rueck, {zweifel: gebaut.zweifel || [],
@@ -6318,6 +6327,7 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
   reihen.forEach(aufsSchema);
   const anhangBericht = anhaengselEntfernen(reihen);
   const geraeteBericht = geraeteZusammenfassen(reihen);
+  const leerKlammerBericht = leereKlammer(reihen);
   reihen.forEach(function(r){ [r.bez, r.ort].forEach(f => { if(f && f.text) f.text = f.text.replace(/\u00a0/g, ' '); }); });
 
   reihen.forEach(function(r, idx){
@@ -6421,7 +6431,7 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
   const zweifelZahl = zweifelListe.filter(z => z.nr || z.bez || z.ort || z.sich).length;
   text += 'Zweifel-Vermerk (v0.55): ' + zweifelZahl + ' von ' + reihen.length + ' Zeilen' +
     (zweifelListe.gruende.length ? ' – ' + zweifelListe.gruende.join(', ') : '') + '\n';
-  return {knoten: huelle, text, zuB, zuO, zweifel, ist, klammerBericht: klammerBericht.length ? klammerBericht : null, geraeteBericht, fussBericht, folgeBericht, folgeBehalten: nach ? folgeBehalten : null, nummerBezBericht, anhangBericht};
+  return {knoten: huelle, text, zuB, zuO, zweifel, ist, klammerBericht: klammerBericht.length ? klammerBericht : null, geraeteBericht, leerKlammerBericht, fussBericht, folgeBericht, folgeBehalten: nach ? folgeBehalten : null, nummerBezBericht, anhangBericht};
 }
 
 /* v0.44 (Jean, 25.09.2026, sein eigener Verteiler, zurückgehalten und nur
@@ -6685,6 +6695,38 @@ function geraeteZusammenfassen(reihen){
     bericht.push(von + '–' + bis + ' ' + txt(a.bez) + (te ? ' (' + te + ' TE' + (/^E-Herd$/.test(txt(a.bez)) ? (te === 3 ? ', passt zum dreipoligen Herd' : ', passt NICHT zum dreipoligen Herd') : '') + ')' : ''));
     a.n.text = von + '–' + bis; a.n.a = von; a.n.b = bis; a.hinweis = '';
     reihen.splice(i + 1, j - i);
+  }
+  return bericht;
+}
+
+/* v0.60 (Jean, IMG_8276, Münch): eine Klammer, deren Strich nicht gelesen wurde.
+   „13 | 14 Hauptschalter | 15“ mit einem dünnen senkrechten Strich neben den
+   Nummern – die Erkennung sah nur drei Nummern, Text allein bei der mittleren,
+   und es wurde still „14 Hauptschalter“. Ein mehrpoliges Gerät mit leeren
+   Einzelnummern direkt darüber UND darunter (je eine oder zwei, Text etwa in
+   der Mitte) ist ein Gerät über alle diese Nummern. Erschlossen, nicht
+   gelesen – darum immer bernstein. Leere Reserveplätze ohne Gerät dazwischen
+   (IMG_8259, 7–12) berührt das nicht. */
+const KLAMMER_GERAET = /^(Hauptschalter|E-Herd|Überspannungsableiter|FI-Schutzschalter|Fehlerstromschutzschalter)$/;
+function leereKlammer(reihen){
+  const bericht = [];
+  const einzeln = r => r && r.n && typeof r.n.b === 'number' && (r.n.a === null || r.n.a === undefined || r.n.a === r.n.b) && !r.abgeleitet;
+  const nr = r => r.n.b;
+  const leer = r => (!r.bez || r.bez.leer || !saeubern(r.bez.text)) && (!r.ort || r.ort.leer || !saeubern(r.ort.text)) && (!r.sich || r.sich.leer);
+  for(let i = 1; i < reihen.length - 1; i++){
+    const g = reihen[i];
+    if(!einzeln(g) || !g.bez || g.bez.leer || !KLAMMER_GERAET.test(saeubern(g.bez.text))) continue;
+    /* leere Einzelnummern lückenlos darüber und darunter zählen */
+    let oben = 0, unten = 0;
+    while(oben < 2 && i - oben - 1 >= 0 && einzeln(reihen[i - oben - 1]) && leer(reihen[i - oben - 1]) && nr(reihen[i - oben - 1]) === nr(g) - oben - 1) oben++;
+    while(unten < 2 && i + unten + 1 < reihen.length && einzeln(reihen[i + unten + 1]) && leer(reihen[i + unten + 1]) && nr(reihen[i + unten + 1]) === nr(g) + unten + 1) unten++;
+    if(!oben || !unten || Math.abs(oben - unten) > 1) continue;
+    const von = nr(g) - oben, bis = nr(g) + unten;
+    g.n = Object.assign({}, g.n, {text: von + '–' + bis, a: von, b: bis, herkunft: 'korrigiert'});
+    reihen.splice(i + 1, unten);
+    reihen.splice(i - oben, oben);
+    i -= oben;
+    bericht.push(von + '–' + bis + ' ' + saeubern(g.bez.text) + ' (Text nur bei ' + (von + oben) + ', bernstein)');
   }
   return bericht;
 }
