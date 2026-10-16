@@ -10,6 +10,12 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.207 16.10.2026 SAM, Umbau Etappe 4c (Jean, IMG_8259: Zeile 3 fehlte ganz):
+                    hat SAM bei einer Nummer keinen Text gelesen, sitzt dort laut
+                    Verteilerfoto aber ein Geraet, kommt die Zeile bernstein in
+                    die Liste ("Text auf dem Blatt nicht gelesen - Geraet vom
+                    Verteiler") statt still wegzufallen. Leere Reserveplaetze
+                    ohne Geraet fallen weiter weg.
   v1.206 16.10.2026 SAM, Umbau Etappe 4a (Jean: mit einem Tipp uebernehmen, aber
                     bernstein bis angesehen): ein Kreis, den SAM unsicher gelesen
                     hat, bleibt nach dem Uebernehmen bernstein - in Erfassen mit
@@ -3991,7 +3997,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.206';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.207';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 16.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -10288,6 +10294,8 @@ async function samLesen(P, fid, datei, tidP, nochmal){
   P.samLesung = {fid, laeuft:false, ok: !!d.ok && reihen.length > 0, fehler: d.fehler || '',
                  version: d.version || '', zeit: Date.now(), reihen,
                  klein: !!d.schriftKlein, schrift: d.schrift || null,      // v1.155: Schrift im Foto zu klein (SAM v0.53)
+                 /* v1.207: Nummern ohne Text – Reserve oder verlorene Zeile, der Verteiler entscheidet */
+                 leerNr: (d.reihen || []).filter(r => r.nr && !(r.bez || r.ort || r.sich)).map(r => String(r.nr)),
                  uebernommen: vorher ? vorher.uebernommen : undefined};
   samVerknuepfen(P);
   if(P.probe){} else if(P === PROJ) saveProj(); else { saveProjects(); fbProjHoch(P); }   // v1.121: Probelauf speichert nichts
@@ -10328,6 +10336,8 @@ async function samGeraeteLesen(P, fid, datei, tidP, nochmal){
   if(!P.samGeraete || P.samGeraete.fid !== fid) return;
   const reihen = (d.reihen || []).map(r => (r.geraete || []).map(g => ({art: g.art || '—', aufdruck: g.aufdruck || '', unsicher: g.aufdruckSicher === false, marke: g.marke || '',
                                    streifen: g.streifen || '', streifenSicher: !!g.streifenSicher,   // v1.146: Nummernstreifen
+                                   te: r.te > 0 && g.x1 > g.x0 ? Math.max(1, Math.round((g.x1 - g.x0) / r.te)) : null,   // v1.207: Breite
+                                   teAb: r.te > 0 && g.x0 != null ? Math.round(g.x0 / r.te) : null,                       // und Lage in TE
                                    texte: g.texte || []})))                                      // v1.149: Typnummer (Stromstoßschalter)
                                  .filter(r => r.length);
   P.samGeraete = {fid, laeuft:false, ok: !!d.ok && reihen.length > 0, fehler: d.fehler || '',
@@ -10487,6 +10497,7 @@ function samVerknuepfen(P){
   const l = P.samLesung, g = P.samGeraete;
   if(!l || !l.reihen) return;
   /* Was ein früherer Abgleich eingetragen hat, zuerst zurücknehmen */
+  l.reihen = l.reihen.filter(z => !z.ausVt || z.uebernommen || z.geprueft);   // v1.207
   l.reihen.forEach(z => {
     if(z.uebernommen) return;
     if(z.vt){
@@ -10559,6 +10570,67 @@ function samVerknuepfen(P){
     }
   });
   samStreifenAbgleich(P, rs, geraete);
+  samTextFehlt(P, rs, geraete);
+}
+/* v1.207 (Umbau SAM Etappe 4c; Jean, IMG_8259: Zeile 3 fehlte in der App ganz):
+   eine Nummer, zu der die Beschreibung keinen Text lieferte, fiel bisher weg –
+   als Reserveplatz. Sitzt dort laut Verteiler aber ein Gerät, das keinem Eintrag
+   ohne passenden Eintrag ist, kommt sie bernstein in die Liste. Die Nummer des
+   Geräts kommt vom sicheren Nummernstreifen oder aus seiner Lage in der Reihe
+   (Breite in TE), wenn die meisten Geräte der Reihe damit genau auf ihre
+   Einträge fallen. Leere
+   Reserveplätze ohne Gerät fallen weiter weg. */
+function samTextFehlt(P, rs, geraete){
+  const l = P.samLesung, g = P.samGeraete;
+  const leer = new Set(l.leerNr || []);
+  if(!leer.size || P.abwNr || samGeraeteZaehlung(rs)) return;
+  const nummern = rs.map(z => samNummer(z.nr)).filter(Boolean);
+  const belegt = n => nummern.some(m => n >= m.start && n <= m.start + m.te - 1);
+  const vergeben = new Set();                            // Einträge, die schon eine Reihe erklärt
+  const neu = [];
+  let k0 = 0;
+  g.reihen.forEach(reihe => {
+    const ks = reihe.map((x, i) => k0 + i); k0 += reihe.length;
+    /* Lage jedes Geräts in TE (aus der Bildlage, Lücken im Verteiler zählen
+       mit); ohne Breite und Lage keine Rechnung */
+    if(reihe.some(x => !x.te || x.teAb == null)) return;
+    const ab = reihe.map(x => x.teAb);
+    /* Versatz Nummer − Lage: der, bei dem die meisten Geräte genau auf einen
+       Eintrag gleicher Breite fallen. Das hängt nicht an der Zuordnung, die bei
+       einer fehlenden Zeile das Nachbargerät nehmen kann. Gleich gebaute Reihen
+       (FI + 4 LS) passen auf mehrere Versätze – ein Eintrag erklärt nur eine Reihe,
+       bei Gleichstand entscheidet die Zuordnung. */
+    const treffer = o => reihe.map((x, i) => nummern.findIndex((m, e) => !vergeben.has(e) && m.start === ab[i] + o && m.te === x.te)).filter(e => e >= 0);
+    const stuetze = o => reihe.filter((x, i) => rs.some(z => z.verteiler && z.verteiler.idx && z.verteiler.idx[0] === ks[i] && samNummer(z.nr) && samNummer(z.nr).start === ab[i] + o)).length;
+    const kandidaten = [...new Set(reihe.flatMap((x, i) => nummern.map(m => m.start - ab[i])))];
+    let best = null, bestN = 0, bestS = -1;
+    kandidaten.forEach(o => { const n = treffer(o).length, st = stuetze(o);
+      if(n > bestN || (n === bestN && st > bestS)){ best = o; bestN = n; bestS = st; } });
+    if(best == null || bestN < Math.max(2, Math.ceil(0.6 * reihe.length))) return;
+    treffer(best).forEach(e => vergeben.add(e));
+    reihe.forEach((x, i) => {
+      const k = ks[i];
+      if(x.art === '—') return;
+      const st = x.streifenSicher ? samNummer(x.streifen) : null;
+      const n = st ? st.start : ab[i] + best;
+      if(!leer.has(String(n)) || belegt(n)) return;
+      const nr = x.te > 1 ? n + '–' + (n + x.te - 1) : String(n);
+      const art = samGeraetArt(geraete, k);
+      const geraet = art === 'FI' ? 'rcd' : art === 'FI/LS' ? 'rcbo' : (art === 'LS' || art === 'LS~') ? 'ls' : 'other';
+      const z = {nr, bez:'', ort:'', sich: samAufdruckText(x.aufdruck), geraet, special: geraet === 'other' ? samSonder(art) : '',
+                 zweifel: {nr: !st, bez: true, ort: false, sich: !!x.unsicher, geraet: art === 'LS~'},
+                 hinweis: 'Text auf dem Blatt nicht gelesen – Gerät vom Verteiler', ausVt: true,
+                 verteiler: {art: art === 'LS~' ? 'LS' : art, aufdruck: x.aufdruck, unsicher: !!x.unsicher, n: 1, passt: true, idx: [k, k]}};
+      z.gelesen = {nr:'', bez:'', ort:'', sich:''};
+      neu.push(z);
+    });
+  });
+  neu.forEach(z => {
+    const n = samNummer(z.nr).start;
+    const i = rs.findIndex(y => { const m = samNummer(y.nr); return m && m.start > n; });
+    if(i < 0) rs.push(z); else rs.splice(i, 0, z);
+  });
+  if(neu.length) l.abgleich.ergaenzt = neu.map(z => z.nr);
 }
 /* v1.146: Nummernstreifen (Jean, 03.10.2026: "erkannte Geräte sollen
    fragliche Ergebnisse der Beschreibung korrigieren"). Die Geräteerkennung
@@ -10939,6 +11011,7 @@ function samAbgleichText(l, P){
   const ab = l.abgleich;
   if(!ab) return '';
   return ab.angewandt ? ` Verteiler: ${ab.geraete} Geräte, ${ab.gleich} von ${ab.eintraege} Einträgen passen.`
+      + (ab.ergaenzt && ab.ergaenzt.length ? ` Ohne Text auf dem Blatt, Gerät vom Verteiler: Nr. ${ab.ergaenzt.join(', ')}.` : '')
                       : ` Verteiler: ${ab.geraete} Geräte, passt nicht zur Beschreibung – nicht verwendet.`;
 }
 function renderSamListe(){

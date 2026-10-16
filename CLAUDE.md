@@ -260,8 +260,14 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   `persistCircuit` löscht `samZw` (Speichern = angesehen) und notiert Änderungen still in
   `Store 'samNotiz'` (nur lokal, je Projekt; dazu Zeit vom Lesen bis zum Übernehmen).
   `#btnSamBoard` springt zum nächsten; Abschluss gelbe Karte, sperrt nicht (Jean).
-  Geplant: 4c Zeile ohne Text, aber Gerät im Verteiler → bernstein statt wegfallen;
-  4b Bildausschnitt je Zeile (nur auf dem Gerät, nicht in die Wolke).
+- **Etappe 4c (v1.207):** `samLesung.leerNr` hält die Nummern ohne Text; `samTextFehlt`
+  (am Ende von `samVerknuepfen`) sucht je Verteiler-Reihe den Versatz Nummer − Lage in TE
+  (`te`, `teAb` aus der Geräteerkennung, Lücken zählen mit), bei dem ≥ 60 % der Geräte auf
+  Einträge gleicher Breite fallen (ein Eintrag erklärt nur eine Reihe, Gleichstand: Zuordnung),
+  oder nimmt den sicheren Streifen. Gerät auf einer leeren Nummer → Zeile `ausVt` bernstein
+  („Text auf dem Blatt nicht gelesen – Gerät vom Verteiler“); beim nächsten Abgleich neu gebaut.
+  Alte Lesungen ohne `teAb` bleiben unberührt. Geplant: 4b Bildausschnitt je Zeile (nur auf dem
+  Gerät, nicht in die Wolke).
 - Trainingsordner und Probelauf: Einstellungen › SAM (Beta) › Werkstatt ›
   „Trainingsordner öffnen“, Foto antippen, „Durchspielen“ (v1.121).
 - Verknüpfung mit dem Verteiler (v1.134–v1.155): `samAusrichten` ordnet die
