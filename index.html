@@ -10,6 +10,15 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.206 16.10.2026 SAM, Umbau Etappe 4a (Jean: mit einem Tipp uebernehmen, aber
+                    bernstein bis angesehen): ein Kreis, den SAM unsicher gelesen
+                    hat, bleibt nach dem Uebernehmen bernstein - in Erfassen mit
+                    "SAM: Nummer ansehen", im Kreis ist das Feld umrandet, im
+                    Messen steht es im Kopf. Speichern gilt als angesehen. Oben
+                    "SAM: noch n Kreise ansehen" fuehrt zum naechsten; im
+                    Abschluss eine gelbe Karte, sperrt nicht. Still und nur auf
+                    dem Geraet notiert: Zeit vom Lesen bis zum Uebernehmen und
+                    was danach noch geaendert wurde.
   v1.205 16.10.2026 SAM v0.60 (Jean, IMG_8276): steht neben "13 | 14 Hauptschalter
                     | 15" nur ein duenner Klammerstrich, wird daraus "13-15
                     Hauptschalter" (bernstein, bitte ansehen) statt still "14".
@@ -1847,6 +1856,10 @@ main{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overfl
 /* Übernahmeliste: gelesen ist schwarz, Zweifel bernsteinfarben hinterlegt –
    dieselbe Farbe wie "bitte ansehen" in der Verteilerliste. */
 .sam-zeile .zw{background:var(--sig-bg);border-radius:3px;padding:0 3px;box-shadow:inset 0 -2px 0 var(--signal)}
+/* v1.206: unsicher Gelesenes im Kreis */
+.field.sam-zw > span:first-child{color:var(--signal-ink)}
+.field.sam-zw input,.field.sam-zw .seg,.field.sam-zw .kacheln,.field.sam-zw .stepper{box-shadow:0 0 0 2px var(--signal);border-radius:8px}
+.zw-mark{background:var(--sig-bg);border-radius:3px;padding:0 3px;box-shadow:inset 0 -2px 0 var(--signal)}
 .sam-zeile .geraet{font-family:var(--f-data);font-size:12px;color:var(--ink-soft);text-align:right;flex:0 0 auto;max-width:40%}
 .sam-zeile .geraet .vt{display:block;font-size:11px;margin-top:2px}
 .sam-zeile .body .hw{font-style:italic;color:var(--ink-soft);white-space:normal;overflow:visible;text-overflow:clip}
@@ -3414,6 +3427,7 @@ function nameGross(s){
     <section class="view" id="view-circuit">
       <div class="panes">
         <div class="pane" id="paneGeraet">     <!-- zweispaltig links: Geraet -->
+          <div class="warn gelb" id="samZwHinweis" hidden style="margin-bottom:12px"></div>   <!-- v1.206 -->
           <!-- v1.163: Platz, Breite und Geräteart in der Reihenfolge, in der man den
                Verteiler liest; die Geräteart in einem Schalter (Bedienkonzept E5) -->
           <div class="row" style="align-items:flex-start">
@@ -3977,7 +3991,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.205';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.206';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 16.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -5640,7 +5654,7 @@ function zustand(o, isFeed){
    Zeile rot da (Bedienkonzept B7). */
 function erfassZustand(o, isFeed){
   if(isFeed) return o.cable == null ? 'z-ask' : 'z-plain';
-  return (o.sam && devOf(o) !== 'rcd' && !isSpecial(o) && !o.cable) ? 'z-ask' : 'z-plain';
+  return (samZwOffen(o) || (o.sam && devOf(o) !== 'rcd' && !isSpecial(o) && !o.cable)) ? 'z-ask' : 'z-plain';
 }
 const ZST = '<i class="zst" aria-hidden="true"></i>';
 /* Was an einem roten Kreis fehlt oder nicht stimmt – steht in der Zeile, damit
@@ -5667,9 +5681,12 @@ function feedSummary(f){
 function renderBoard(){
   if(!PROJ){ go('home', false); return; }
   /* v1.182 (QK D14): oben nur, solange SAM-Einträge offen sind – sonst unter "…" */
-  const samOffen = PROJ.sam ? circuits().filter(c => erfassZustand(c, false) === 'z-ask').length : 0;
+  /* v1.206: unsicher gelesene Kreise zuerst – der Knopf führt zum nächsten */
+  const samZwN = circuits().filter(samZwOffen).length;
+  const samOffen = samZwN || (PROJ.sam ? circuits().filter(c => erfassZustand(c, false) === 'z-ask').length : 0);
   $('#btnSamBoard').hidden = !samOffen;
-  if(samOffen) $('#btnSamBoard').textContent = `SAM: ${samOffen} ${samOffen === 1 ? 'Eintrag' : 'Einträge'} ansehen ›`;
+  if(samZwN) $('#btnSamBoard').textContent = `SAM: noch ${samZwN} ${samZwN === 1 ? 'Kreis' : 'Kreise'} ansehen ›`;
+  else if(samOffen) $('#btnSamBoard').textContent = `SAM: ${samOffen} ${samOffen === 1 ? 'Eintrag' : 'Einträge'} ansehen ›`;
   $('#btnAddCircuit').hidden = messModus();   // im Messen-Modus wird nichts angelegt
   planLeisteZeigen();                              // v1.192
   PROJ.feed = PROJ.feed || blankFeed();   // ältere Projekte ohne Zuleitung nachrüsten
@@ -5775,7 +5792,9 @@ function listHtml(){
       : ' · Übersicherung: zu entscheiden';
     /* Erfassen zeigt Gerät und Kabel, Messen die Werte (v1.162). */
     const z = mess ? zustand(it, false) : erfassZustand(it, false);
-    const fehlt = !mess && z === 'z-ask' ? 'Kabelart fehlt' : '';
+    const kabelFehlt = it.sam && devOf(it) !== 'rcd' && !isSpecial(it) && !it.cable;
+    const fehlt = !mess && kabelFehlt ? 'Kabelart fehlt' : '';
+    const samZ  = !mess && samZwOffen(it) ? samZwText(it) : '';   // v1.206: vorn, sonst abgeschnitten
     const offen = mess && z === 'z-open' ? 'offen' : '';
     /* v1.175 (QK G83): im Messen nur Werte, Zs zuerst, Fehlendes vorn – Gerät
        und Kabel stehen im Erfassen; auf dem iPhone war der Zs abgeschnitten. */
@@ -5787,7 +5806,7 @@ function listHtml(){
          it.m.rpe != null && it.m.rpe !== '' ? `R_PE ${fmt(it.m.rpe)} Ω` : null].filter(Boolean).join(' · ');
     const zeile = mess
       ? (offen || [z === 'z-bad' ? mangelText(it) : '', mv].filter(Boolean).join(' · ') || 'Werte fehlen') + ov
-      : [it.breaker, fehlt || kabelText(it.cable), isSpecial(it) ? '' : ''].filter(Boolean).join(' · ') + ov;
+      : [samZ, it.breaker, fehlt || kabelText(it.cable), isSpecial(it) ? '' : ''].filter(Boolean).join(' · ') + ov;
     return out += `<button class="list-item ${z}" data-idx="${idx}">
       ${z === 'z-plain' ? '' : ZST}<span class="no">${esc(circuitLabel(it) || '–')}</span>
       <span class="body">
@@ -6352,6 +6371,7 @@ function openCircuit(idx){
   setTimeout(idnHinweis); setTimeout(grenzLive);
   $('#btnDelCircuit').hidden = editIdx == null || messModus();
   refreshNoField();
+  samZwZeigen();                                     // v1.206
   syncCircuitUi(); go('circuit');
   /* Die Kreisarten stehen von Anfang an zur Wahl – bei einem neuen Kreis steht
      die Gerätewahl ohnehin auf LS. Beim FI und bei sonstigen Geräten gibt es
@@ -7137,13 +7157,32 @@ function messKopfZeilen(c){
   }
   return z.filter(t => String(t).trim());
 }
+/* v1.206: was SAM unsicher gelesen hat, ist im Kreis bernstein umrandet, mit
+   einer Zeile darüber. Speichern gilt als angesehen (persistCircuit). */
+function samZwZeigen(){
+  const zw = (draft && draft.samZw) || [];
+  const feld = {nr: $('#cNo').closest('.field'), bez: $('#cName').closest('.field'), ort: $('#fldRoom'),
+                sich: draft && draft.device === 'rcd' ? $('#fldType') : $('#fldAbs'), geraet: $('#fldDevSeg')};
+  Object.entries(feld).forEach(([k, el]) => { if(el) el.classList.toggle('sam-zw', zw.includes(k)); });
+  const h = $('#samZwHinweis');
+  h.hidden = !zw.length;
+  if(zw.length) h.innerHTML = `<strong>SAM war unsicher: ${esc(zw.map(k => SAM_ZW_TEXT[k] || k).join(', '))}</strong>`
+    + 'Bitte mit der Beschreibung vergleichen. Speichern gilt als angesehen.';
+}
 function messKopfSetzen(an){
   const k = $('#messKopf');
   if(!an || !draft){ k.hidden = true; return; }
   const z = messKopfZeilen(draft);
   k.hidden = false;
-  k.innerHTML = `<div><strong>${esc(z[0])}</strong></div>`
-    + z.slice(1).map(t => `<div class="muted small">${esc(t)}</div>`).join('')
+  /* v1.206: unsicher Gelesenes bernstein – Nummer/Bezeichnung, Ort, Gerät */
+  const zw = draft.samZw || [], hat = (...k) => k.some(x => zw.includes(x));
+  const ortDa = String(draft.room || '').trim() !== '';
+  const zwZeile = [hat('nr', 'bez'), ortDa && hat('ort'), hat('sich', 'geraet')];
+  if(!ortDa) zwZeile.splice(1, 1);
+  const mark = (t, i) => zwZeile[i] ? `<span class="zw-mark">${esc(t)}</span>` : esc(t);
+  k.innerHTML = (zw.length ? `<div class="small" style="color:var(--signal-ink);margin-bottom:4px">${esc(samZwText(draft))} – Weiter gilt als angesehen</div>` : '')
+    + `<div><strong>${mark(z[0], 0)}</strong></div>`
+    + z.slice(1).map((t, i) => `<div class="muted small">${mark(t, i + 1)}</div>`).join('')
     /* v1.175 (QK G52): bei jedem Kreis – B10 statt B16 bemerkt kostete sonst den Weg ins Erfassen */
     + '<div class="small" style="margin-top:6px"><button class="linkbtn" id="btnSamAendern" type="button">Gerät und Kabel ändern</button></div>';
   $('#btnSamAendern').onclick = () => {
@@ -7511,6 +7550,8 @@ function noteFirstMeasure(o){                         // Neuinstallation: Beginn
 }
 function persistCircuit(){
   const c = collectCircuit();
+  delete c.samZw;                                     // v1.206: angesehen
+  samKorrekturNotieren(c);
   /* v1.193: in der Wiederholungsprüfung bleibt eine von Hand eingetragene
      K-Nummer stehen (am Gerät steht oft schon eine Kennzeichnung) */
   if(PROJ.kNr && (PROJ.mode || 'wdh') !== 'neu' && istStromstoss(c)){
@@ -7522,6 +7563,24 @@ function persistCircuit(){
   sortCircuits();                                     // eingefügte Kreise rutschen an ihre Position
   noteFirstMeasure(c);
   saveProj();
+}
+/* v1.206 (Jean, Umbau Etappe 4: Zeiten und Korrekturen still mitschreiben, nur
+   auf dem Gerät): was nach dem Übernehmen am Kreis noch geändert wurde */
+function samNotiz(){ return Store.get('samNotiz') || {}; }
+function samNotizSetzen(fn){
+  if(!PROJ || !PROJ.id) return;
+  const alle = samNotiz(), n = alle[PROJ.id] || {};
+  fn(n); alle[PROJ.id] = n; Store.set('samNotiz', alle);
+}
+function samKorrekturNotieren(c){
+  const g = c.samGelesen;
+  if(!g) return;
+  const geaendert = ['no', 'name', 'room', 'breaker'].filter(k => String(g[k] || '') !== String(c[k] || ''));
+  if(!geaendert.length) return;
+  samNotizSetzen(n => {
+    n.kreise = n.kreise || {};
+    n.kreise[g.no || c.no] = geaendert.map(k => ({feld:k, gelesen:g[k] || '', jetzt:c[k] || ''}));
+  });
 }
 function backToBoard(){ stack = archOffen ? ['home', 'archive'] : ['home']; go('board', false); }   // v1.181: aus der Ablage zurück dorthin
 
@@ -8500,6 +8559,20 @@ function renderFinish(){
       + `${Math.max(0, Math.round((PROJ.finishedAt - PROJ.startedAt) / 60000))} min · <button class="linkbtn" id="finZeitAendern">ändern</button>`;
     $('#finZeitAendern').onclick = () => zeitAendern(PROJ.finishedAt, ts => { PROJ.finishedAt = ts; saveProj(); renderFinish(); });
   }
+  /* v1.206: unsicher gelesene SAM-Kreise – sperrt nicht (Jean) */
+  const samZwK = (archOffen && archLesen) ? [] : circuits().filter(samZwOffen);
+  if(samZwK.length){
+    $('#plausiOut').insertAdjacentHTML('beforeend', `<div class="warn gelb"><strong>SAM: ${samZwK.length} ${samZwK.length === 1 ? 'Kreis' : 'Kreise'} noch nicht angesehen</strong>`
+      + 'Unsicher gelesen, sperrt nicht.' + samZwK.map((c, i) => `<div><button class="linkbtn" data-samzw="${i}">`
+      + `${c.no ? 'Kreis ' + esc(circuitLabel(c)) + ' · ' : ''}${esc(c.name || 'ohne Bezeichnung')} – ${esc(samZwText(c).replace(/^SAM: /, ''))}</button></div>`).join('') + `</div>`);
+    $$('#plausiOut [data-samzw]').forEach(b => b.onclick = () => {
+      const c = samZwK[+b.dataset.samzw];
+      if(PROJ.modus !== 'edit'){ PROJ.modus = 'edit'; saveProj(); }
+      stack = archOffen ? ['home', 'archive'] : ['home'];
+      go('board', false);
+      openCircuit(PROJ.items.indexOf(c));
+    });
+  }
   const kal = kalibListe()[PROJ.device];
   if(kal && kalibAbgelaufen(kal)) $('#plausiOut').insertAdjacentHTML('beforeend',
     `<div class="warn gelb"><strong>Kalibrierung abgelaufen</strong>${esc(PROJ.device)}: kalibriert bis ${esc(kal)}. Sperrt nicht.</div>`);
@@ -9451,7 +9524,14 @@ SAM_ARTEN.forEach(art => {
   $('#samB_' + art).onclick = () => samFoto(art);
   $('#samM_' + art).onclick = () => samFoto(art, true);
 });
-$('#btnSamBoard').onclick = () => vorVerlassen(() => go('sam'));   // v1.167
+$('#btnSamBoard').onclick = () => vorVerlassen(() => {
+  /* v1.206: zum nächsten unsicher gelesenen Kreis, im Erfassen – dort stehen
+     Nummer, Bezeichnung und Ort zum Ändern */
+  const c = circuits().find(samZwOffen);
+  if(!c){ go('sam'); return; }
+  if(PROJ.modus !== 'edit'){ PROJ.modus = 'edit'; saveProj(); bereicheZeigen(current); }
+  openCircuit(PROJ.items.indexOf(c));
+});   // v1.167
 $('#samOhne').onclick = () => {
   const l = PROJ && PROJ.samLesung;
   if(l && l.ok && !l.laeuft && !samOffenZahl(l)){ go('samliste'); return; }   // nur ansehen
@@ -10606,6 +10686,7 @@ function samZeilen(reihen){
     .map(r => {
       const z = {nr: r.nr || '', bez: r.bez || '', ort: r.ort || '', sich: r.sich || '',
                  zweifel: Object.assign({nr:false, bez:false, ort:false, sich:false}, r.zweifel || {})};
+      z.gelesen = {nr: z.nr, bez: z.bez, ort: z.ort, sich: z.sich};   // v1.206: für die Zählung der Korrekturen
       z.geraet  = samGeraet(z);
       z.special = z.geraet === 'other' ? samSonder(z.bez) : '';
       if(samIstStromstoss(z.bez)) z.ss = true;            // Bauart folgt unten
@@ -10769,7 +10850,24 @@ function samFiTyp(sich, te){
   }
   return liste.find(x => /40A/.test(x) && poleTe(x) === pole) || liste[0];
 }
+/* v1.206 (Umbau SAM Etappe 4a, Jean: markierte Zeilen lassen sich mit einem Tipp
+   übernehmen, bleiben im Kreis aber bernstein, bis sie angesehen wurden): der
+   Kreis merkt sich, welche Angaben SAM unsicher war (samZw), und was gelesen
+   wurde (samGelesen) – Speichern des Kreises gilt als angesehen. */
+const SAM_ZW_TEXT = {nr:'Nummer', bez:'Bezeichnung', ort:'Ort', sich:'Absicherung', geraet:'Gerät'};
 function samKreis(z, frei){
+  const c = samKreisBau(z, frei);
+  if(!z.geprueft){
+    const zw = Object.keys(SAM_ZW_TEXT).filter(k => z.zweifel && z.zweifel[k]);
+    if(samFiOhneNenn(z) && !zw.includes('sich')) zw.push('sich');
+    if(zw.length) c.samZw = zw;
+  }
+  c.samGelesen = {no: c.no, name: c.name, room: c.room, breaker: c.breaker};
+  return c;
+}
+const samZwOffen = c => !!(c && c.samZw && c.samZw.length);
+const samZwText  = c => 'SAM: ' + c.samZw.map(k => SAM_ZW_TEXT[k] || k).join(', ') + ' ansehen';
+function samKreisBau(z, frei){
   const c = blankCircuit();
   const nr = samNummer(z.nr);
   if(frei){ c.no = z.nr; c.te = nr ? samTe(nr.te) : '1'; }
@@ -10953,6 +11051,10 @@ $('#samUebernehmen').onclick = () => {
     PROJ.items = (PROJ.items || []).concat(kreise);
     sortCircuits();
     l.uebernommen = Date.now();
+    /* v1.206: Zeit vom Lesen bis zum Übernehmen, Änderungen in der Liste */
+    const listeGeaendert = rs.reduce((s, z) => s + (z.gelesen ? ['nr', 'bez', 'ort', 'sich'].filter(k => z.gelesen[k] !== z[k]).length : 0), 0);
+    samNotizSetzen(n => { n.gelesen = l.zeit || null; n.uebernommen = l.uebernommen; n.dauerS = l.zeit ? Math.round((l.uebernommen - l.zeit) / 1000) : null;
+      n.zeilen = rs.length; n.markiert = offen; n.listeGeaendert = listeGeaendert; n.version = l.version || ''; });
     PROJ.modus = 'mess';                     // im Idealfall bleiben nur Kabel und Messwerte
     saveProj();
     trainingNachtrag(PROJ.samTid, 'uebernommen', l.reihen.filter(z => z.uebernommen)

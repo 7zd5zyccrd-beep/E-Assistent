@@ -254,6 +254,14 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   überarbeitet (ehrliche Markierung, Mehrfachlesung, später Kern-Umbau). Ältestes
   Gerät der Kollegen: iPhone 13 Pro. Seit v1.205 ist `sam.html` = Werkstatt v0.60 (v1.204: v0.59, v1.203: v0.58) (Mehrfachlesung:
   bei Bernstein zwei weitere Lesungen, Zwischenstände „Zweite/Dritte Lesung“ kommen als `{stand}`).
+- **Etappe 4a (v1.206):** `samKreis` setzt `c.samZw` (Felder, die SAM unsicher las) und
+  `c.samGelesen`; `samZwOffen` macht den Kreis in Erfassen bernstein („SAM: Nummer ansehen“),
+  `samZwZeigen` umrandet die Felder (`.sam-zw`), `messKopfSetzen` markiert im Messen.
+  `persistCircuit` löscht `samZw` (Speichern = angesehen) und notiert Änderungen still in
+  `Store 'samNotiz'` (nur lokal, je Projekt; dazu Zeit vom Lesen bis zum Übernehmen).
+  `#btnSamBoard` springt zum nächsten; Abschluss gelbe Karte, sperrt nicht (Jean).
+  Geplant: 4c Zeile ohne Text, aber Gerät im Verteiler → bernstein statt wegfallen;
+  4b Bildausschnitt je Zeile (nur auf dem Gerät, nicht in die Wolke).
 - Trainingsordner und Probelauf: Einstellungen › SAM (Beta) › Werkstatt ›
   „Trainingsordner öffnen“, Foto antippen, „Durchspielen“ (v1.121).
 - Verknüpfung mit dem Verteiler (v1.134–v1.155): `samAusrichten` ordnet die
