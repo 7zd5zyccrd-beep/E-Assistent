@@ -252,7 +252,8 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   dort möglich, die iOS-Kamera bleibt Ersatzweg.
 - **Umbau (14.10.2026):** SAM wird nach `sam-werkstatt/docs/umbau/KONZEPT.md`
   überarbeitet (ehrliche Markierung, Mehrfachlesung, später Kern-Umbau). Ältestes
-  Gerät der Kollegen: iPhone 13 Pro.
+  Gerät der Kollegen: iPhone 13 Pro. Seit v1.203 ist `sam.html` = Werkstatt v0.58 (Mehrfachlesung:
+  bei Bernstein zwei weitere Lesungen, Zwischenstände „Zweite/Dritte Lesung“ kommen als `{stand}`).
 - Trainingsordner und Probelauf: Einstellungen › SAM (Beta) › Werkstatt ›
   „Trainingsordner öffnen“, Foto antippen, „Durchspielen“ (v1.121).
 - Verknüpfung mit dem Verteiler (v1.134–v1.155): `samAusrichten` ordnet die

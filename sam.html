@@ -1,7 +1,22 @@
 <!DOCTYPE html>
 <!--
   PaddleOCR-Test · Verteilerbeschreibung
-  v0.55 · 14.10.2026
+  v0.58 · 15.10.2026
+
+  v0.58: Fehlerbehebung an v0.55 – Relais, Stromstoßschalter, Trafo,
+  Hauptschalter, Überspannungsableiter und Steuersicherung lösen „Absicherung
+  fehlt“ nicht mehr aus (iPhone, IMG_5146: Relais 1–6 bernstein, obwohl das
+  Blatt für sie keine Absicherung führt). Die Mehrfachlesung bleibt wie in
+  v0.56. v0.57 (schneller nachlesen) wurde erprobt und verworfen: mehr stille
+  Fehler (1,7 → 1,8 je 100) für wenig Zeit – Jean: Weg 1, Sicherheit vor Zeit.
+
+  v0.56: Mehrfachlesung (Umbau Etappe 3, Jean 15.10.2026). Trägt die erste
+  Lesung Bernstein oder fast keine Zeilen, liest SAM dasselbe Foto noch zweimal
+  (15 % kleiner, um 1° gedreht) und stimmt je Kreisnummer ab: die Mehrheit
+  gewinnt, ohne Mehrheit wird die Nummer bernstein, eine Nummer aus nur einer
+  Lesung fällt weg. Anlass: im Prüfstand kippte dasselbe Foto, leicht anders
+  aufbereitet, mal ganz (IMG_6676 0/11, STEIN7B 0/10). Schalter „Bei Zweifel
+  dreimal lesen“, Bericht „Mehrfachlesung“, Abschnitt „Abgestimmt“.
 
   v0.55: Ehrlicher Zweifel-Vermerk (Umbau Etappe 2, docs/umbau/KONZEPT.md).
   Im Robustheits-Prüfstand (werkzeuge/robust.mjs) trugen bei v0.54 drei von
@@ -914,7 +929,7 @@ pre.abgleich.gut{background:#EAF5DC;border-color:#8FBE36}
 
   <header>
     <h1>PaddleOCR-Test · Verteilerbeschreibung</h1>
-    <span class="ver">v0.55 · 14.10.2026</span>
+    <span class="ver">v0.58 · 15.10.2026</span>
   </header>
 
   <div class="karte">
@@ -981,6 +996,7 @@ pre.abgleich.gut{background:#EAF5DC;border-color:#8FBE36}
       <div class="schalter"><input type="checkbox" id="optLinien" checked><label for="optLinien">Gedruckte Tabellenlinien suchen</label></div>
       <div class="schalter"><input type="checkbox" id="optZellen" checked><label for="optZellen">Jede beschriebene Zelle einzeln lesen</label></div>
       <div class="schalter"><input type="checkbox" id="optNachlese" checked><label for="optNachlese">Zweifelhafte Zellen einzeln nachlesen</label></div>
+      <div class="schalter"><input type="checkbox" id="optMehrfach" checked><label for="optMehrfach">Bei Zweifel dreimal lesen und abstimmen</label></div>
     </div>
     <p class="hinweis" id="fotoinfo">Am besten dasselbe Blatt wie bisher, damit wir vergleichen können.</p>
   </div>
@@ -1101,7 +1117,7 @@ const MODELLE = {
   latin: {name:'v5 lateinisch',  konstante:'V5_LATIN_MOBILE_MODEL'}
 };
 
-const VERSION = 'v0.55 · 14.10.2026';
+const VERSION = 'v0.58 · 15.10.2026';
 
 /* ==================== Schrittliste ==================== */
 
@@ -2959,7 +2975,7 @@ document.getElementById('datei').addEventListener('change', async function(e){
 });
 
 /* v0.24: ein Bild annehmen - aus dem Fotoalbum oder aus der Sammlung */
-async function bildAnnehmen(datei, dateiname){
+async function bildAnnehmen(datei, dateiname, melde){
   let t0 = jetzt();
   setze('foto','laeuft');
   try{
@@ -2972,23 +2988,8 @@ async function bildAnnehmen(datei, dateiname){
         i.src = URL.createObjectURL(datei);
       });
     }
-    /* v0.42: das Original bleibt für den Zuschnitt erhalten (höchstens 4032
-       Punkte lang) - aus ihm wird die gefundene Beschriftung in voller
-       Auflösung ausgeschnitten */
-    const fo = Math.min(1, 4032 / Math.max(bm.width, bm.height));
-    const o = document.createElement('canvas');
-    o.width = Math.round(bm.width*fo); o.height = Math.round(bm.height*fo);
-    o.getContext('2d').drawImage(bm, 0, 0, o.width, o.height);
-    quelleOriginal = o;
-    const f = Math.min(1, 2000 / bm.width);
-    const c = document.createElement('canvas');
-    c.width = Math.round(bm.width*f);
-    c.height = Math.round(bm.height*f);
-    const ctx = c.getContext('2d');
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(bm, 0, 0, c.width, c.height);
+    const c = quelleSetzen(bm);
     if(bm.close) bm.close();
-    quelle = c;
     letzterDateiname = dateiname || datei.name || '';
     document.getElementById('fotoinfo').textContent =
       c.width + ' × ' + c.height + ' Bildpunkte, ' + Math.round(datei.size/1024) + ' KB';
@@ -2999,7 +3000,236 @@ async function bildAnnehmen(datei, dateiname){
     return false;
   }
   await lauf();
+  if(document.getElementById('optMehrfach').checked){
+    try{ await mehrfachLesen(melde); }
+    catch(err){ letzteAusgabe += '\nMehrfachlesung: abgebrochen – ' + err.message; }
+  }
   return true;
+}
+
+/* v0.42: das Original bleibt für den Zuschnitt erhalten (höchstens 4032
+   Punkte lang) - aus ihm wird die gefundene Beschriftung in voller
+   Auflösung ausgeschnitten. v0.56: ausgelagert, die Mehrfachlesung setzt
+   hier ihre Abwandlungen ein. */
+function quelleSetzen(bm){
+  const fo = Math.min(1, 4032 / Math.max(bm.width, bm.height));
+  const o = document.createElement('canvas');
+  o.width = Math.round(bm.width*fo); o.height = Math.round(bm.height*fo);
+  o.getContext('2d').drawImage(bm, 0, 0, o.width, o.height);
+  quelleOriginal = o;
+  const f = Math.min(1, 2000 / bm.width);
+  const c = document.createElement('canvas');
+  c.width = Math.round(bm.width*f);
+  c.height = Math.round(bm.height*f);
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bm, 0, 0, c.width, c.height);
+  quelle = c;
+  return c;
+}
+
+/* ==================== Mehrfachlesung (v0.56) ====================
+
+   Umbau Etappe 3 (docs/umbau/KONZEPT.md, Jean 15.10.2026). Dasselbe Foto,
+   leicht anders aufbereitet, kippte im Prüfstand mal ganz (IMG_6676 0 von 11,
+   STEIN7B 0 von 10) und war mal fehlerfrei. Trägt die erste Lesung Bernstein
+   oder fast keine Zeilen - das taten 54 von 60 fehlerhaften Lesungen -, liest
+   SAM dasselbe Foto noch zweimal: 15 % kleiner und um 1° gedreht. Je
+   Kreisnummer gewinnt der Inhalt, den die Mehrheit gelesen hat; ohne
+   Mehrheit wird die Nummer bernstein. Eine Nummer, die nur eine Lesung kennt,
+   fällt weg (Jean: meist verrutschte Nummern). Angezeigt bleibt die erste
+   Lesung; ersetzt werden nur die Zeilen, der Abgleich und der Bericht. */
+const MEHRFACH_KLEIN = 0.85, MEHRFACH_DREH = 1;
+
+function mehrfachNr(t){
+  return String(t || '').replace(/\*/g, '').replace(/\s/g, '').replace(/[–—\/,.]/g, '-').replace(/-+/g, '-');
+}
+function mehrfachInhalt(r){
+  const g = s => String(s || '').replace(/\s+/g, ' ').trim().replace(/^[—–-]$/, '');
+  return g(r.bez) + '|' + g(r.ort) + '|' + g(r.sich);
+}
+const mehrfachText = r => mehrfachInhalt(r) !== '||';
+const mehrfachZweifel = r => !!r.zweifel && Object.keys(r.zweifel).some(k => r.zweifel[k]);
+
+/* Abwandlungen aus dem Original (nicht aus dem verkleinerten Arbeitsbild) */
+function mehrfachAbwandlung(art, basis){
+  const o = basis || quelleOriginal;
+  const c = document.createElement('canvas');
+  if(art === 'klein'){
+    c.width = Math.round(o.width * MEHRFACH_KLEIN); c.height = Math.round(o.height * MEHRFACH_KLEIN);
+    const x = c.getContext('2d'); x.imageSmoothingQuality = 'high';
+    x.drawImage(o, 0, 0, c.width, c.height);
+    return c;
+  }
+  /* gedreht, Ecken in der Farbe des Bildrands aufgefüllt */
+  const w = MEHRFACH_DREH * Math.PI / 180, cos = Math.abs(Math.cos(w)), sin = Math.abs(Math.sin(w));
+  c.width = Math.round(o.width * cos + o.height * sin); c.height = Math.round(o.width * sin + o.height * cos);
+  const x = c.getContext('2d');
+  const p = o.getContext('2d').getImageData(0, 0, 1, 1).data;
+  x.fillStyle = 'rgb(' + p[0] + ',' + p[1] + ',' + p[2] + ')';
+  x.fillRect(0, 0, c.width, c.height);
+  x.translate(c.width / 2, c.height / 2); x.rotate(w);
+  x.imageSmoothingQuality = 'high';
+  x.drawImage(o, -o.width / 2, -o.height / 2);
+  return c;
+}
+
+/* Zeilen verschiedener Lesungen gehören zusammen, wenn sich ihre Nummern
+   überschneiden – nicht erst bei gleicher Schreibweise. Im Schnelllauf las
+   eine Lesung „1–3“, die andere „1–2“ (IMG_6014, Schreibmaschinenklammer);
+   als zwei Nummern gezählt stand jede in der Minderheit und fiel weg. Die
+   Nummer selbst wird mit abgestimmt. */
+function mehrfachBereich(nr){
+  const q = /^\s*(\d{1,3})\s*(?:[–—\-\/]\s*(\d{1,3}))?\s*$/.exec(String(nr || '').replace(/\*/g, ''));
+  if(!q) return null;
+  const a = +q[1], b = q[2] ? +q[2] : a;
+  return b >= a ? {a, b} : null;
+}
+function mehrfachAbstimmen(lesungen){
+  const n = lesungen.length, gruppen = [];
+  lesungen.forEach(function(rs, i){
+    (rs || []).forEach(function(r){
+      if(!mehrfachText(r)) return;
+      const be = mehrfachBereich(r.nr), k = mehrfachNr(r.nr);
+      /* passende Gruppe: gleiche Schreibweise, sonst größte Überschneidung,
+         und nur eine, in der diese Lesung noch nicht vorkommt */
+      let ziel = null, beste = 0;
+      gruppen.forEach(function(g){
+        if(g.lesungen.has(i)) return;
+        if(g.k === k){ ziel = g; beste = Infinity; return; }
+        if(!be || !g.be || beste === Infinity) return;
+        const ue = Math.min(be.b, g.be.b) - Math.max(be.a, g.be.a) + 1;
+        if(ue > beste){ beste = ue; ziel = g; }
+      });
+      if(!ziel){ ziel = {k, be, eintr: [], lesungen: new Set()}; gruppen.push(ziel); }
+      ziel.eintr.push({i, r}); ziel.lesungen.add(i);
+    });
+  });
+  const bericht = {uneinig: [], weg: [], einig: 0};
+  const ergebnis = [];
+  gruppen.forEach(function(g){
+    const eintr = g.eintr;
+    if(g.lesungen.size * 2 <= n){ bericht.weg.push(eintr[0].r.nr); return; }
+    const schl = r => mehrfachNr(r.nr) + '#' + mehrfachInhalt(r);
+    const zaehl = new Map();
+    eintr.forEach(e => { const s = schl(e.r); zaehl.set(s, (zaehl.get(s) || 0) + 1); });
+    let best = null, m = 0;
+    zaehl.forEach((v, s) => { if(v > m){ m = v; best = s; } });
+    const mehr = eintr.filter(e => schl(e.r) === best);
+    const r = Object.assign({}, mehr[0].r);
+    const z = {nr: false, bez: false, ort: false, sich: false};
+    mehr.forEach(e => Object.keys(e.r.zweifel || {}).forEach(f => { if(e.r.zweifel[f]) z[f] = true; }));
+    if(m * 2 <= n){ z.nr = true; bericht.uneinig.push(r.nr); }
+    else if(m === n) bericht.einig++;
+    r.zweifel = z;
+    ergebnis.push({g, r, erst: eintr.find(e => e.i === 0) || null});
+  });
+  /* Reihenfolge der ersten Lesung; was sie nicht hat, nach seiner Zahl einsortiert */
+  const zahl = r => { const q = /^\s*(\d+)/.exec(r.nr || ''); return q ? +q[1] : null; };
+  const aus = [], platz = new Map();
+  ergebnis.forEach(x => { if(x.erst) platz.set(x.erst.r, x.r); });
+  (lesungen[0] || []).forEach(function(r){
+    if(!mehrfachText(r)){ aus.push(r); return; }
+    if(platz.has(r)) aus.push(platz.get(r));
+  });
+  ergebnis.forEach(function(x){
+    if(x.erst) return;
+    const a = zahl(x.r);
+    let pos = aus.length;
+    if(a !== null) for(let j = 0; j < aus.length; j++){ const b = zahl(aus[j]); if(b !== null && b > a){ pos = j; break; } }
+    aus.splice(pos, 0, x.r);
+  });
+  return {reihen: aus, bericht};
+}
+
+async function mehrfachLesen(melde){
+  const erste = letzteReihen || [];
+  const mitText = erste.filter(mehrfachText);
+  const zw = mitText.filter(mehrfachZweifel).length;
+  if(mitText.length >= 3 && !zw){
+    mehrfachMelden('Mehrfachlesung: nicht nötig (kein Bernstein, ' + mitText.length + ' Zeilen)');
+    return;
+  }
+  /* was die erste Lesung angezeigt und gemerkt hat, bleibt stehen */
+  const t0 = jetzt();
+  const merk = {quelle, quelleOriginal, letzteAusgabe, letzteSchrift, letzteErnte, letzteEntzerrung, letzterZuschnitt,
+                letzterNummernBericht, letzterZellenBericht, letzterAbgleich};
+  const dom = ['tabelle', 'rohtexte', 'ernteKopf', 'ernteTabelle'].map(id => {
+    const e = document.getElementById(id); return e ? [e, e.innerHTML] : null; }).filter(Boolean);
+  const lw = document.getElementById('leinwand'), lwKopie = document.createElement('canvas');
+  if(lw && lw.width){ lwKopie.width = lw.width; lwKopie.height = lw.height; lwKopie.getContext('2d').drawImage(lw, 0, 0); }
+  const soll = aktuellesSoll;
+  const lesungen = [erste], zeiten = [];
+  /* v0.57 erprobt und verworfen (Jean, 15.10.2026: Weg 1 – keine stillen
+     Fehler für Zeit): (1) die Zusatzlesungen vom Ausschnitt der ersten
+     ausgehen lassen – IMG_6014 las daraus verklebte Nummern („4tec“), 6 Zeilen
+     fielen weg; (2) die dritte Lesung nur, wenn die zweite der ersten
+     widerspricht – lesen beide denselben Fehler (fehlende Absicherung bei
+     IMG_6552/IMG_7120, verrutschter Ort bei IMG_6539), bleibt er ohne
+     Bernstein; im vollen Lauf 17 neue stille Fehler gegen 9 weggefallene.
+     v0.58: ohne eigene Grundlage – wie in v0.56 geht die dritte Lesung vom
+     schon verkleinerten Bild der zweiten aus (quelleOriginal ist dann deren
+     Abwandlung). Ein erster Lauf mit dem unverkleinerten Original als
+     Grundlage brachte dieselben 17 neuen stillen Fehler wie v0.57 – vermutlich
+     lag es auch dort eher daran als an Punkt (2). */
+  for(const art of ['klein', 'dreh']){
+    if(melde) melde(art === 'klein' ? 'Zweite Lesung' : 'Dritte Lesung');
+    const tL = jetzt();
+    quelleSetzen(mehrfachAbwandlung(art));
+    aktuellesSoll = null;
+    await lauf();
+    lesungen.push(letzteReihen || []);
+    zeiten.push(((jetzt() - tL) / 1000).toFixed(1) + ' s');
+  }
+  quelle = merk.quelle; quelleOriginal = merk.quelleOriginal; letzteSchrift = merk.letzteSchrift; letzteErnte = merk.letzteErnte;
+  letzteEntzerrung = merk.letzteEntzerrung; letzterZuschnitt = merk.letzterZuschnitt;
+  letzterNummernBericht = merk.letzterNummernBericht; letzterZellenBericht = merk.letzterZellenBericht;
+  dom.forEach(([e, h]) => { e.innerHTML = h; });
+  if(lw && lwKopie.width){ lw.width = lwKopie.width; lw.height = lwKopie.height; lw.getContext('2d').drawImage(lwKopie, 0, 0); }
+  aktuellesSoll = soll;
+
+  const {reihen, bericht} = mehrfachAbstimmen(lesungen);
+  letzteReihen = reihen;
+  const zeile = 'Mehrfachlesung: ' + lesungen.length + ' Lesungen (Anlass: ' + (zw ? zw + ' Zeilen mit Bernstein' : 'nur ' + mitText.length + ' Zeilen') +
+    '; 15 % kleiner ' + zeiten[0] + ', um 1° gedreht ' + zeiten[1] + '), ' +
+    bericht.einig + ' Nummern einig' +
+    (bericht.uneinig.length ? ', ohne Mehrheit (bernstein): ' + bericht.uneinig.join(', ') : '') +
+    (bericht.weg.length ? ', nur in einer Lesung (weggelassen): ' + bericht.weg.join(', ') : '') +
+    ', Lesungen mit Text: ' + lesungen.map(l => l.filter(mehrfachText).length).join(' / ') +
+    ', zusammen ' + ((jetzt() - t0) / 1000).toFixed(1) + ' s';
+  letzteAusgabe = merk.letzteAusgabe;
+  /* Abgleich und Tabelle auf das abgestimmte Ergebnis */
+  if(aktuellesSoll){
+    const alt = merk.letzterAbgleich;
+    letzterAbgleich = abgleichen(aktuellesSoll, letzteReihen);
+    const neuText = abgleichText(letzterAbgleich);
+    const altText = alt ? abgleichText(alt) : null;
+    if(altText && letzteAusgabe.indexOf(altText) >= 0) letzteAusgabe = letzteAusgabe.replace(altText, neuText);
+    const box = document.querySelector('#tabelle pre.abgleich');
+    if(box){
+      box.textContent = neuText.replace('--- Abgleich mit der Musterlösung ---\n', '');
+      box.className = 'abgleich' + (letzterAbgleich.richtig === letzterAbgleich.zeilen && !letzterAbgleich.zuviel.length ? ' gut' : '');
+    }
+  }
+  const tabText = '--- Abgestimmt (Mehrfachlesung) ---\n' + letzteReihen.filter(mehrfachText).map(r =>
+    r.nr + (r.zweifel && r.zweifel.nr ? '?' : '') + ' | ' + (r.bez || '—') + ' | ' + (r.ort || '—') + (r.sich ? ' | ' + r.sich : '') +
+    (mehrfachZweifel(r) ? '  (bernstein)' : '')).join('\n');
+  letzteAusgabe = letzteAusgabe.replace('\n\n--- Messwerte, Raster und Ernte ---\n', '\n\n' + tabText + '\n\n--- Messwerte, Raster und Ernte ---\n');
+  mehrfachMelden(zeile);
+  const ziel = document.getElementById('tabelle');
+  if(ziel){
+    const pre = document.createElement('pre');
+    pre.textContent = tabText;
+    ziel.appendChild(pre);
+  }
+}
+function mehrfachMelden(zeile){
+  /* jede Stufe meldet sich im Bericht, Abschnitt Messwerte */
+  const marke = '\n--- Messwerte, Raster und Ernte ---\n';
+  if(letzteAusgabe.indexOf(marke) >= 0) letzteAusgabe = letzteAusgabe.replace(marke, marke + zeile + '\n');
+  else letzteAusgabe += '\n' + zeile;
+  const rt = document.getElementById('rohtexte');
+  if(rt){ const p = document.createElement('pre'); p.textContent = zeile; rt.appendChild(p); }
 }
 
 document.getElementById('nochmal').addEventListener('click', lauf);
@@ -6206,7 +6436,10 @@ function zweifelBestimmen(reihen, sichSpalte, zw){
     if(leerB && leerO){ z.bez = true; grund('Zeile ohne Text'); }
     if(!leerB && fremdesWort(r.bez.text)){ z.bez = true; grund('fremdes Wort'); }
     if(!leerO && fremdesWort(r.ort.text)){ z.ort = true; grund('fremdes Wort'); }
-    if(sichErwartet && (!r.sich || r.sich.leer)){ z.sich = true; grund('Absicherung fehlt'); }
+    /* v0.58: Geräte ohne eigene Absicherung auf dem Blatt lösen das nicht aus –
+       auf dem iPhone waren bei IMG_5146 Relais 1–6 und „Trafo Beleuchtung“ bernstein */
+    const ohneSich = /Relais|Stromsto|Trafo|Hauptschalter|Überspannung|Steuer/i.test(leerB ? '' : r.bez.text);
+    if(sichErwartet && !ohneSich && (!r.sich || r.sich.leer)){ z.sich = true; grund('Absicherung fehlt'); }
     return z;
   });
   liste.gruende = gruende;
@@ -6964,7 +7197,7 @@ if(new URLSearchParams(location.search).has('einbettung') && window.parent !== w
         antwort({stand:'Beschreibung wird gelesen'});
         aktuellesSoll = null;
         letzteReihen = null;
-        const ok = await bildAnnehmen(d.bild, 'sam');
+        const ok = await bildAnnehmen(d.bild, 'sam', s => antwort({stand: s}));   // v0.56: Zweite/Dritte Lesung
         antwort({fertig:true, ok: !!ok && !!letzteReihen, reihen: letzteReihen || [], bericht: letzteAusgabe || '',
                  schrift: letzteSchrift, schriftKlein: schriftKlein()});   // v0.53: Warnung in der App
       }catch(err){
