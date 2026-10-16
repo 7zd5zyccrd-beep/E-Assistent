@@ -10,6 +10,12 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.208 16.10.2026 SAM, Umbau Etappe 4b (SAM v0.61): beim Pruefen einer Zeile steht
+                    der Streifen aus dem Foto darueber, aus dem sie gelesen
+                    wurde - in der SAM-Liste beim geoeffneten Eintrag, im Kreis
+                    im Erfassen und im Messen, solange er noch angesehen werden
+                    soll. Die Streifen bleiben auf dem Geraet (nicht in der
+                    Wolke, nicht im Trainingsordner).
   v1.207 16.10.2026 SAM, Umbau Etappe 4c (Jean, IMG_8259: Zeile 3 fehlte ganz):
                     hat SAM bei einer Nummer keinen Text gelesen, sitzt dort laut
                     Verteilerfoto aber ein Geraet, kommt die Zeile bernstein in
@@ -1865,6 +1871,11 @@ main{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overfl
 /* v1.206: unsicher Gelesenes im Kreis */
 .field.sam-zw > span:first-child{color:var(--signal-ink)}
 .field.sam-zw input,.field.sam-zw .seg,.field.sam-zw .kacheln,.field.sam-zw .stepper{box-shadow:0 0 0 2px var(--signal);border-radius:8px}
+/* v1.208: Bildstreifen der Zeile aus dem Foto */
+.sam-streifen{margin:0 0 12px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+.sam-streifen img{display:block;width:100%;height:auto}
+.sam-streifen.gross{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sam-streifen.gross img{width:260%;max-width:none}
 .zw-mark{background:var(--sig-bg);border-radius:3px;padding:0 3px;box-shadow:inset 0 -2px 0 var(--signal)}
 .sam-zeile .geraet{font-family:var(--f-data);font-size:12px;color:var(--ink-soft);text-align:right;flex:0 0 auto;max-width:40%}
 .sam-zeile .geraet .vt{display:block;font-size:11px;margin-top:2px}
@@ -3434,6 +3445,7 @@ function nameGross(s){
       <div class="panes">
         <div class="pane" id="paneGeraet">     <!-- zweispaltig links: Geraet -->
           <div class="warn gelb" id="samZwHinweis" hidden style="margin-bottom:12px"></div>   <!-- v1.206 -->
+          <div class="sam-streifen" id="cStreifen" hidden></div>   <!-- v1.208 -->
           <!-- v1.163: Platz, Breite und Geräteart in der Reihenfolge, in der man den
                Verteiler liest; die Geräteart in einem Schalter (Bedienkonzept E5) -->
           <div class="row" style="align-items:flex-start">
@@ -3997,7 +4009,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.207';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.208';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 16.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -7170,6 +7182,8 @@ function samZwZeigen(){
   const feld = {nr: $('#cNo').closest('.field'), bez: $('#cName').closest('.field'), ort: $('#fldRoom'),
                 sich: draft && draft.device === 'rcd' ? $('#fldType') : $('#fldAbs'), geraet: $('#fldDevSeg')};
   Object.entries(feld).forEach(([k, el]) => { if(el) el.classList.toggle('sam-zw', zw.includes(k)); });
+  const st = draft && draft.samStreifen;              // v1.208
+  samStreifenZeigen($('#cStreifen'), st && st.fid, st && st.i);
   const h = $('#samZwHinweis');
   h.hidden = !zw.length;
   if(zw.length) h.innerHTML = `<strong>SAM war unsicher: ${esc(zw.map(k => SAM_ZW_TEXT[k] || k).join(', '))}</strong>`
@@ -7191,6 +7205,11 @@ function messKopfSetzen(an){
     + z.slice(1).map((t, i) => `<div class="muted small">${mark(t, i + 1)}</div>`).join('')
     /* v1.175 (QK G52): bei jedem Kreis – B10 statt B16 bemerkt kostete sonst den Weg ins Erfassen */
     + '<div class="small" style="margin-top:6px"><button class="linkbtn" id="btnSamAendern" type="button">Gerät und Kabel ändern</button></div>';
+  /* v1.208: im Messen der Bildstreifen, solange der Kreis noch angesehen werden soll */
+  if(zw.length && draft.samStreifen){
+    k.insertAdjacentHTML('afterbegin', '<div class="sam-streifen" id="mStreifen" hidden></div>');
+    samStreifenZeigen($('#mStreifen'), draft.samStreifen.fid, draft.samStreifen.i);
+  }
   $('#btnSamAendern').onclick = () => {
     samAendern = true;
     if(samKabelWahl) paintCableList(samKabelWahl);    // die Wahl steht dann im Feld
@@ -10285,6 +10304,11 @@ async function samLesen(P, fid, datei, tidP, nochmal){
   } catch(e){ d = {ok:false, fehler: e && e.message || String(e)}; }
   if(!P.samLesung || P.samLesung.fid !== fid) return;      // inzwischen neu aufgenommen
   const reihen = samZeilen(d.reihen || []);
+  /* v1.208 (Umbau SAM Etappe 4b, Jean: nur auf dem Gerät, nicht in die Wolke):
+     die Bildstreifen je Zeile liegen in der IndexedDB, nicht im Projekt */
+  const streifen = (d.reihen || []).map(r => (r && r.bild) || '');
+  if(streifen.some(Boolean)){ SAM_STREIFEN.set(fid, streifen); Bilder.datenLegen('streifen:' + fid, streifen).catch(() => {}); }
+  d.reihen = (d.reihen || []).map(r => { if(!r || !r.bild) return r; const o = Object.assign({}, r); delete o.bild; return o; });
   /* Neu gelesen, nachdem schon übernommen wurde: was als Kreis mit derselben
      Nummer schon dasteht, gilt als übernommen und kommt nicht doppelt. */
   if(vorher && vorher.uebernommen && P === PROJ){
@@ -10754,11 +10778,13 @@ function samSsBauart(texte, trafo){
 }
 function samZeilen(reihen){
   const rs = reihen
+    .map((r, i) => r && r.bild ? Object.assign({}, r, {streifenIdx: i}) : r)   // v1.208: Bildstreifen
     .filter(r => (r.bez || r.ort || r.sich))                 // Reserveplätze nur mit Nummer fallen weg
     .map(r => {
       const z = {nr: r.nr || '', bez: r.bez || '', ort: r.ort || '', sich: r.sich || '',
                  zweifel: Object.assign({nr:false, bez:false, ort:false, sich:false}, r.zweifel || {})};
       z.gelesen = {nr: z.nr, bez: z.bez, ort: z.ort, sich: z.sich};   // v1.206: für die Zählung der Korrekturen
+      if(r.streifenIdx != null) z.streifen = r.streifenIdx;          // v1.208
       z.geraet  = samGeraet(z);
       z.special = z.geraet === 'other' ? samSonder(z.bez) : '';
       if(samIstStromstoss(z.bez)) z.ss = true;            // Bauart folgt unten
@@ -10935,7 +10961,28 @@ function samKreis(z, frei){
     if(zw.length) c.samZw = zw;
   }
   c.samGelesen = {no: c.no, name: c.name, room: c.room, breaker: c.breaker};
+  if(z.streifen != null && PROJ && PROJ.samLesung) c.samStreifen = {fid: PROJ.samLesung.fid, i: z.streifen};   // v1.208
   return c;
+}
+/* v1.208: Bildstreifen der Zeile aus dem Foto der Beschreibung – nur auf dem
+   Gerät (IndexedDB 'streifen:<Foto>'); fehlt er, bleibt der Platz leer */
+const SAM_STREIFEN = new Map();
+async function samStreifenHolen(fid, i){
+  if(!fid || i == null) return '';
+  let a = SAM_STREIFEN.get(fid);
+  if(!a){ try { a = await Bilder.datenLesen('streifen:' + fid); } catch(e){ a = null; } if(a) SAM_STREIFEN.set(fid, a); }
+  return (a && a[i]) || '';
+}
+function samStreifenZeigen(el, fid, i){
+  if(!el) return;
+  el.hidden = true; el.innerHTML = '';
+  samStreifenHolen(fid, i).then(url => {
+    if(!url || !el.isConnected) return;
+    el.innerHTML = `<img src="${url}" alt="Zeile im Foto der Beschreibung">`;
+    el.hidden = false;
+    /* Antippen vergrößert – auf dem iPhone ist die ganze Tabellenbreite sonst klein */
+    el.onclick = e => { e.stopPropagation(); el.classList.toggle('gross'); };
+  });
 }
 const samZwOffen = c => !!(c && c.samZw && c.samZw.length);
 const samZwText  = c => 'SAM: ' + c.samZw.map(k => SAM_ZW_TEXT[k] || k).join(', ') + ' ansehen';
@@ -11043,6 +11090,7 @@ function renderSamListe(){
     const opt = Object.entries(SAM_GERAETE).map(([k, t]) => `<option value="${k}"${z.geraet === k ? ' selected' : ''}>${t}</option>`).join('');
     const sp  = specialNames().map(n => `<option${z.special === n ? ' selected' : ''}>${esc(n)}</option>`).join('');
     return kopf + `<div class="sam-edit">
+        <div class="sam-streifen" id="seStreifen" hidden></div>
         <div class="row">
           <label class="field narrow"><span>Nr.</span><input class="data" id="seNr" value="${esc(z.nr)}"></label>
           <label class="field"><span>Gerät</span><select id="seGeraet">${opt}</select></label>
@@ -11065,6 +11113,7 @@ function renderSamListe(){
     const e = $('#samListe .sam-edit'); if(e) e.scrollIntoView({block:'nearest'});
   });
   if(samOffen != null && $('#seOk')){
+    samStreifenZeigen($('#seStreifen'), l.fid, rs[samOffen] && rs[samOffen].streifen);   // v1.208
     $('#seGeraet').onchange = () => { $('#seSpFeld').hidden = $('#seGeraet').value !== 'other'; };
     $('#seOk').onclick  = () => { samZeileSichern(); samOffen = null; renderSamListe(); };
     $('#seWeg').onclick = () => { rs.splice(samOffen, 1); samOffen = null; saveProj(); renderSamListe(); };
