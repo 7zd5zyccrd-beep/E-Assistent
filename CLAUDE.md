@@ -252,7 +252,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   dort möglich, die iOS-Kamera bleibt Ersatzweg.
 - **Umbau (14.10.2026):** SAM wird nach `sam-werkstatt/docs/umbau/KONZEPT.md`
   überarbeitet (ehrliche Markierung, Mehrfachlesung, später Kern-Umbau). Ältestes
-  Gerät der Kollegen: iPhone 13 Pro. Seit v1.205 ist `sam.html` = Werkstatt v0.60 (v1.204: v0.59, v1.203: v0.58) (Mehrfachlesung:
+  Gerät der Kollegen: iPhone 13 Pro. Seit v1.208 ist `sam.html` = Werkstatt v0.61 (v1.205: v0.60, v1.204: v0.59, v1.203: v0.58) (Mehrfachlesung:
   bei Bernstein zwei weitere Lesungen, Zwischenstände „Zweite/Dritte Lesung“ kommen als `{stand}`).
 - **Etappe 4a (v1.206):** `samKreis` setzt `c.samZw` (Felder, die SAM unsicher las) und
   `c.samGelesen`; `samZwOffen` macht den Kreis in Erfassen bernstein („SAM: Nummer ansehen“),
@@ -266,8 +266,12 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Einträge gleicher Breite fallen (ein Eintrag erklärt nur eine Reihe, Gleichstand: Zuordnung),
   oder nimmt den sicheren Streifen. Gerät auf einer leeren Nummer → Zeile `ausVt` bernstein
   („Text auf dem Blatt nicht gelesen – Gerät vom Verteiler“); beim nächsten Abgleich neu gebaut.
-  Alte Lesungen ohne `teAb` bleiben unberührt. Geplant: 4b Bildausschnitt je Zeile (nur auf dem
-  Gerät, nicht in die Wolke).
+  Alte Lesungen ohne `teAb` bleiben unberührt.
+- **Etappe 4b (v1.208, SAM v0.61):** `sam.html` schickt je Zeile `bild` (JPEG-Streifen); `samLesen`
+  legt sie nur auf dem Gerät ab (`Bilder.datenLegen('streifen:<Foto>')`, Speicher `SAM_STREIFEN`)
+  und entfernt sie vor Projekt und Trainingsordner. `z.streifen`/`c.samStreifen` = Index;
+  `samStreifenZeigen` in der SAM-Liste (`#seStreifen`), im Kreis (`#cStreifen`) und im Messen-Kopf
+  bei offenem Zweifel; Antippen vergrößert (`.sam-streifen.gross`).
 - Trainingsordner und Probelauf: Einstellungen › SAM (Beta) › Werkstatt ›
   „Trainingsordner öffnen“, Foto antippen, „Durchspielen“ (v1.121).
 - Verknüpfung mit dem Verteiler (v1.134–v1.155): `samAusrichten` ordnet die

@@ -1,7 +1,12 @@
 <!DOCTYPE html>
 <!--
   PaddleOCR-Test · Verteilerbeschreibung
-  v0.60 · 16.10.2026
+  v0.61 · 16.10.2026
+
+  v0.61: Bildstreifen je Zeile (Umbau Etappe 4b, Jean 16.10.2026). In der
+  Einbettung trägt jede Zeile „bild“ – den Ausschnitt aus dem Foto, aus dem sie
+  gelesen wurde, als kleines JPEG (höchstens 900 Punkte breit). Die App zeigt
+  ihn beim Prüfen der Zeile. Am Lesen selbst ändert sich nichts.
 
   v0.60: Klammer ohne Strich (Jean, IMG_8276, Münch): „13 | 14 Hauptschalter
   | 15“, der dünne Klammerstrich wurde nicht gelesen, und es blieb still
@@ -945,7 +950,7 @@ pre.abgleich.gut{background:#EAF5DC;border-color:#8FBE36}
 
   <header>
     <h1>PaddleOCR-Test · Verteilerbeschreibung</h1>
-    <span class="ver">v0.60 · 16.10.2026</span>
+    <span class="ver">v0.61 · 16.10.2026</span>
   </header>
 
   <div class="karte">
@@ -1133,7 +1138,7 @@ const MODELLE = {
   latin: {name:'v5 lateinisch',  konstante:'V5_LATIN_MOBILE_MODEL'}
 };
 
-const VERSION = 'v0.60 · 16.10.2026';
+const VERSION = 'v0.61 · 16.10.2026';
 
 /* ==================== Schrittliste ==================== */
 
@@ -1739,6 +1744,12 @@ let letzteEntzerrung = null;
    (Blatt 2 hat 36 davon); trägt eine Zeile Inhalt, den die Musterlösung
    nicht kennt, ist sie "zu viel". */
 let letzteReihen = null, aktuellesSoll = null, letzterAbgleich = null;
+/* v0.61 (Umbau Etappe 4b, Jean 16.10.2026): Bildstreifen je Zeile für die App.
+   Je Zeile die Lage im Arbeitsbild der Lesung (bildVon), dazu nur das
+   Arbeitsbild der letzten Lesung – die Mehrfachlesung stellt das der ersten
+   wieder her. So bleibt höchstens ein großes Bild im Speicher (iPhone). */
+let letzteArbeit = null, laufZaehler = 0;
+const bildVon = new WeakMap();
 function sollLesen(text){
   const zeilen = [];
   (text || '').split(/\r?\n/).forEach(function(l){
@@ -3133,6 +3144,9 @@ function mehrfachAbstimmen(lesungen){
     zaehl.forEach((v, s) => { if(v > m){ m = v; best = s; } });
     const mehr = eintr.filter(e => schl(e.r) === best);
     const r = Object.assign({}, mehr[0].r);
+    /* v0.61: Bildstreifen aus der ersten Lesung – nur deren Arbeitsbild bleibt */
+    const ausErster = eintr.find(e => e.i === 0);
+    if(ausErster && bildVon.has(ausErster.r)) bildVon.set(r, bildVon.get(ausErster.r));
     const z = {nr: false, bez: false, ort: false, sich: false};
     mehr.forEach(e => Object.keys(e.r.zweifel || {}).forEach(f => { if(e.r.zweifel[f]) z[f] = true; }));
     if(m * 2 <= n){ z.nr = true; bericht.uneinig.push(r.nr); }
@@ -3168,7 +3182,7 @@ async function mehrfachLesen(melde){
   }
   /* was die erste Lesung angezeigt und gemerkt hat, bleibt stehen */
   const t0 = jetzt();
-  const merk = {quelle, quelleOriginal, letzteAusgabe, letzteSchrift, letzteErnte, letzteEntzerrung, letzterZuschnitt,
+  const merk = {quelle, quelleOriginal, letzteArbeit, laufZaehler, letzteAusgabe, letzteSchrift, letzteErnte, letzteEntzerrung, letzterZuschnitt,
                 letzterNummernBericht, letzterZellenBericht, letzterAbgleich};
   const dom = ['tabelle', 'rohtexte', 'ernteKopf', 'ernteTabelle'].map(id => {
     const e = document.getElementById(id); return e ? [e, e.innerHTML] : null; }).filter(Boolean);
@@ -3197,6 +3211,7 @@ async function mehrfachLesen(melde){
     lesungen.push(letzteReihen || []);
     zeiten.push(((jetzt() - tL) / 1000).toFixed(1) + ' s');
   }
+  letzteArbeit = merk.letzteArbeit; laufZaehler = merk.laufZaehler;   // v0.61
   quelle = merk.quelle; quelleOriginal = merk.quelleOriginal; letzteSchrift = merk.letzteSchrift; letzteErnte = merk.letzteErnte;
   letzteEntzerrung = merk.letzteEntzerrung; letzterZuschnitt = merk.letzterZuschnitt;
   letzterNummernBericht = merk.letzterNummernBericht; letzterZellenBericht = merk.letzterZellenBericht;
@@ -3501,6 +3516,7 @@ async function lauf(){
     }
   }
 
+  laufZaehler++; letzteArbeit = arbeit;                 // v0.61: für die Bildstreifen
   let t0 = jetzt();
   setze('lesen','laeuft');
   await new Promise(r => setTimeout(r, 30));
@@ -6283,7 +6299,15 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
     }
 
     if(kg) klammerZeilen[kg].zeilen.push(reihen.length);
-    reihen.push({n, bez, ort, sich, hinweis, luecke:n.luecke, erw:erwartet,
+    /* v0.61: Mitte der Zeile im Arbeitsbild – aus der Nummer, sonst aus dem
+       Text. Die Höhe kommt aus dem Zeilenabstand (unten); Wörter aus Nachbar-
+       zeilen machten den Streifen sonst zwei Zeilen hoch (IMG_8259). */
+    const mitteVon = z => { if(!z) return null; const ws = (z.woerter || []).filter(w => w.bbox);
+      return ws.length ? ws.reduce((a, w) => a + (w.bbox.y0 + w.bbox.y1) / 2, 0) / ws.length : (typeof z.mitte === 'number' ? z.mitte : null); };
+    let bildY = zi >= 0 ? mitteVon(nr[zi]) : null;
+    if(bildY == null){ const ms = Object.values(quelle).map(q => mitteVon(teile[q.i] && teile[q.i].zeilen[q.j])).filter(v => v != null);
+      if(ms.length) bildY = ms.reduce((a, v) => a + v, 0) / ms.length; }
+    reihen.push({n, bez, ort, sich, hinweis, luecke:n.luecke, erw:erwartet, bildY,
                  abgeleitet:!!n.abgeleitet,
                  fortgesetzt: !gitter && ((fortsetzung[1][zi]||[]).length + (fortsetzung[2][zi]||[]).length) > 0});
   });
@@ -6428,6 +6452,13 @@ function baueTabelle(teile, nach, raster, rollen, gitter, basis, warnung){
   const ist = reihen.map((r, k) => ({nr: r.n.text || '', bez: r.bez.leer ? '' : r.bez.text,
     ort: (r.ort && !r.ort.leer) ? r.ort.text : '', sich: (r.sich && !r.sich.leer) ? r.sich.text : '',
     zweifel: zweifelListe[k]}));
+  /* v0.61: Lage für den Bildstreifen – Breite der ganzen Tabelle */
+  let tx0 = Infinity, tx1 = -Infinity;
+  teile.forEach(t => (t.zeilen || []).forEach(z => (z.woerter || []).forEach(w => {
+    if(w.bbox){ tx0 = Math.min(tx0, w.bbox.x0); tx1 = Math.max(tx1, w.bbox.x1); } })));
+  const zh = (teile[0] && teile[0].zeilen && teile[0].zeilen.hoehe) || 40;
+  if(isFinite(tx0)) ist.forEach((z, k) => { const y = reihen[k].bildY;
+    if(y != null) bildVon.set(z, {x0: tx0, x1: tx1, y0: y - 0.68 * zh, y1: y + 0.5 * zh, lauf: laufZaehler}); });
   const zweifelZahl = zweifelListe.filter(z => z.nr || z.bez || z.ort || z.sich).length;
   text += 'Zweifel-Vermerk (v0.55): ' + zweifelZahl + ' von ' + reihen.length + ' Zeilen' +
     (zweifelListe.gruende.length ? ' – ' + zweifelListe.gruende.join(', ') : '') + '\n';
@@ -7270,6 +7301,23 @@ document.getElementById('sollSpeichern').addEventListener('click', async functio
 
 sammlungZeigen();
 
+/* v0.61 (Umbau Etappe 4b): Bildstreifen einer Zeile als kleines JPEG, höchstens
+   900 Punkte breit – die App zeigt ihn beim Prüfen der Zeile. Leer, wenn die
+   Zeile aus einer anderen Lesung stammt oder keine Lage hat. */
+function zeilenBild(r){
+  const b = bildVon.get(r), a = letzteArbeit;
+  if(!b || !a || b.lauf !== laufZaehler) return '';
+  const rand = 12;
+  const x0 = Math.max(0, Math.floor(b.x0 - rand)), x1 = Math.min(a.width, Math.ceil(b.x1 + rand));
+  const y0 = Math.max(0, Math.floor(b.y0)), y1 = Math.min(a.height, Math.ceil(b.y1));
+  if(x1 - x0 < 20 || y1 - y0 < 8) return '';
+  const f = Math.min(1, 900 / (x1 - x0));
+  const c = document.createElement('canvas');
+  c.width = Math.round((x1 - x0) * f); c.height = Math.round((y1 - y0) * f);
+  c.getContext('2d').drawImage(a, x0, y0, x1 - x0, y1 - y0, 0, 0, c.width, c.height);
+  try{ return c.toDataURL('image/jpeg', 0.75); }catch(e){ return ''; }
+}
+
 /* ==================== Einbettung in den E-Assistenten (v0.43) ====================
    Nur mit ?einbettung und nur für die eigene Herkunft: die App (gleiche
    Adresse bei GitHub Pages) schickt {sam:'lesen', id, bild}, die Seite
@@ -7295,7 +7343,8 @@ if(new URLSearchParams(location.search).has('einbettung') && window.parent !== w
         aktuellesSoll = null;
         letzteReihen = null;
         const ok = await bildAnnehmen(d.bild, 'sam', s => antwort({stand: s}));   // v0.56: Zweite/Dritte Lesung
-        antwort({fertig:true, ok: !!ok && !!letzteReihen, reihen: letzteReihen || [], bericht: letzteAusgabe || '',
+        const mitBild = (letzteReihen || []).map(r => Object.assign({}, r, {bild: zeilenBild(r)}));   // v0.61
+        antwort({fertig:true, ok: !!ok && !!letzteReihen, reihen: mitBild, bericht: letzteAusgabe || '',
                  schrift: letzteSchrift, schriftKlein: schriftKlein()});   // v0.53: Warnung in der App
       }catch(err){
         antwort({fertig:true, ok:false, fehler: (err && err.message) ? err.message : String(err)});
