@@ -282,8 +282,12 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **„+ Gerät“ im Ordnen (v1.227, Jean: Leitungen erfassen, zusammenlegen, dann FIs und Geräte
   einfügen):** `#btnPlanGeraet` (nur ohne Markierung) bietet `specialList()` per `waehlDialog`,
   setzt das Gerät mit seiner TE-Breite oben ein; Unterzeile im Ordnen „n TE“ statt des Namens.
+  Seit v1.228 (Jean) steht der FI an erster Stelle darin (`ordnenFiEinfuegen`, früher Knopf
+  `#btnPlanFi`, entfällt); „+ Gerät“ daher auch mit Markierung: FI holt die Markierten hinter
+  sich, andere Geräte kommen vor die erste markierte Zeile. Leiste: „+ Gerät“/„+ Frei“ bzw.
+  „+ Gerät“/„Zusammenlegen (n)“/„Entfernen“.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.227, 20.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.228, 20.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
