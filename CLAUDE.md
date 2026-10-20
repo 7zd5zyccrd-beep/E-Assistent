@@ -262,8 +262,12 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   setzt `boardMarke` (cid); zurück aus dem Kreis `kreisHervorheben` (ins Bild, `.zuletzt` leuchtet).
   `kreisTitel` („Stromkreis 7“/„Neuer Stromkreis 14“, auch aus `refreshNoField`); `#kreisOk`
   „✓ … gespeichert“ nach Weiter/Nächster Kreis, weg beim ersten Tippen.
+- **Paket 4 (v1.224):** Prüfpunkt-Kacheln 48 px; gewählte Räume (`.chk.on`) dunkel gefüllt und
+  rund wie die Kacheln; Bezeichnungs-/Zweck-Kacheln mit Fläche `--enclosure-2`; FI-Typ zweispaltig
+  mit Kurztext `fiKurz` („40 A · 30 mA · 4-pol.“); ± der freien TE 44 px; Return in `#cName`
+  springt zu `#cRoom`, dort schließt es die Tastatur.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.223, 20.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.224, 20.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
