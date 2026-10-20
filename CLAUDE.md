@@ -224,6 +224,8 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Küche); beide nicht mehr Endpunkt (`KUECHE_GERAET`): danach Arbeitsfläche (`AF_GERAET`,
   3×2,5, links/rechts) oder das andere Gerät; `liste`-Glieder bekommen Komma und machen
   „Steckdose“ zu „Steckdosen“ (`sugNameAus`), `ohnePaar` unterdrückt „Beleuchtung“ dazu.
+  v1.216: auch hinter „Steckdosen links/rechts/Arbeitsfläche (links/rechts)“ (`GERAET_DANACH`,
+  `kommaVor`), Kabel bleibt 2,5, Raum Küche.
   Zusammenlegen (v1.212, Jean): Kabel und Absicherung von der Leitung mit dem kleinsten
   Querschnitt, bei Gleichstand die kleinere Absicherung; Altbestand ohne Querschnitt zählt
   nur, wenn alle so sind (vorher trug die stärkste Leitung).
@@ -231,7 +233,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   (`istStromstoss`) bekommen „K1 …“ nach Lage, nur Projekte mit `kNr` (neu ab v1.193,
   bestehende unverändert). Wiederholung: K vom Blatt (SAM) oder von Hand → `kFest`.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.215, 20.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.216, 20.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
@@ -239,7 +241,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Selbst drucken auf A4-Etikettenbögen (Empfehlung Avery L3415, 24 × Ø 40 mm, dauerhaft,
   nicht „ablösbar“): Vorlage mit der Bogen-Aufteilung erst, wenn Jean die Etiketten
   gewählt hat (Ränder dann von ihm nachgemessen).
-- **Leitung hinzufügen (v1.211–v1.215):** Zweck-Kacheln wie im Stromkreis, Dunstabzug/Kühlschrank mit Folgekacheln; Feld bleibt
+- **Leitung hinzufügen (v1.211–v1.216):** Zweck-Kacheln wie im Stromkreis, Dunstabzug/Kühlschrank mit Folgekacheln; Feld bleibt
   mit Tastatur im Bild (v1.213) – am Gerät ansehen.
 - **FI im Messen (v1.191):** öffnet die Tastatur beim Auslösestrom auch über „Weiter →“
   und aus der Liste? Hier nicht prüfbar.

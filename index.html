@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.216 20.10.2026 Bezeichnung (Jean): Dunstabzug und Kuehlschrank lassen sich auch
+                    hinter "Steckdosen links/rechts" und "Steckdosen
+                    Arbeitsflaeche (links/rechts)" anfuegen - "Steckdosen
+                    Arbeitsflaeche links, Dunstabzug". Kabel bleibt 3x2,5, Raum
+                    wird Kueche.
   v1.215 20.10.2026 Bezeichnung (Jean): neu "Kuehlschrank" unter Steckdose, wie der
                     Dunstabzug nur Kueche und 3x1,5 an B16. Nach Dunstabzug oder
                     Kuehlschrank geht es weiter mit Arbeitsflaeche (dann 3x2,5,
@@ -4058,7 +4063,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.215';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.216';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 20.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4087,6 +4092,11 @@ const AF_GERAET = {label:'Arbeitsfläche', liste:true, cable:'NYM-J 3x2,5', b16B
 const KUECHE_GERAET = (name, anderes) => ({label:name, room:['Küche'], rooms:[], ...GERAET_KABEL,
   cable:'NYM-J 3x1,5', b16Bei15:true, final:false, liste:true, ohnePaar:true,
   subs:[AF_GERAET, {label:anderes, liste:true, subs:[AF_GERAET]}]});
+/* v1.216 (Jean): Dunstabzug und Kühlschrank auch hinter „Steckdosen …“ anfügen –
+   „Steckdosen Arbeitsfläche links, Dunstabzug“. Das Kabel bleibt das der
+   Steckdosen (2,5 mm²), der Raum wird Küche; kommaVor setzt das Komma davor. */
+const GERAET_DANACH = () => [['Dunstabzug', 'Kühlschrank'], ['Kühlschrank', 'Dunstabzug']].map(([n, a]) =>
+  ({label:n, kommaVor:true, room:['Küche'], rooms:[], ohnePaar:true, subs:[{label:a, kommaVor:true, final:true}]}));
 const NAME_SUGGESTIONS = [
   {label:'E-Herd',      te:'3', char:'B', rated:'16 A', cable:'NYM-J 5x2,5',
    minCores:5, maxSection:6, room:['Küche'], rooms:[], final:true},   // kein zweites Wort
@@ -4104,8 +4114,9 @@ const NAME_SUGGESTIONS = [
       KUECHE_GERAET('Kühlschrank', 'Dunstabzug')
   ]},
   {label:'Steckdosen',  te:'1', char:'B', rated:'16 A', maxSection:2.5, rooms:ROOMS_BALKON, poles:'2', subs:[
-      {label:'links'}, {label:'rechts'},
-      {label:'Arbeitsfläche', room:['Küche'], rooms:[], subs:[{label:'links'}, {label:'rechts'}]}
+      {label:'links', subs:GERAET_DANACH()}, {label:'rechts', subs:GERAET_DANACH()},
+      {label:'Arbeitsfläche', room:['Küche'], rooms:[], subs:[{label:'links', subs:GERAET_DANACH()},
+        {label:'rechts', subs:GERAET_DANACH()}, ...GERAET_DANACH()]}
   ]},
   /* Setzt bewusst nur den Namen: keine Vorgabe für Nennstrom, Charakteristik,
      Kabel oder Raum. Der Name ist zugleich das Merkmal, an dem die Angabenliste
@@ -6766,7 +6777,7 @@ const sugNameAus = pfad => {
     const l = mehr && n.label === 'Steckdose' ? 'Steckdosen' : n.label;
     if(i === 0) return l;
     const v = pfad[i - 1];
-    return txt + (brauchtKomma(v.label, n.label) || (v.liste && n.liste) ? ', ' : ' ') + l;
+    return txt + (brauchtKomma(v.label, n.label) || (v.liste && n.liste) || n.kommaVor ? ', ' : ' ') + l;
   }, '');
 };
 const sugName = () => sugNameAus(sugPath);
