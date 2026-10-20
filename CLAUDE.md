@@ -234,7 +234,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   `circuits()`, aber in `planZeilen()`); „+ Frei“ im Ordnen mit −/+ und „bis Reihenende“
   (`freiBreite`, `ROW_SIZE` 12). `lueckenAlsFrei` macht beim Öffnen von Ordnen Lücken
   zwischen Nummern zu freien Zeilen (endet die Lücke am Reihenende: `rest`);
-  `nummernPlan` zählt sie mit. `freiAnpassen` (in `saveProj`) lässt sie schrumpfen, wenn ein
+  `nummernPlan` zählt sie mit. `freiAnpassen` (in `saveProj`, nicht während `ordnen` – v1.220) lässt sie schrumpfen, wenn ein
   Kreis ihren Platz belegt; `verschiebePlan` behandelt sie als Lücke. Sichtbar in der
   Erfassen-Liste (nicht antippbar) und als „frei“ in der Verteilerbeschreibung; nicht in
   Messen/Protokoll. Abweichende Nummerierung entfernt sie. `teLage` (Material: Reihen,
@@ -243,7 +243,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   (`istStromstoss`) bekommen „K1 …“ nach Lage, nur Projekte mit `kNr` (neu ab v1.193,
   bestehende unverändert). Wiederholung: K vom Blatt (SAM) oder von Hand → `kFest`.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.219, 20.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.220, 20.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
@@ -253,7 +253,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   gewählt hat (Ränder dann von ihm nachgemessen).
 - **Leitung hinzufügen (v1.211–v1.217):** Zweck-Kacheln wie im Stromkreis, Dunstabzug/Kühlschrank mit Folgekacheln; Feld bleibt
   mit Tastatur im Bild (v1.213) – am Gerät ansehen.
-- **Freie TE (v1.218–v1.219):** Ordnen mit „+ Frei“, Lücken bleiben, Nummern sofort beim Ziehen – am Gerät ausprobieren.
+- **Freie TE (v1.218–v1.220):** Ordnen mit „+ Frei“, Lücken bleiben, Nummern sofort beim Ziehen – am Gerät ausprobieren.
 - **FI im Messen (v1.191):** öffnet die Tastatur beim Auslösestrom auch über „Weiter →“
   und aus der Liste? Hier nicht prüfbar.
 - **Neuausgabe zeigte alten Inhalt:** liegt nach Jeans Versuch (Umbenennen) an
