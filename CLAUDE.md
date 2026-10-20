@@ -216,7 +216,8 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   zurück): Ziehen am Griff per Pointer-Ereignissen (`ordnenZiehen`, Rand rollt mit),
   Ziehen gleitend (v1.195: Zeile am Finger, andere rücken per transform), Zusammenlegen mit `teile` (Trennen), `+ FI` (`ordnenFiTyp`), Entfernen mit
   Rückgängig, `nummernPlan` nummeriert nach TE und setzt `covers` jedes FI;
-  Rückfrage, wenn sich vergebene Nummern ändern. Jean: Ziehen ggf. später ersetzen.
+  Seit v1.219 nummeriert jede Änderung im Ordnen sofort (`nummernAnwenden` am Anfang von
+  `ordnenZeigen`), „Fertig“ ohne Rückfrage (Jean: wegfallen). Jean: Ziehen ggf. später ersetzen.
   Seit v1.211 wählt „Leitung hinzufügen“ den Zweck mit den Kacheln der Bezeichnung
   (`leitungFolge`, `sugNameAus`, `paarPartnerAus`; Räume/Kabel nach der Kette wie
   `applySugValues`). Dunstabzug unter „Steckdose“: nur Küche, 3×1,5 an B16 (`b16Bei15`,
@@ -242,7 +243,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   (`istStromstoss`) bekommen „K1 …“ nach Lage, nur Projekte mit `kNr` (neu ab v1.193,
   bestehende unverändert). Wiederholung: K vom Blatt (SAM) oder von Hand → `kFest`.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.218, 20.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.219, 20.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
@@ -252,7 +253,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   gewählt hat (Ränder dann von ihm nachgemessen).
 - **Leitung hinzufügen (v1.211–v1.217):** Zweck-Kacheln wie im Stromkreis, Dunstabzug/Kühlschrank mit Folgekacheln; Feld bleibt
   mit Tastatur im Bild (v1.213) – am Gerät ansehen.
-- **Freie TE (v1.218):** Ordnen mit „+ Frei“, Lücken bleiben beim Nummerieren – am Gerät ausprobieren.
+- **Freie TE (v1.218–v1.219):** Ordnen mit „+ Frei“, Lücken bleiben, Nummern sofort beim Ziehen – am Gerät ausprobieren.
 - **FI im Messen (v1.191):** öffnet die Tastatur beim Auslösestrom auch über „Weiter →“
   und aus der Liste? Hier nicht prüfbar.
 - **Neuausgabe zeigte alten Inhalt:** liegt nach Jeans Versuch (Umbenennen) an
