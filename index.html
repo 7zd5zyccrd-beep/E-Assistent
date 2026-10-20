@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.213 20.10.2026 Blaetter von unten (Jean, "Leitung hinzufuegen"): mit offener
+                    Tastatur ragte ein langes Blatt oben aus dem Bild, das Feld
+                    fuer die Bezeichnung war nicht mehr zu sehen. Das Blatt ist
+                    jetzt nie hoeher als der Platz ueber der Tastatur und rollt
+                    das Feld ins Bild.
   v1.212 20.10.2026 Leitungen planen (Jean): beim Zusammenlegen kommen Kabel und
                     Absicherung von der Leitung mit dem kleinsten Querschnitt
                     (Licht 3x1,5 B10 und Steckdosen 3x2,5 B16 werden 3x1,5 an
@@ -2562,6 +2567,10 @@ input.ungueltig{border-color:var(--fault)!important;color:var(--fault)}   /* v1.
   background:var(--surface);border:2px solid var(--fault);border-radius:var(--r-btn);
   padding:18px;width:100%;max-width:460px;max-height:82vh;overflow:auto;
 }
+/* v1.213 (Jean, „Leitung hinzufügen“: Feld verschwand mit der Tastatur): steht
+   das Blatt über der Tastatur (#modal mit bottom), darf es nicht höher sein als
+   der Platz darüber – sonst ragte es oben aus dem Bild, samt Eingabefeld. */
+#modal.ueberTastatur .modal-box{max-height:calc(100% - 8px)}
 .modal-box h2{
   font-family:var(--f-label);text-transform:uppercase;letter-spacing:.08em;
   font-size:20px;margin:0 0 10px;color:var(--ink);
@@ -4036,7 +4045,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.212';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.213';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 20.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4628,7 +4637,21 @@ function feldFreiholen(){
   const kante = tastaturKante();
   const imModal = !$('#modal').hidden && $('#modal').contains(el);
   if(imModal){                                       // Blatt über die Tastatur setzen
-    $('#modal').style.bottom = Math.max(0, Math.round(ruheH - kante)) + 'px';
+    /* v1.213: vom tatsächlichen Fenster aus gerechnet – schrumpft es mit der
+       Tastatur (innerHeight), war die Tastatur sonst doppelt abgezogen */
+    $('#modal').style.bottom = Math.max(0, Math.round(Math.min(ruheH, window.innerHeight) - kante)) + 'px';
+    $('#modal').classList.add('ueberTastatur');      // v1.213: Höhe auf den Platz darüber begrenzen
+    /* v1.213: und das Feld im Blatt sichtbar rollen – oben unter den Rand, unten
+       über die mitlaufende Knopfzeile (.btn-row im langen Blatt) */
+    const box = el.closest('.modal-box');
+    if(box){
+      void box.offsetHeight;
+      const r = el.getBoundingClientRect(), bx = box.getBoundingClientRect();
+      const leiste = box.querySelector('.btn-row');
+      const unten = leiste && getComputedStyle(leiste).position === 'sticky' ? leiste.getBoundingClientRect().top : bx.bottom;
+      if(r.top < bx.top + 8) box.scrollTop -= bx.top + 8 - r.top + 24;
+      else if(r.bottom > unten - 8) box.scrollTop += r.bottom - unten + 8;
+    }
     return;
   }
   if(!bild().contains(el)) return;
@@ -4652,6 +4675,7 @@ function tastaturPlatz(el){
 function tastaturPlatzWeg(){
   $('.app').classList.remove('luft');
   $('#modal').style.bottom = '';
+  $('#modal').classList.remove('ueberTastatur');
 }
 /* Nach dem Tippen wird in EINEM Durchgang aufgeräumt: Leiste zurück, angehängte
    Luft weg, und falls die Leiste dabei das zuletzt gefüllte Feld verdeckt, wird

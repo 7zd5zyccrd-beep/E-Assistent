@@ -166,7 +166,9 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   main::after`), `feldFreiholen` holt Feld samt Begleiter (`BEGLEITER`: „999“,
   „übernehmen“) über `tastaturKante()` (aus visualViewport, sonst geschätzt);
   `ruheH` = Höhe ohne Fokus; kein `scrollTo(0,0)` während des Tippens; Blätter
-  (`#modal`) bekommen `bottom` in Tastaturhöhe. Testen: per Init-Skript
+  (`#modal`) bekommen `bottom` in Tastaturhöhe (seit v1.213 aus `min(ruheH, innerHeight)`
+  gerechnet, dazu `.ueberTastatur`: Blatt höchstens so hoch wie der Platz darüber, Feld
+  im Blatt ins Bild gerollt – sonst ragte „Leitung hinzufügen“ oben hinaus). Testen: per Init-Skript
   `window.visualViewport` durch ein Objekt mit setzbarer Höhe ersetzen und `resize`
   feuern; einmal mit gleichbleibendem, einmal mit mitschrumpfendem `innerHeight`.
 - **Ablage:** `archVorher` hält den Stand vor „Nachbessern“; `go` fragt beim
@@ -225,7 +227,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   (`istStromstoss`) bekommen „K1 …“ nach Lage, nur Projekte mit `kNr` (neu ab v1.193,
   bestehende unverändert). Wiederholung: K vom Blatt (SAM) oder von Hand → `kFest`.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.212, 20.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.213, 20.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
@@ -233,7 +235,8 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Selbst drucken auf A4-Etikettenbögen (Empfehlung Avery L3415, 24 × Ø 40 mm, dauerhaft,
   nicht „ablösbar“): Vorlage mit der Bogen-Aufteilung erst, wenn Jean die Etiketten
   gewählt hat (Ränder dann von ihm nachgemessen).
-- **Leitung hinzufügen (v1.211):** Zweck-Kacheln wie im Stromkreis, Dunstabzug – am Gerät ansehen.
+- **Leitung hinzufügen (v1.211–v1.213):** Zweck-Kacheln wie im Stromkreis, Dunstabzug; Feld bleibt
+  mit Tastatur im Bild (v1.213) – am Gerät ansehen.
 - **FI im Messen (v1.191):** öffnet die Tastatur beim Auslösestrom auch über „Weiter →“
   und aus der Liste? Hier nicht prüfbar.
 - **Neuausgabe zeigte alten Inhalt:** liegt nach Jeans Versuch (Umbenennen) an
