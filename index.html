@@ -10,6 +10,17 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.218 20.10.2026 Leitungen planen (Jean: freie TE im Verteiler gingen beim
+                    Nummerieren verloren): im Ordnen gibt es "+ Frei" - eine
+                    Zeile freie Teilungseinheiten mit einstellbarer Breite oder
+                    "bis Reihenende". Beim Oeffnen von Ordnen werden vorhandene
+                    Luecken (z. B. Reihe 2 ab 13) als freie Zeilen gezeigt, und
+                    "Fertig" nummeriert mit ihnen - nichts rutscht mehr
+                    zusammen. Freie TE stehen in der Liste und als "frei" in der
+                    Verteilerbeschreibung; die Materialrechnung (Reihen,
+                    Phasenschiene, Aderendhuelsen) richtet sich nach den
+                    Nummern. Wird ein freier Platz von Hand belegt, gibt die
+                    freie Zeile ihn ab.
   v1.217 20.10.2026 Leitung hinzufuegen (Jean): nach "Hinzufuegen" sind fuer die
                     naechste Leitung keine Raeume mehr vorgewaehlt.
   v1.216 20.10.2026 Bezeichnung (Jean): Dunstabzug und Kuehlschrank lassen sich auch
@@ -2350,6 +2361,18 @@ input.schalter:checked::after{transform:translateX(20px)}
 .ord-zeile .ord-mark{flex:0 0 22px;height:22px;border:2px solid var(--field-border);border-radius:6px;position:relative}
 .ord-zeile.an{border-color:var(--ink);background:var(--enclosure-2)}
 .ord-zeile.an .ord-mark{background:var(--ink);border-color:var(--ink)}
+/* v1.218: freie Teilungseinheiten – grau, gestrichelt, mit eigener Breite */
+.ord-zeile.ord-frei,.list-item.frei{border-style:dashed;background:transparent;color:var(--ink-soft)}
+.ord-zeile.ord-frei,.list-item.frei{border-left-color:var(--field-border);border-left-width:2px}
+/* vier Knöpfe in einer Zeile (v1.218): die kurzen schmaler, „Zusammenlegen“ am breitesten */
+.plan-leiste #btnPlanFi{flex:.8 1 0}.plan-leiste #btnPlanFrei{flex:.95 1 0}
+.plan-leiste #btnPlanZus{flex:1.9 1 0}.plan-leiste #btnPlanWeg{flex:1.35 1 0}
+@media (max-width:430px){ .plan-leiste .btn{font-size:14px;padding:0 3px} .plan-leiste{gap:6px} }
+.list-item.frei{cursor:default}
+.ord-frei-ctl{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap}
+.ord-frei-ctl button{min-height:36px;min-width:40px;padding:0 10px;border:1.5px solid var(--field-border);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:15px}
+.ord-frei-ctl button.gewaehlt{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.ord-frei-ctl .te{min-width:44px;text-align:center;font-family:var(--f-data);font-weight:600;color:var(--ink)}
 .ord-zeile.an .ord-mark::after{content:"";position:absolute;left:6px;top:1px;width:5px;height:11px;
   border:solid var(--surface);border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
 .ord-zeile.ord-fi{border-left-color:var(--ink);border-left-width:8px}
@@ -2358,7 +2381,6 @@ input.schalter:checked::after{transform:translateX(20px)}
 .ord-zeile.zieht{position:relative;z-index:5;border-color:var(--ink);box-shadow:0 8px 20px rgba(0,0,0,.28)}
 .plan-leiste{margin-bottom:10px}
 .plan-leiste .btn{flex:1 1 0;width:auto;min-width:0;padding:0 6px;font-size:15px}
-.plan-leiste #btnPlanZus{flex:1.6 1 0}
 @media (max-width:360px){ .plan-leiste .btn{font-size:14px;padding:0 4px} }
 .list-item.ord-zeile .no{flex:0 0 auto;min-width:1.2em;max-width:4.2em}
 /* langes Blatt (Leitung hinzufügen): die Knöpfe bleiben unten stehen */
@@ -3488,6 +3510,7 @@ function nameGross(s){
         <!-- v1.192: Ordnen-Modus der Leitungsplanung -->
         <div class="btn-row plan-leiste" id="planLeiste" hidden>
           <button class="btn ghost" id="btnPlanFi" type="button">+ FI</button>
+          <button class="btn ghost" id="btnPlanFrei" type="button">+ Frei</button>
           <button class="btn ghost" id="btnPlanZus" type="button">Zusammenlegen</button>
           <button class="btn ghost" id="btnPlanWeg" type="button">Entfernen</button>
         </div>
@@ -4065,7 +4088,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.217';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.218';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 20.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4480,7 +4503,7 @@ let archLesen = false;          // v1.173: abgelegt und noch nicht zum Nachbesse
 let archVorher = null;          // v1.181: Stand vor dem Nachbessern, bis ausgegeben oder entschieden
 const saveProj = () => {
   if(!PROJ) return true;
-  if(!(archOffen && archLesen)) kNummernSetzen();   // v1.193
+  if(!(archOffen && archLesen)){ freiAnpassen(); kNummernSetzen(); }   // v1.218, v1.193
   /* v1.173: Im Lesemodus wird nichts geändert. Was doch geändert wurde, fällt
      auf den abgelegten Stand zurück – nur Bereich und Dokumentwahl bleiben, sie
      sind Ansicht, nicht Inhalt. */
@@ -5527,6 +5550,7 @@ function abwNrUmschalten(an){
   if(!PROJ || an === !!PROJ.abwNr) return true;
   if(an){
     sortCircuits();                                   // letzte Ordnung nach Nummern einfrieren
+    PROJ.items = PROJ.items.filter(i => !istFrei(i)); // v1.218: ohne Positionen keine freien TE
     PROJ.items.forEach(c => { if(c.kind === 'circuit') c.no = circuitLabel(c); });
     PROJ.abwNr = true;
     return true;
@@ -5868,7 +5892,8 @@ function rowOf(c){
 function listHtml(){
   const entries = PROJ.items
     .map((it, idx) => ({it, idx}))
-    .filter(e => e.it.kind === 'circuit');
+    .filter(e => e.it.kind === 'circuit'
+      || (istFrei(e.it) && !abwNr() && !messModus() && e.it.no && (parseInt(e.it.te, 10) || 0) > 0));   // v1.218
   /* Sonst ordnet die Nummer die Anzeige. Weicht sie ab, bleibt die Reihenfolge
      der Erfassung stehen, und Reihen gibt es nicht – ohne Positionen ließe sich
      nicht sagen, wo eine Reihe endet. */
@@ -5889,6 +5914,12 @@ function listHtml(){
       /* v1.192: aufgeschriebene Leitungen ohne Nummer stehen unter eigener Zeile */
       const r = isFinite(parseInt(it.no, 10)) ? rowOf(it) : 'ohne';
       if(r !== lastRow){ out += `<div class="row-head">${r === 'ohne' ? 'Ohne Nummer' : 'Reihe ' + r}</div>`; lastRow = r; }
+    }
+    if(istFrei(it)){                                   // v1.218: nur zur Anzeige, nicht antippbar
+      const b = parseInt(it.te, 10) || 1;
+      out += `<div class="list-item frei z-plain"><span class="no">${esc(b > 1 ? `${it.no}–${+it.no + b - 1}` : it.no)}</span>
+        <span class="body"><span class="t">frei</span><span class="s">${b} TE</span></span></div>`;
+      return;
     }
     const vals = isSpecial(it) ? 'Ohne Messung erfassbar' : trafoLs(it) ? 'Trafo · ohne Messung'
       : it.status === 'measured'
@@ -5947,6 +5978,58 @@ const ordnenWahl = new Set();       // markierte Zeilen (Kennungen der Kreise)
 const planBar = () => !!PROJ && (PROJ.mode || 'wdh') === 'neu' && !messModus() && !abwNr() && !(archOffen && archLesen);
 const ohneNr = c => !String(c.no == null ? '' : c.no).trim();
 const istFiZeile = c => c.device === 'rcd' && !isSpecial(c);
+/* v1.218 (Jean: im Verteiler bleiben oft TE frei, „Fertig“ schob alles
+   zusammen): freie Teilungseinheiten sind eigene Zeilen {kind:'frei'} mit
+   Breite (te) oder „bis Reihenende“ (rest). Sie zählen beim Nummerieren, in
+   der Verteilerbeschreibung („frei“) und für die Lage im Verteiler, sonst
+   nirgends – circuits() kennt sie nicht. */
+const istFrei = it => !!it && it.kind === 'frei';
+const planZeilen = () => PROJ ? PROJ.items.filter(i => i.kind === 'circuit' || i.kind === 'frei') : [];
+const freiBreite = (f, pos) => {
+  if(!f.rest) return Math.max(1, parseInt(f.te, 10) || 1);
+  const r = (pos - 1) % ROW_SIZE;
+  return r ? ROW_SIZE - r : 0;                    // steht sie am Reihenanfang, bleibt nichts frei
+};
+const freiNeu = (te, rest) => ({kind:'frei', cid:neueKennung('F'), no:'', te:String(te), rest:!!rest});
+/* Beim Öffnen von „Ordnen“: Lücken zwischen vergebenen Nummern als freie Zeilen
+   zeigen – auch die von Hand gelassenen (Reihe 2 ab 13). Sonst schob „Fertig“
+   sie zusammen. */
+function lueckenAlsFrei(){
+  sortCircuits();
+  let pos = 1;
+  planZeilen().forEach(z => {
+    const n = parseInt(z.no, 10);
+    if(!isFinite(n)) return;
+    /* endet die Lücke genau am Reihenende (das Nächste beginnt bei 13, 25 …), wird
+       sie „bis Reihenende“ – dann bleibt die Reihe stehen, wenn davor etwas dazukommt */
+    if(n > pos){ const f = freiNeu(n - pos, (n - 1) % ROW_SIZE === 0); f.no = String(pos); PROJ.items.splice(PROJ.items.indexOf(z), 0, f); }
+    pos = Math.max(pos, n + (istFrei(z) ? Math.max(0, parseInt(z.te, 10) || 0) : Math.max(1, parseInt(z.te, 10) || 1)));
+  });
+}
+/* Belegt ein Kreis TE, die als frei vermerkt sind (Nummer von Hand geändert,
+   Kreise verschoben), gibt die freie Zeile sie ab – sie schrumpft, teilt sich
+   oder fällt weg. Läuft in saveProj. */
+function freiAnpassen(){
+  if(!PROJ || abwNr() || !PROJ.items.some(istFrei)) return;
+  const belegt = new Set();
+  circuits().forEach(c => kreisNummern(c).forEach(n => belegt.add(n)));
+  const neu = [];
+  PROJ.items.forEach(it => {
+    const s0 = parseInt(it.no, 10), te = parseInt(it.te, 10) || 0;
+    if(!istFrei(it) || !isFinite(s0) || !te){ neu.push(it); return; }
+    const stuecke = []; let a = null;
+    for(let n = s0; n < s0 + te; n++){
+      if(!belegt.has(n)){ if(a == null) a = n; }
+      else if(a != null){ stuecke.push([a, n - 1]); a = null; }
+    }
+    if(a != null) stuecke.push([a, s0 + te - 1]);
+    if(stuecke.length === 1 && stuecke[0][0] === s0 && stuecke[0][1] === s0 + te - 1){ neu.push(it); return; }
+    stuecke.forEach(([v, b], i) => neu.push(i === 0
+      ? Object.assign(it, {no:String(v), te:String(b - v + 1), rest:false})
+      : Object.assign(freiNeu(b - v + 1), {no:String(v)})));
+  });
+  PROJ.items = neu;
+}
 
 /* v1.211 (Jean): der Zweck wird wie die Bezeichnung im Stromkreis gewählt –
    dieselben Kacheln, Schritt für Schritt (Steckdose → Waschmaschine …), mit
@@ -6091,6 +6174,7 @@ function planKopfZeigen(n){
     if(current !== 'board') backToBoard();
     sortCircuits();
     circuits().forEach(c => { if(!c.cid) c.cid = neueKennung('K'); });
+    lueckenAlsFrei();                                 // v1.218
     ordnen = true; ordnenWahl.clear();
     saveProj(); renderBoard(); bildNach(imBild($('#planKopf')) - 12);
   });
@@ -6104,18 +6188,33 @@ function planLeisteZeigen(){
   $('#planLeiste').hidden    = !ordnen;
   $('#btnPlanFertig').hidden = !ordnen;
   if(!ordnen) return;
-  const sel = circuits().filter(c => ordnenWahl.has(c.cid));
+  const sel = planZeilen().filter(c => ordnenWahl.has(c.cid));
   const trennen = sel.length === 1 && Array.isArray(sel[0].teile) && sel[0].teile.length > 1;
   $('#btnPlanZus').textContent = trennen ? 'Trennen' : 'Zusammenlegen';
-  $('#btnPlanZus').disabled = !trennen && sel.filter(c => !istFiZeile(c) && !isSpecial(c)).length < 2;
+  $('#btnPlanZus').disabled = !trennen && (sel.some(istFrei) || sel.filter(c => !istFiZeile(c) && !isSpecial(c)).length < 2);
   $('#btnPlanWeg').disabled = !sel.length;
 }
 
 /* --- Liste im Ordnen-Modus --- */
 function ordnenZeigen(){
   const box = $('#boardBody');
-  box.innerHTML = circuits().map(c => {
-    const fi = istFiZeile(c), an = ordnenWahl.has(c.cid);
+  box.innerHTML = planZeilen().map(c => {
+    const an = ordnenWahl.has(c.cid);
+    if(istFrei(c)){                                  // v1.218
+      const b = Math.max(1, parseInt(c.te, 10) || 1);
+      return `<div class="list-item ord-zeile ord-frei${an ? ' an' : ''}" data-ord="${esc(c.cid)}" role="button">
+        <span class="ord-mark" aria-hidden="true"></span>
+        <span class="no">${esc(c.no ? (c.rest ? c.no : b > 1 ? `${c.no}–${+c.no + b - 1}` : c.no) : '–')}</span>
+        <span class="body"><span class="t">frei</span>
+          <span class="ord-frei-ctl">
+            <button type="button" data-frei="-"${c.rest ? ' disabled' : ''} aria-label="Weniger">−</button>
+            <span class="te">${c.rest ? '…' : b} TE</span>
+            <button type="button" data-frei="+"${c.rest ? ' disabled' : ''} aria-label="Mehr">+</button>
+            <button type="button" data-frei="rest" class="${c.rest ? 'gewaehlt' : ''}">bis Reihenende</button>
+          </span></span>
+        <span class="ord-griff" aria-label="Verschieben">≡</span></div>`;
+    }
+    const fi = istFiZeile(c);
     const unter = fi ? (c.breaker || '')
       : [c.breaker, kabelText(c.cable), Array.isArray(c.teile) && c.teile.length > 1 ? `aus ${c.teile.length} Leitungen` : ''].filter(Boolean).join(' · ');
     return `<div class="list-item ord-zeile${fi ? ' ord-fi' : ''}${an ? ' an' : ''}" data-ord="${esc(c.cid)}" role="button">
@@ -6128,6 +6227,16 @@ function ordnenZeigen(){
   $$('#boardBody .ord-zeile').forEach(z => {
     z.onclick = e => {
       if(e.target.closest('.ord-griff')) return;
+      const fb = e.target.closest('[data-frei]');
+      if(fb){                                         // v1.218: Breite der freien Zeile
+        const f = PROJ.items.find(i => istFrei(i) && i.cid === z.dataset.ord);
+        if(!f) return;
+        const b = Math.max(1, parseInt(f.te, 10) || 1);
+        if(fb.dataset.frei === 'rest') f.rest = !f.rest;
+        else f.te = String(Math.min(ROW_SIZE, Math.max(1, b + (fb.dataset.frei === '+' ? 1 : -1))));
+        saveProj(); renderBoard();
+        return;
+      }
       const id = z.dataset.ord;
       if(ordnenWahl.has(id)) ordnenWahl.delete(id); else ordnenWahl.add(id);
       z.classList.toggle('an', ordnenWahl.has(id));
@@ -6199,12 +6308,13 @@ function ordnenZiehen(zeile, e){
   document.addEventListener('pointercancel', ende);
 }
 function ordnenUebernehmen(ids){
-  const cs = ids.map(id => PROJ.items.find(c => c.kind === 'circuit' && c.cid === id)).filter(Boolean);
-  if(cs.length !== circuits().length){ renderBoard(); return; }
-  const vorher = circuits().map(c => c.cid).join('|');
+  const zeilenArt = it => it.kind === 'circuit' || it.kind === 'frei';      // v1.218: mit freien Zeilen
+  const cs = ids.map(id => PROJ.items.find(c => zeilenArt(c) && c.cid === id)).filter(Boolean);
+  if(cs.length !== planZeilen().length){ renderBoard(); return; }
+  const vorher = planZeilen().map(c => c.cid).join('|');
   let k = 0;
-  PROJ.items = PROJ.items.map(it => it.kind === 'circuit' ? cs[k++] : it);
-  if(circuits().map(c => c.cid).join('|') !== vorher) saveProj();
+  PROJ.items = PROJ.items.map(it => zeilenArt(it) ? cs[k++] : it);
+  if(planZeilen().map(c => c.cid).join('|') !== vorher) saveProj();
   renderBoard();
 }
 
@@ -6218,10 +6328,19 @@ $('#btnPlanFi').onclick = () => {
   const fi = Object.assign(blankCircuit(), {no:'', device:'rcd', breaker:typ, te:poleTe(typ) || '4', name:AUTO_NAMES.rcd,
     room:'', cable:'', covers:'', cid:neueKennung('K')});
   /* vor die erste markierte Zeile, sonst ganz nach oben – dort sitzt der FI meist */
-  const cs = circuits(), ziel = cs.find(c => ordnenWahl.has(c.cid)) || cs[0];
+  const cs = planZeilen(), ziel = cs.find(c => ordnenWahl.has(c.cid)) || cs[0];
   PROJ.items.splice(ziel ? PROJ.items.indexOf(ziel) : PROJ.items.length, 0, fi);
   ordnenWahl.clear(); saveProj(); renderBoard();
   toast('FI eingefügt – am ≡ an seinen Platz ziehen');
+};
+/* v1.218: freie TE vor die erste markierte Zeile, sonst ans Ende – meist bleibt
+   der Rest einer Reihe frei */
+$('#btnPlanFrei').onclick = () => {
+  const f = freiNeu(1);
+  const ziel = planZeilen().find(c => ordnenWahl.has(c.cid));
+  PROJ.items.splice(ziel ? PROJ.items.indexOf(ziel) : PROJ.items.length, 0, f);
+  ordnenWahl.clear(); saveProj(); renderBoard();
+  toast('Freie TE eingefügt – Breite einstellen, am ≡ an ihren Platz ziehen');
 };
 /* Bezeichnungen und Orte zusammenführen, Doppeltes nur einmal. "Steckdose"
    neben "Steckdosen" fällt weg. */
@@ -6238,6 +6357,7 @@ $('#btnPlanZus').onclick = () => {
     ordnenWahl.clear(); saveProj(); renderBoard(); toast(`In ${teile.length} Leitungen getrennt`);
     return;
   }
+  if(planZeilen().some(c => istFrei(c) && ordnenWahl.has(c.cid))){ toast('Freie TE lassen sich nicht zusammenlegen'); return; }
   if(sel.some(c => istFiZeile(c) || isSpecial(c))){ toast('FI und sonstige Geräte lassen sich nicht zusammenlegen'); return; }
   if(sel.length < 2) return;
   /* v1.212 (Jean): die Leitung mit dem kleinsten Querschnitt trägt Kabel und
@@ -6264,7 +6384,7 @@ $('#btnPlanZus').onclick = () => {
   saveProj(); renderBoard(); toast(`${sel.length} Leitungen zusammengelegt`);
 };
 $('#btnPlanWeg').onclick = () => {
-  const sel = circuits().filter(c => ordnenWahl.has(c.cid));
+  const sel = planZeilen().filter(c => ordnenWahl.has(c.cid));          // v1.218: auch freie Zeilen
   if(!sel.length) return;
   const vorher = PROJ.items.slice();
   PROJ.items = PROJ.items.filter(c => !sel.includes(c));
@@ -6281,13 +6401,17 @@ function bereicheText(nr){
 }
 function nummernPlan(){
   let n = 1;
-  const plan = circuits().map(c => { const te = Math.max(1, parseInt(c.te, 10) || 1), p = {c, no:n, bis:n + te - 1}; n += te; return p; });
+  /* v1.218: freie Zeilen belegen ihre TE mit – so bleiben Lücken stehen */
+  const plan = planZeilen().map(c => {
+    const te = istFrei(c) ? freiBreite(c, n) : Math.max(1, parseInt(c.te, 10) || 1);
+    const p = {c, no:n, bis:n + te - 1, te}; n += te; return p;
+  });
   plan.forEach((p, i) => {
     if(!istFiZeile(p.c)) return;
     const nr = [];
     for(let j = i + 1; j < plan.length && !istFiZeile(plan[j].c); j++){
       const q = plan[j];
-      if(isSpecial(q.c) || q.c.device === 'rcbo') continue;   // eigener Fehlerschutz bzw. kein Kreis
+      if(istFrei(q.c) || isSpecial(q.c) || q.c.device === 'rcbo') continue;   // frei, eigener Fehlerschutz bzw. kein Kreis
       for(let k = q.no; k <= q.bis; k++) nr.push(k);
     }
     p.covers = bereicheText(nr);
@@ -6297,12 +6421,15 @@ function nummernPlan(){
 $('#btnPlanFertig').onclick = () => {
   const plan = nummernPlan();
   const anwenden = () => {
-    plan.forEach(p => { p.c.no = String(p.no); if(p.covers != null) p.c.covers = p.covers; });
+    plan.forEach(p => {
+      if(istFrei(p.c)){ p.c.no = p.te ? String(p.no) : ''; p.c.te = String(p.te); return; }   // v1.218
+      p.c.no = String(p.no); if(p.covers != null) p.c.covers = p.covers;
+    });
     ordnen = false; ordnenWahl.clear();
     sortCircuits(); saveProj(); renderBoard(); toast('Nummeriert');
   };
   const beenden = () => { ordnen = false; ordnenWahl.clear(); sortCircuits(); saveProj(); renderBoard(); };
-  const aendert = plan.some(p => !ohneNr(p.c) && String(parseInt(p.c.no, 10)) !== String(p.no));
+  const aendert = plan.some(p => !istFrei(p.c) && !ohneNr(p.c) && String(parseInt(p.c.no, 10)) !== String(p.no));
   if(!aendert){ anwenden(); return; }
   /* Jean (Frage 4): neu nummerieren ist erlaubt, aber nur nach Rückfrage */
   waehlDialog('Nummern neu vergeben?', 'Schon vergebene Nummern ändern sich – eine Beschriftung am Verteiler muss nachgezogen werden.', [
@@ -6410,8 +6537,10 @@ function nextNo(){
     }
     return '';
   }
-  if(!cs.length) return 1;
-  const last = cs[cs.length - 1];
+  /* v1.218: eine freie Zeile am Ende belegt ihre TE – der nächste Kreis kommt dahinter */
+  const fz = planZeilen().filter(z => !istFrei(z) || (z.no && (parseInt(z.te, 10) || 0) > 0));
+  if(!fz.length) return 1;
+  const last = fz[fz.length - 1];
   const end = circuitEnd(last);
   return end != null ? end + 1 : cs.length + 1;
 }
@@ -7445,7 +7574,7 @@ const istLicht = c => /beleucht|licht/i.test(c.name || '')
    gehen dann vorweg – auch bei der Einstellung „Nummernfolge“, die ohne
    tragende Nummern nichts mehr zu ordnen hätte. */
 function messFolge(){
-  const alle = (PROJ ? PROJ.items : []).filter(c => !ohneMessung(c));   // v1.189
+  const alle = circuits().filter(c => !ohneMessung(c));   // v1.189; v1.218: ohne freie Zeilen
   const cs   = alle.filter(c => devOf(c) !== 'rcd');          // die Kreise
   const fis  = alle.filter(c => devOf(c) === 'rcd');          // die FI messen zuletzt
   const zahlen = !abwNr() && cs.every(c => isFinite(parseInt(c.no, 10)));
@@ -7785,8 +7914,8 @@ function verschiebePlan(c){
   const start = kreisStart(c), ende = circuitEnd(c);
   if(!isFinite(start) || ende == null) return null;
   /* Alles, was hinter dem Anfang des geänderten Kreises liegt, der Reihe nach. */
-  const folge = PROJ.items
-    .filter(o => o !== c && isFinite(kreisStart(o)) && kreisStart(o) >= start)
+  const folge = PROJ.items                                   // v1.218: freie TE nehmen die Verschiebung auf (freiAnpassen)
+    .filter(o => o !== c && o.kind === 'circuit' && isFinite(kreisStart(o)) && kreisStart(o) >= start)
     .sort((a, b) => kreisStart(a) - kreisStart(b));
   const erste = folge[0];
   if(!erste || kreisStart(erste) > ende) return null;      // keine Überschneidung
@@ -8128,15 +8257,11 @@ const istFi  = c => !isSpecial(c) && (c.device === 'rcd' || c.device === 'rcbo')
    fort. Geliefert wird je Reihe das Gerät, das ihre erste TE belegt. */
 function reihenAnfang(){
   const anf = [];
-  let pos = 0;
-  circuits().forEach(c => {
-    const te = parseInt(c.te, 10) || 1;
-    const von = pos + 1, bis = pos + te;
+  teLage().forEach(({von, bis}, c) => {
     for(let r = Math.ceil(von / 12); r <= Math.ceil(bis / 12); r++){
       const erste = (r - 1) * 12 + 1;
       if(von <= erste && erste <= bis && !anf[r - 1]) anf[r - 1] = c;
     }
-    pos = bis;
   });
   return anf;
 }
@@ -8189,13 +8314,17 @@ function huelsen18(quelle){
 }
 /* Lage der Kreise auf der Hutschiene: erste und letzte Teilungseinheit in
    Kreisreihenfolge, dazu die Reihe, in der das Gerät beginnt. */
+/* v1.218 (Jean): mit Nummer zählt die Nummer – freie TE und eine Reihe, die
+   bewusst bei 13 beginnt, verschieben die Lage. Ohne Nummer (oder bei
+   abweichender Nummerierung) wie bisher lückenlos hinter dem Vorgänger. */
 function teLage(){
   const lage = new Map();
   let pos = 0;
   circuits().forEach(c => {
-    const te = parseInt(c.te, 10) || 1;
-    lage.set(c, {von: pos + 1, bis: pos + te, reihe: Math.ceil((pos + 1) / 12)});
-    pos += te;
+    const te = parseInt(c.te, 10) || 1, n = parseInt(c.no, 10);
+    const von = !abwNr() && isFinite(n) && n > pos ? n : pos + 1;
+    lage.set(c, {von, bis: von + te - 1, reihe: Math.ceil(von / 12)});
+    pos = von + te - 1;
   });
   return lage;
 }
@@ -8241,11 +8370,7 @@ function psKlein(anzahl){
    Reihe – maßgeblich ist die Reihe, in der die erste TE des Geräts liegt. */
 function fiDurchgeschliffen(){
   const proReihe = new Map();
-  let pos = 0;
-  circuits().forEach(c => {
-    const te = parseInt(c.te, 10) || 1;
-    const reihe = Math.ceil((pos + 1) / 12);
-    pos += te;
+  teLage().forEach(({reihe}, c) => {                // v1.218: Lage aus den Nummern
     if(isSpecial(c) || c.device !== 'rcd') return;
     proReihe.set(reihe, (proReihe.get(reihe) || 0) + 1);
   });
@@ -12432,7 +12557,11 @@ function blaetterBauen(nur){
         <div class="pvf d"><i></i><span>Datum</span></div>
         <div class="pvf u"><i></i><span>Unterschrift</span></div></div></div>
       <table class="besch BESCH_STUFE"><thead><tr><th style="width:90px">Nr.</th><th>Bezeichnung</th><th style="width:39%">Ort</th></tr></thead><tbody>` +
-      cs.map(c => `<tr><td>${esc(circuitLabel(c))}</td><td>${esc(beschrName(c))}</td><td>${esc(c.room)}</td></tr>`).join('') +
+      /* v1.218 (Jean): freie TE stehen als „frei“ mit, damit Blatt und Verteiler übereinstimmen */
+      (abwNr() ? cs : planZeilen().filter(z => !istFrei(z) || (z.no && (parseInt(z.te, 10) || 0) > 0)))
+        .map(c => istFrei(c)
+          ? `<tr class="frei"><td>${esc((parseInt(c.te, 10) || 1) > 1 ? `${c.no}–${+c.no + (parseInt(c.te, 10) || 1) - 1}` : c.no)}</td><td>frei</td><td></td></tr>`
+          : `<tr><td>${esc(circuitLabel(c))}</td><td>${esc(beschrName(c))}</td><td>${esc(c.room)}</td></tr>`).join('') +
       `</tbody></table>` +
       /* Das Blatt bleibt am Verteiler, deshalb der Prüfhinweis darunter – nur
          wenn dort auch ein FI oder FI/LS sitzt. */
