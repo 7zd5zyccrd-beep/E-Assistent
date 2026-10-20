@@ -243,7 +243,16 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   (`istStromstoss`) bekommen „K1 …“ nach Lage, nur Projekte mit `kNr` (neu ab v1.193,
   bestehende unverändert). Wiederholung: K vom Blatt (SAM) oder von Hand → `kFest`.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.220, 20.10.2026)
+## Prüfung Erfassen (20.10.2026, Artifact „Erfassen unter der Lupe“, Jean: alles umsetzen)
+
+- **Paket 1 (v1.221):** `erfassNaechster` – im bestehenden Kreis „Weiter → N“ (offene SAM-Kreise
+  zuerst); `persistCircuit` gibt den Kreis zurück, `nummernPruefen(fertig, obj)` fragt auch bei
+  neuem Kreis auf belegter Nummer; `fiOhneAbdeckung` macht den FI bernstein, `coversVorschlag`
+  (aus `coversHint` gelöst) als Knopf `[data-covers]` unter dem FI in der Liste, gelbe Karte im
+  Abschluss (sperrt nicht); Blatt „Leitung hinzufügen“: „Fertig“ nimmt gewählte Leitung mit
+  (`leitungZurueckOrig`).
+
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.221, 20.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
