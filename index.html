@@ -10,6 +10,13 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.211 20.10.2026 Leitungen planen (Jean): der Zweck bei "Leitung hinzufuegen"
+                    wird mit denselben Kacheln gewaehlt wie die Bezeichnung im
+                    Stromkreis - Schritt fuer Schritt (Steckdose, dann
+                    Waschmaschine ...), mit Zurueck und dem Paar Beleuchtung /
+                    Steckdosen. Raeume und Kabel richten sich wie dort nach der
+                    Wahl. Neu bei den Geraetesteckdosen: Dunstabzug (nur Kueche,
+                    NYM-J 3x1,5 an B16).
   v1.210 20.10.2026 Pruefvermerk (Jean, nach Testausdruck Variante A gewaehlt):
                     wieder mit "Datum" und "Unterschrift" unter den Linien. Die
                     Datumslinie steht genau mittig zwischen gruener Linie und
@@ -4025,7 +4032,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.210';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.211';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 20.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4052,7 +4059,10 @@ const NAME_SUGGESTIONS = [
   {label:'Steckdose',   te:'1', char:'B', rated:'16 A', maxSection:2.5, rooms:ROOMS_BALKON, poles:'2', subs:[
       {label:'Geschirrspüler', room:['Küche'], rooms:[], ...GERAET_KABEL},
       {label:'Waschmaschine',  rooms:['Küche','Badezimmer','Hauswirtschaftsraum','Kammer'], ...GERAET_KABEL},
-      {label:'Trockner',       rooms:['Badezimmer','Hauswirtschaftsraum','Kammer','Küche'], ...GERAET_KABEL}
+      {label:'Trockner',       rooms:['Badezimmer','Hauswirtschaftsraum','Kammer','Küche'], ...GERAET_KABEL},
+      /* v1.211 (Jean): Dunstabzug nur in der Küche, 3×1,5 an B16 – bewusst
+         ohne die Regel „1,5 mm² an B10“ beim Aufschreiben (b16Bei15) */
+      {label:'Dunstabzug',     room:['Küche'], rooms:[], ...GERAET_KABEL, cable:'NYM-J 3x1,5', b16Bei15:true}
   ]},
   {label:'Steckdosen',  te:'1', char:'B', rated:'16 A', maxSection:2.5, rooms:ROOMS_BALKON, poles:'2', subs:[
       {label:'links'}, {label:'rechts'},
@@ -4726,6 +4736,7 @@ const KURZ = [
   [/Geschirrspüler/gi,      'GS'],
   [/Waschmaschine/gi,       'WM'],
   [/Trockner/gi,            'TR'],
+  [/Dunstabzug/gi,          'DA'],
   [/Arbeitsfläche/gi,       'AF'],
   [/Beleuchtung/gi,         'Bel.'],
   [/Steckdosen?/gi,         'Std.'],
@@ -5869,16 +5880,18 @@ const planBar = () => !!PROJ && (PROJ.mode || 'wdh') === 'neu' && !messModus() &
 const ohneNr = c => !String(c.no == null ? '' : c.no).trim();
 const istFiZeile = c => c.device === 'rcd' && !isSpecial(c);
 
-/* Zwecke fürs Aufschreiben: dieselben Vorschläge wie im Stromkreis, die
-   Geräte-Steckdosen einzeln. Beleuchtung und Steckdosen zuerst – die häufigsten. */
-function leitungZwecke(){
-  const z = [];
-  NAME_SUGGESTIONS.forEach(s => {
-    if(s.label === 'Steckdose') (s.subs || []).forEach(u => z.push(Object.assign({}, s, u, {label:'Steckdose ' + u.label, subs:null})));
-    else z.push(Object.assign({}, s, {subs:null}));
-  });
-  const vorn = ['Beleuchtung', 'Steckdosen'];
-  return [...vorn.map(l => z.find(x => x.label === l)).filter(Boolean), ...z.filter(x => !vorn.includes(x.label))];
+/* v1.211 (Jean): der Zweck wird wie die Bezeichnung im Stromkreis gewählt –
+   dieselben Kacheln, Schritt für Schritt (Steckdose → Waschmaschine …), mit
+   „← zurück“ und dem Paar Beleuchtung/Steckdosen. Folgt showNameSug ohne
+   die Sonderwege für FI/LS und sonstige Geräte. */
+function leitungFolge(pfad){
+  const cur = pfad[pfad.length - 1];
+  if(cur && cur.final) return [];
+  const dazu = paarPartnerAus(pfad);
+  if(cur && cur.subs) return [...cur.subs, ...dazu];
+  if(dazu.length) return dazu;
+  if(pfad.some(n => paarWort(n.label))) return [];
+  return NAME_SUGGESTIONS;
 }
 function leitungKabel(z, name){
   if(z && z.cable) return z.cable;
@@ -5891,15 +5904,16 @@ function leitungBauen(z, name, raeume, kabel){
   const c = blankCircuit(), te = (z && z.te) || '1';
   Object.assign(c, {no:'', name, room:raeume.join(', '), te, poles: te === '3' ? '3' : '1',
     char:(z && z.char) || 'B', cable:kabel || leitungKabel(z, name), cid:neueKennung('K')});
-  /* 1,5 mm² gehört an B10, nicht an B16 (wie QK U7) */
-  c.rated = (cableSection(c.cable) || 2.5) < 2.5 ? '10 A' : (z && z.rated && z.rated !== '10 A' ? z.rated : '16 A');
+  /* 1,5 mm² gehört an B10, nicht an B16 (wie QK U7) – außer der Zweck legt
+     es ausdrücklich anders fest (v1.211: Dunstabzug) */
+  c.rated = (cableSection(c.cable) || 2.5) < 2.5 && !(z && z.b16Bei15) ? '10 A'
+    : (z && z.rated && z.rated !== '10 A' ? z.rated : '16 A');
   c.breaker = breakerOf(c);
   return c;
 }
 function leitungBlatt(zuletzt, vorher){
-  const zw = leitungZwecke();
-  const kabelListe = CFG.cables.filter(k => !/\(Alu\)/.test(k) && (cableSection(k) == null || cableSection(k) <= KREIS_MAX_QS));
-  let z = null, kabel = null, kabelHandGewaehlt = false;
+  const kabelAlle = CFG.cables.filter(k => !/\(Alu\)/.test(k) && (cableSection(k) == null || cableSection(k) <= KREIS_MAX_QS));
+  let pfad = [], kabel = null, kabelHandGewaehlt = false;
   const raeume = new Set((vorher && vorher.raeume) || []);
   resetModal(false);
   $('#modalTitle').textContent = 'Leitung hinzufügen';
@@ -5907,48 +5921,86 @@ function leitungBlatt(zuletzt, vorher){
   const zahl = circuits().filter(ohneNr).length;
   $('#modalBody').innerHTML = (zuletzt ? `<div class="small leitung-ok">✓ ${esc(zuletzt)}</div>` : '')
     + `<div class="eyebrow">Zweck</div>
-       <div class="chk-grid kacheln" id="lzZweck">${zw.map((x, i) => `<button type="button" class="sug" data-z="${i}">${esc(x.label)}</button>`).join('')}</div>
-       <input id="lzName" placeholder="oder eigene Bezeichnung" style="margin-top:8px" autocomplete="off">
+       <input id="lzName" placeholder="Zweck wählen oder eintippen" autocomplete="off">
+       <div class="chk-grid" id="lzZweck" style="margin-top:8px"></div>
        <div class="eyebrow">Raum</div>
-       <div class="chk-grid" id="lzRaum">${ROOMS_BALKON.map(o => `<label class="chk${raeume.has(o) ? ' on' : ''}">
-         <input type="checkbox" value="${esc(o)}"${raeume.has(o) ? ' checked' : ''}><span>${esc(o)}</span></label>`).join('')}</div>
+       <div class="chk-grid" id="lzRaum"></div>
        <div class="eyebrow">Kabel</div>
-       <div class="chk-grid kacheln" id="lzKabel">${kabelListe.map(k => `<button type="button" class="sug mono" data-k="${esc(k)}">${esc(kabelText(k))}</button>`).join('')}</div>
+       <div class="chk-grid kacheln" id="lzKabel"></div>
        <p class="muted small" style="margin-top:10px">${zahl ? `${zahl} ${zahl === 1 ? 'Leitung' : 'Leitungen'} ohne Nummer. ` : ''}Die Absicherung schlägt die App vor – ändern im Kreis.</p>`;
-  const malen = () => {
-    $$('#lzZweck [data-z]').forEach(b => b.classList.toggle('gewaehlt', !!z && zw[+b.dataset.z] === z));
-    $$('#lzKabel [data-k]').forEach(b => b.classList.toggle('gewaehlt', b.dataset.k === kabel));
+  /* Werte der Kette: Wurzel zuerst, tiefere Ebenen überschreiben (wie applySugValues) */
+  const quelle = () => pfad.length ? Object.assign({}, ...pfad, {label:sugNameAus(pfad), subs:null}) : null;
+  const raumListe = () => {
+    const rf = [...pfad].reverse().find(n => n.rooms);
+    return rf ? rf.rooms : ROOMS_BALKON;
   };
-  $$('#lzZweck [data-z]').forEach(b => b.onclick = () => {
-    z = zw[+b.dataset.z];
-    $('#lzName').value = z.label;
-    if(!kabelHandGewaehlt) kabel = leitungKabel(z, z.label);
-    if(z.room && !raeume.size){
-      z.room.forEach(o => raeume.add(o));
-      $$('#lzRaum input').forEach(i => { i.checked = raeume.has(i.value); i.closest('.chk').classList.toggle('on', i.checked); });
+  const kabelListe = () => {
+    const q = quelle();
+    if(!q) return kabelAlle;
+    if(q.cables) return q.cables.filter(k => kabelAlle.includes(k) || k === CABLE_UNBEKANNT);
+    return kabelAlle.filter(k => {
+      const qs = cableSection(k), ad = cableCores(k);
+      return !(q.maxSection && qs != null && qs > q.maxSection) && !(q.minCores && ad != null && ad < q.minCores)
+          && !(q.maxCores && ad != null && ad > q.maxCores);
+    });
+  };
+  const kabelVorschlag = () => {
+    const q = quelle(), name = $('#lzName').value.trim();
+    if(!name) return null;
+    const kj = kabelJeArt(name);
+    /* beim Paar Licht + Steckdosen zählt der Steckdosenkreis (wie im Stromkreis, v1.182) */
+    if(q && /steckdose/i.test(name) && /beleuchtung|licht/i.test(name) && kj) return kj;
+    return leitungKabel(q, name);
+  };
+  const raeumeMalen = () => {
+    const liste = raumListe(), feld = $('#lzRaum');
+    if(!liste.length){                    // Zweck gibt den Raum fest vor
+      feld.innerHTML = `<span class="muted small">${esc([...raeume].join(', ') || '–')}</span>`; return;
     }
-    malen();
-  });
-  $('#lzName').oninput = () => {
-    const t = $('#lzName').value.trim();
-    if(z && t !== z.label) z = null;
-    if(!kabelHandGewaehlt) kabel = t ? leitungKabel(z, t) : null;
-    malen();
+    feld.innerHTML = liste.map(o => `<label class="chk${raeume.has(o) ? ' on' : ''}">
+      <input type="checkbox" value="${esc(o)}"${raeume.has(o) ? ' checked' : ''}><span>${esc(o)}</span></label>`).join('');
+    $$('#lzRaum input').forEach(i => i.onchange = () => {
+      if(i.checked) raeume.add(i.value); else raeume.delete(i.value);
+      i.closest('.chk').classList.toggle('on', i.checked);
+    });
   };
-  $$('#lzRaum input').forEach(i => i.onchange = () => {
-    if(i.checked) raeume.add(i.value); else raeume.delete(i.value);
-    i.closest('.chk').classList.toggle('on', i.checked);
-  });
-  $$('#lzKabel [data-k]').forEach(b => b.onclick = () => { kabel = b.dataset.k; kabelHandGewaehlt = true; malen(); });
+  const kabelMalen = () => {
+    const liste = kabelListe();
+    if(kabel && !liste.includes(kabel)){ kabel = null; kabelHandGewaehlt = false; }
+    if(!kabelHandGewaehlt) kabel = kabelVorschlag();
+    $('#lzKabel').innerHTML = liste.map(k => `<button type="button" class="sug mono${k === kabel ? ' gewaehlt' : ''}" data-k="${esc(k)}">${esc(kabelText(k))}</button>`).join('');
+    $$('#lzKabel [data-k]').forEach(b => b.onclick = () => { kabel = b.dataset.k; kabelHandGewaehlt = true; kabelMalen(); });
+  };
+  const zweckMalen = () => {
+    const folge = leitungFolge(pfad), letzt = pfad[pfad.length - 1];
+    $('#lzZweck').innerHTML = (letzt ? `<button type="button" class="sug back" data-back="1">← ${esc(letzt.label)}</button>` : '')
+      + folge.map((o, i) => `<button type="button" class="sug" data-i="${i}">${esc(o.label)}</button>`).join('');
+    $$('#lzZweck button').forEach(b => b.onclick = () => {
+      if(b.dataset.back) pfad.pop(); else pfad.push(folge[+b.dataset.i]);
+      $('#lzName').value = sugNameAus(pfad);
+      /* Raum wie im Stromkreis: Vorgabe der tiefsten Ebene, sonst nur, was in die Liste passt */
+      const rp = [...pfad].reverse().find(n => n.room), liste = raumListe();
+      if(rp && (!liste.length || ![...raeume].some(o => liste.includes(o)))){ raeume.clear(); rp.room.forEach(o => raeume.add(o)); }
+      else if(liste.length) [...raeume].forEach(o => { if(!liste.includes(o)) raeume.delete(o); });
+      zweckMalen(); raeumeMalen(); kabelMalen();
+    });
+  };
+  $('#lzName').oninput = () => {          // Handeingabe verlässt die Kette, alle Räume und Kabel wieder
+    if(pfad.length){ pfad = []; zweckMalen(); raeumeMalen(); }
+    kabelMalen();
+  };
+  zweckMalen(); raeumeMalen(); kabelMalen();
   $('#modalOk').textContent   = 'Hinzufügen';
   $('#modalBack').textContent = 'Fertig';
   pendingAck = () => {
     const name = $('#lzName').value.trim();
     if(!name){ toast('Bitte einen Zweck wählen'); leitungBlatt(zuletzt, {raeume:[...raeume]}); return; }
-    const c = leitungBauen(z && z.label === name ? z : null, name, ROOMS_BALKON.filter(o => raeume.has(o)), kabel);
+    const q = quelle(), liste = raumListe();
+    const orte = liste.length ? ROOMS_BALKON.filter(o => raeume.has(o)) : [...raeume];
+    const c = leitungBauen(q && q.label === name ? q : null, name, orte, kabel);
     PROJ.items.push(c);
     saveProj(); renderBoard();
-    leitungBlatt(name + (c.room ? ' · ' + c.room : '') + ' hinzugefügt');
+    leitungBlatt(name + (c.room ? ' · ' + c.room : '') + ' hinzugefügt', {raeume:liste.length ? [...raeume] : []});
   };
   $('#modal').hidden = false;
 }
@@ -6643,9 +6695,11 @@ const STECKDOSE = ['Steckdose', 'Steckdosen'];
 const brauchtKomma = (a, b) =>
   (a === 'Beleuchtung' && STECKDOSE.includes(b)) ||
   (b === 'Beleuchtung' && STECKDOSE.includes(a));
-const sugName = () => sugPath.reduce((txt, n, i) =>
+/* v1.211: auch für „Leitung hinzufügen“ – dort mit eigener Kette */
+const sugNameAus = pfad => pfad.reduce((txt, n, i) =>
   i === 0 ? n.label
-          : txt + (brauchtKomma(sugPath[i - 1].label, n.label) ? ', ' : ' ') + n.label, '');
+          : txt + (brauchtKomma(pfad[i - 1].label, n.label) ? ', ' : ' ') + n.label, '');
+const sugName = () => sugNameAus(sugPath);
 const FILS_SUBS = ['Beleuchtung','Steckdosen','Steckdose','CEE-Steckdose'];
 function filsRoot(){                                  // virtuelle Wurzel: "FI/LS" + passende Kreisarten
   return {label:AUTO_NAMES.rcbo, root:true,
@@ -6659,8 +6713,10 @@ const LICHT_WORTE = ['Beleuchtung'];
 const DOSEN_WORTE = ['Steckdosen','Steckdose'];
 const paarWort = l => LICHT_WORTE.includes(l) || DOSEN_WORTE.includes(l);
 function paarPartner(){
-  if(draft.special) return [];
-  const worte = sugPath.filter(n => !n.root).map(n => n.label);
+  return draft.special ? [] : paarPartnerAus(sugPath);
+}
+function paarPartnerAus(pfad){
+  const worte = pfad.filter(n => !n.root).map(n => n.label);
   if(!worte.length) return [];                                 // erst nach dem ersten Wort
   const licht = worte.some(l => LICHT_WORTE.includes(l));
   const dose  = worte.some(l => DOSEN_WORTE.includes(l));
@@ -6709,7 +6765,9 @@ function renderNameSug(list){
 function kabelJeArt(label){
   const art = /steckdose/i.test(label || '') ? /steckdose/i : /beleuchtung|licht/i.test(label || '') ? /beleuchtung|licht/i : null;
   if(!art) return null;
-  const vor = circuits().filter(c => c.cable && art.test(c.name || '') && (cableCores(c.cable) == null || cableCores(c.cable) <= 3)).pop();
+  /* v1.211: der Dunstabzug hat bewusst 1,5 mm² – kein Vorbild für Steckdosenkreise */
+  const vor = circuits().filter(c => c.cable && art.test(c.name || '') && !/dunstabzug/i.test(c.name || '')
+    && (cableCores(c.cable) == null || cableCores(c.cable) <= 3)).pop();
   return vor ? vor.cable : (art.test('Steckdose') ? 'NYM-J 3x2,5' : 'NYM-J 3x1,5');
 }
 function applySugValues(){

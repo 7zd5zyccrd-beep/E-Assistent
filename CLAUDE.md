@@ -214,11 +214,15 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Ziehen gleitend (v1.195: Zeile am Finger, andere rücken per transform), Zusammenlegen mit `teile` (Trennen), `+ FI` (`ordnenFiTyp`), Entfernen mit
   Rückgängig, `nummernPlan` nummeriert nach TE und setzt `covers` jedes FI;
   Rückfrage, wenn sich vergebene Nummern ändern. Jean: Ziehen ggf. später ersetzen.
+  Seit v1.211 wählt „Leitung hinzufügen“ den Zweck mit den Kacheln der Bezeichnung
+  (`leitungFolge`, `sugNameAus`, `paarPartnerAus`; Räume/Kabel nach der Kette wie
+  `applySugValues`). Dunstabzug unter „Steckdose“: nur Küche, 3×1,5 an B16 (`b16Bei15`,
+  Jean), zählt in `kabelJeArt` nicht als Vorbild.
 - **K-Nummern (v1.193):** `kNummernSetzen` läuft in `saveProj` – Stromstoßschalter
   (`istStromstoss`) bekommen „K1 …“ nach Lage, nur Projekte mit `kNr` (neu ab v1.193,
   bestehende unverändert). Wiederholung: K vom Blatt (SAM) oder von Hand → `kFest`.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.210, 20.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.211, 20.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
@@ -226,6 +230,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Selbst drucken auf A4-Etikettenbögen (Empfehlung Avery L3415, 24 × Ø 40 mm, dauerhaft,
   nicht „ablösbar“): Vorlage mit der Bogen-Aufteilung erst, wenn Jean die Etiketten
   gewählt hat (Ränder dann von ihm nachgemessen).
+- **Leitung hinzufügen (v1.211):** Zweck-Kacheln wie im Stromkreis, Dunstabzug – am Gerät ansehen.
 - **FI im Messen (v1.191):** öffnet die Tastatur beim Auslösestrom auch über „Weiter →“
   und aus der Liste? Hier nicht prüfbar.
 - **Neuausgabe zeigte alten Inhalt:** liegt nach Jeans Versuch (Umbenennen) an
