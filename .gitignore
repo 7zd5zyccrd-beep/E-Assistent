@@ -3,3 +3,6 @@
 *.jpeg
 *.png
 *.pdf
+
+# Vorlagen ohne echte Daten (Prüfaufkleber) dürfen hinein
+!vorlagen/**/*.pdf
