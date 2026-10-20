@@ -223,6 +223,9 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
   prüfung (Druckvorlage nur in der Sitzung erstellt). Am Ausdruck prüfen: Ü (v1.209), Größe.
+  Selbst drucken auf A4-Etikettenbögen (Empfehlung Avery L3415, 24 × Ø 40 mm, dauerhaft,
+  nicht „ablösbar“): Vorlage mit der Bogen-Aufteilung erst, wenn Jean die Etiketten
+  gewählt hat (Ränder dann von ihm nachgemessen).
 - **FI im Messen (v1.191):** öffnet die Tastatur beim Auslösestrom auch über „Weiter →“
   und aus der Liste? Hier nicht prüfbar.
 - **Neuausgabe zeigte alten Inhalt:** liegt nach Jeans Versuch (Umbenennen) an
