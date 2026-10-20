@@ -218,11 +218,14 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   (`leitungFolge`, `sugNameAus`, `paarPartnerAus`; Räume/Kabel nach der Kette wie
   `applySugValues`). Dunstabzug unter „Steckdose“: nur Küche, 3×1,5 an B16 (`b16Bei15`,
   Jean), zählt in `kabelJeArt` nicht als Vorbild.
+  Zusammenlegen (v1.212, Jean): Kabel und Absicherung von der Leitung mit dem kleinsten
+  Querschnitt, bei Gleichstand die kleinere Absicherung; Altbestand ohne Querschnitt zählt
+  nur, wenn alle so sind (vorher trug die stärkste Leitung).
 - **K-Nummern (v1.193):** `kNummernSetzen` läuft in `saveProj` – Stromstoßschalter
   (`istStromstoss`) bekommen „K1 …“ nach Lage, nur Projekte mit `kNr` (neu ab v1.193,
   bestehende unverändert). Wiederholung: K vom Blatt (SAM) oder von Hand → `kFest`.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.211, 20.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.212, 20.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-

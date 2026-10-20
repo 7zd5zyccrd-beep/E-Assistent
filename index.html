@@ -10,6 +10,10 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.212 20.10.2026 Leitungen planen (Jean): beim Zusammenlegen kommen Kabel und
+                    Absicherung von der Leitung mit dem kleinsten Querschnitt
+                    (Licht 3x1,5 B10 und Steckdosen 3x2,5 B16 werden 3x1,5 an
+                    B10), bei gleichem Querschnitt gilt die kleinere Absicherung.
   v1.211 20.10.2026 Leitungen planen (Jean): der Zweck bei "Leitung hinzufuegen"
                     wird mit denselben Kacheln gewaehlt wie die Bezeichnung im
                     Stromkreis - Schritt fuer Schritt (Steckdose, dann
@@ -4032,7 +4036,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.211';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.212';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 20.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6171,9 +6175,18 @@ $('#btnPlanZus').onclick = () => {
   }
   if(sel.some(c => istFiZeile(c) || isSpecial(c))){ toast('FI und sonstige Geräte lassen sich nicht zusammenlegen'); return; }
   if(sel.length < 2) return;
-  /* Die stärkste Leitung trägt Absicherung und Kabel – Licht und Steckdosen
-     zusammen hängen am B16 mit 2,5 mm² */
-  const basis = sel.reduce((a, b) => (cableSection(b.cable) || 0) > (cableSection(a.cable) || 0) ? b : a);
+  /* v1.212 (Jean): die Leitung mit dem kleinsten Querschnitt trägt Kabel und
+     Absicherung – der Leitungsschutz muss das schwächste Kabel schützen
+     (Licht 3×1,5 B10 + Steckdosen 3×2,5 B16 → 3×1,5 B10; Dunstabzug bleibt
+     B16). Gleicher Querschnitt: die kleinere Absicherung. Ein Kabel ohne
+     erkennbaren Querschnitt (Altbestand) zählt nur, wenn alle so sind.
+     Vorher (v1.192) trug die stärkste Leitung. */
+  const qs = c => cableSection(c.cable), nenn = c => parseInt(c.rated, 10) || 0;
+  const basis = sel.reduce((a, b) => {
+    if(qs(a) == null) return qs(b) == null && nenn(b) < nenn(a) ? b : (qs(b) == null ? a : b);
+    if(qs(b) == null) return a;
+    return qs(b) < qs(a) || (qs(b) === qs(a) && nenn(b) < nenn(a)) ? b : a;
+  });
   const ohneTeile = c => { const o = Object.assign({}, c); delete o.teile; return o; };
   const neu = Object.assign({}, basis, {
     name: teileVereinen(sel.map(c => c.name)), room: teileVereinen(sel.map(c => c.room)),
