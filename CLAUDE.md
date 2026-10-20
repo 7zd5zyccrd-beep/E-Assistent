@@ -251,8 +251,13 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   (aus `coversHint` gelöst) als Knopf `[data-covers]` unter dem FI in der Liste, gelbe Karte im
   Abschluss (sperrt nicht); Blatt „Leitung hinzufügen“: „Fertig“ nimmt gewählte Leitung mit
   (`leitungZurueckOrig`).
+- **Paket 3 (v1.222):** `.btn.ghost` deckend (`--surface`) mit `--ink`, gesperrt gestrichelt
+  (`#sigView` bleibt durchsichtig); `.list-item.ord-zeile` neutraler Streifen; `.list-item .no`
+  in `--f-label` 20 px, `.t` zweizeilig (line-clamp); `.list-item .s` und `.sug.mono` in
+  `--f-body` mit `tabular-nums`; `.eyebrow` 15 px dunkel, `.row-head` 13 px ohne Linie,
+  Feldbeschriftung 13,5 px.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.221, 20.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.222, 20.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-

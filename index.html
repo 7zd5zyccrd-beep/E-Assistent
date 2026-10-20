@@ -10,6 +10,13 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.222 20.10.2026 Erfassen, Paket 3 aus der Pruefung (Gestaltung): Zweitknoepfe
+                    wie "Fertig" sind deckend und dunkel beschriftet, gesperrte
+                    blass und gestrichelt. Im Ordnen kein gruener Streifen mehr
+                    (gruen heisst gemessen). Die Kreisnummer steht kraeftig in
+                    der Ueberschriftenschrift, lange Bezeichnungen duerfen
+                    zweizeilig sein. Rubrik, Reihe und Feld haben eine klare
+                    Rangfolge. Unterzeilen und Kacheln in der Textschrift.
   v1.221 20.10.2026 Erfassen, Paket 1 aus der Pruefung (Jean: alles umsetzen):
                     - In einem bestehenden Kreis fuehrt der grosse Knopf jetzt
                       "Weiter -> 7" zum naechsten Kreis (bei offenen SAM-Fragen
@@ -1890,6 +1897,8 @@ main{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overfl
 }
 .eyebrow::after{content:"";flex:1;height:1px;background:var(--line)}
 .eyebrow:first-child{margin-top:0}
+/* v1.222: Rubrik vor Reihe vor Feld – die Rubrik etwas größer und dunkel */
+.eyebrow{font-size:15px;color:var(--ink)}
 
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
 /* SAM (Beta): die beiden Aufnahmeschritte. Der gerade fällige Schritt trägt
@@ -1983,6 +1992,7 @@ main{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overfl
   display:block;font-family:var(--f-label);font-size:15px;letter-spacing:.08em;
   text-transform:uppercase;color:var(--ink-soft);font-weight:600;margin-bottom:5px;
 }
+.field > span:not(.unit){font-size:13.5px}   /* v1.222: Feld unter der Rubrik */
 input,select,textarea{
   width:100%;font-family:var(--f-body);font-size:17px;
   padding:0 12px;height:var(--tap);
@@ -2128,7 +2138,7 @@ button.foto-fehlt:disabled{opacity:.6;cursor:default}
 .stepper button:disabled{opacity:.3}
 /* Kacheln statt Auswahllisten: Absicherung, Pole, Kabelart */
 .kacheln .sug.gewaehlt{background:var(--sel, var(--strong));border-color:var(--sel, var(--strong));color:var(--on-sel, var(--on-strong));font-weight:600}
-.kacheln .sug.mono{font-family:var(--f-data);font-weight:600;font-size:14px}
+.kacheln .sug.mono{font-family:var(--f-body);font-weight:600;font-size:14px;letter-spacing:-.01em;font-variant-numeric:tabular-nums}   /* v1.222 */
 .kacheln .sug.andere{border-style:dashed;color:var(--ink-soft)}
 #ovZeile{margin:-4px 0 14px}
 .field.narrow > span{font-size:14px;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2155,6 +2165,11 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
 .btn.primary:disabled{background:var(--neutral-bg);color:var(--ink-soft);border-color:var(--line);opacity:1}   /* v1.182: gesperrt ist grau, auch im Dunkeln */
 .btn.accent{background:var(--brand);border-color:var(--brand-dark);color:#1A1F16;font-weight:700}
 .btn.ghost{border-color:var(--rail-dark);color:var(--ink-soft);background:transparent}
+/* v1.222 (Prüfung Erfassen): ein Zweitknopf ist deckend und dunkel beschriftet –
+   „Fertig“ sah sonst aus wie gesperrt, und in der Fußleiste schien der Inhalt
+   durch. Gesperrt ist allein blass und gestrichelt. */
+.btn.ghost{color:var(--ink);background:var(--surface)}
+.btn.ghost[disabled],.btn.ghost:disabled{border-style:dashed;color:var(--ink-soft)}
 .btn.danger{border-color:var(--fault);color:var(--fault);background:var(--surface)}
 /* v1.160: Karten der offenen Projekte auf der Startseite */
 .list-item.projekt-karte{border-left:1px solid var(--line)}
@@ -2216,7 +2231,7 @@ header h1.tippbar{cursor:pointer}
 @media (orientation:landscape){ #sigView .sv-quer{display:none} #sigView .sv-text{margin:4px 0 8px} }
 #sigView .sv-fuss{display:flex;gap:10px;margin-top:14px}
 #sigView .sv-fuss .btn{flex:1;margin-top:0}
-#sigView .btn.ghost{color:#C9D2BD;border-color:#5C6355}
+#sigView .btn.ghost{color:#C9D2BD;border-color:#5C6355;background:transparent}
 .sig-vorschau{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:6px;margin-bottom:10px}
 .sig-vorschau img{display:block;width:100%;max-width:420px;aspect-ratio:3/1;margin:0 auto}
 .btn.zweizeilig{flex-direction:column;gap:0;line-height:1.2}
@@ -2371,6 +2386,7 @@ input.schalter:checked::after{transform:translateX(20px)}
 }
 .row-head::after{content:"";flex:1;height:1px;background:var(--line)}
 .row-head:first-child{margin-top:0}
+.row-head{font-size:13px;margin-top:14px}.row-head::after{display:none}   /* v1.222: Reihe leiser als die Rubrik, ohne Linie */
 /* v1.192: Leitungen planen – Ordnen-Modus der Erfassen-Liste (Neuinstallation) */
 .plan-kopf{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-2px 0 10px}
 .plan-kopf .btn{width:auto;flex:0 0 auto;min-height:44px;padding:0 18px;font-size:15px}
@@ -2395,7 +2411,9 @@ input.schalter:checked::after{transform:translateX(20px)}
 .ord-frei-ctl .te{min-width:44px;text-align:center;font-family:var(--f-data);font-weight:600;color:var(--ink)}
 .ord-zeile.an .ord-mark::after{content:"";position:absolute;left:6px;top:1px;width:5px;height:11px;
   border:solid var(--surface);border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
-.ord-zeile.ord-fi{border-left-color:var(--ink);border-left-width:8px}
+/* v1.222: im Ordnen ist noch nichts gemessen – kein grüner Streifen; der FI bleibt dunkel abgesetzt */
+.list-item.ord-zeile{border-left-color:var(--line)}
+.list-item.ord-zeile.ord-fi{border-left-color:var(--ink);border-left-width:5px}
 .ord-zeile .ord-griff{flex:0 0 46px;align-self:stretch;display:flex;align-items:center;justify-content:center;
   margin:-10px 0;font-size:24px;color:var(--ink-soft);touch-action:none;cursor:grab}
 .ord-zeile.zieht{position:relative;z-index:5;border-color:var(--ink);box-shadow:0 8px 20px rgba(0,0,0,.28)}
@@ -2423,10 +2441,18 @@ input.schalter:checked::after{transform:translateX(20px)}
 .list-item.state-yellow{border-left-color:var(--signal);background:var(--sig-bg)}
 .list-item.state-green{border-left-color:var(--pe)}
 .list-item .no{font-family:var(--f-data);font-weight:600;font-size:15px;min-width:30px;flex:0 0 3.4em}   /* v1.178: feste Spalte */
+/* v1.222 (Prüfung Erfassen): die Nummer ist das Erkennungszeichen am Verteiler –
+   kräftig in der Überschriftenschrift, dafür schmaler; lange Bezeichnungen
+   dürfen auf zwei Zeilen statt abgeschnitten zu werden */
+.list-item .no{font-family:var(--f-label);font-weight:700;font-size:20px;line-height:1.1;flex:0 0 2.7em;white-space:nowrap}
+.list-item .t{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.3}
 .list-item .body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .list-item .t{font-weight:600;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .list-item .s{font-family:var(--f-data);font-size:12px;color:var(--ink-soft);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* v1.222: Unterzeilen und Kacheln in der Textschrift mit gleich breiten Ziffern –
+   die Festbreitenschrift (nicht eingebettet) bleibt den Messfeldern */
+.list-item .s{font-family:var(--f-body);font-size:13px;font-variant-numeric:tabular-nums}
 
 /* ---------- Warnungen ---------- */
 .warn{
@@ -4108,7 +4134,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.221';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.222';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 20.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
