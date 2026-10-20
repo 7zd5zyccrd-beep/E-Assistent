@@ -266,8 +266,16 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   rund wie die Kacheln; Bezeichnungs-/Zweck-Kacheln mit Fläche `--enclosure-2`; FI-Typ zweispaltig
   mit Kurztext `fiKurz` („40 A · 30 mA · 4-pol.“); ± der freien TE 44 px; Return in `#cName`
   springt zu `#cRoom`, dort schließt es die Tastatur.
+- **Paket 5 (v1.225):** Ordnen-Leiste je nach Auswahl (`planLeisteZeigen`: ohne Markierung
+  „+ FI“/„+ Frei“, mit Markierung „+ FI“, „Zusammenlegen (n)“ nur wenn möglich, „Entfernen“;
+  ausgeblendet statt gesperrt). „+ FI“ setzt den FI vor die erste markierte Zeile und holt
+  alle markierten Leitungen direkt dahinter. Gerät über das Reihenende (`ROW_SIZE`): Hinweis
+  `.ord-reihe` in der Zeile, „Ab 13 beginnen“ fügt davor `freiNeu(1, true)` ein. Absicherung
+  folgt der getippten Bezeichnung (`absJeArt`, nur ohne Kachelpfad und solange nicht `absHand`).
+  Leerer Fotokasten ist der Knopf (`[data-fotoneu]`, „Foto aufnehmen“ erst bei Fotos).
+  Zuleitung: `feedFuseNorm` legt „3× gG 35 A“ auf die Kachel „35 A (gG)“.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.224, 20.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.225, 20.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
@@ -277,6 +285,8 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   gewählt hat (Ränder dann von ihm nachgemessen).
 - **Leitung hinzufügen (v1.211–v1.217):** Zweck-Kacheln wie im Stromkreis, Dunstabzug/Kühlschrank mit Folgekacheln; Feld bleibt
   mit Tastatur im Bild (v1.213) – am Gerät ansehen.
+- **Prüfung Erfassen (v1.221–v1.225):** alle fünf Pakete am Gerät durchgehen, besonders
+  Listenlage (v1.223), Kacheln (v1.224) und Ordnen mit „+ FI“/Reihenende (v1.225).
 - **Freie TE (v1.218–v1.220):** Ordnen mit „+ Frei“, Lücken bleiben, Nummern sofort beim Ziehen – am Gerät ausprobieren.
 - **FI im Messen (v1.191):** öffnet die Tastatur beim Auslösestrom auch über „Weiter →“
   und aus der Liste? Hier nicht prüfbar.

@@ -10,6 +10,22 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.225 20.10.2026 Erfassen, Paket 5 aus der Pruefung (Ordnen) und Kleinigkeiten:
+                    - Die Leiste im Ordnen zeigt nur, was gerade geht: ohne
+                      Markierung "+ FI" und "+ Frei", mit Markierung "+ FI",
+                      "Zusammenlegen (2)" und "Entfernen".
+                    - "+ FI" mit markierten Leitungen setzt den FI vor die erste
+                      und holt alle markierten gleich hinter ihn - er deckt dann
+                      genau diese ab. Statt vieler Zuege ein paar Tipper.
+                    - Laeuft ein Geraet ueber das Reihenende (E-Herd auf 12-14),
+                      steht darunter "Passt nicht mehr in Reihe 1"; ein Tipp
+                      laesst den Rest der Reihe frei und beginnt bei 13.
+                    - Selbst getippte Bezeichnung setzt die Absicherung nach der
+                      Art (Licht B10, Steckdose B16), solange sie nicht von Hand
+                      gewaehlt wurde.
+                    - Der Kasten "Noch kein Foto" ist selbst der Knopf.
+                    - Zuleitung: ein alter Wert wie "3x gG 35 A" steht auf der
+                      passenden Kachel "35 A (gG)" statt als zweite daneben.
   v1.224 20.10.2026 Erfassen, Paket 4 aus der Pruefung (Kacheln): Absicherung, Pole,
                     Kabel und FI-Typ groesser und mit mehr Abstand. Gewaehlt ist
                     ueberall dunkel, auch bei den Raeumen (Haekchen bleibt). Die
@@ -2035,7 +2051,9 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
 .chk-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
 /* Fotos zur Verteilerdokumentation: kleine Vorschau mit Löschknopf darunter */
 .fotos{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
-#photoBody .rail-empty{margin-bottom:10px}   /* gleicher Abstand zum Knopf wie bei vorhandenen Fotos */
+#photoBody .rail-empty{margin-bottom:10px}
+.rail-empty.foto-leer{display:block;width:100%;font:inherit;cursor:pointer;color:var(--ink-soft);min-height:88px}
+.rail-empty.foto-leer b{color:var(--ink);font-weight:600}   /* gleicher Abstand zum Knopf wie bei vorhandenen Fotos */
 .foto{width:104px;position:relative}
 .foto img.nur-vorschau{opacity:.9}
 .foto-marke{
@@ -2432,7 +2450,7 @@ input.schalter:checked::after{transform:translateX(20px)}
 .ord-zeile.ord-frei,.list-item.frei{border-left-color:var(--field-border);border-left-width:2px}
 /* vier Knöpfe in einer Zeile (v1.218): die kurzen schmaler, „Zusammenlegen“ am breitesten */
 .plan-leiste #btnPlanFi{flex:.8 1 0}.plan-leiste #btnPlanFrei{flex:.95 1 0}
-.plan-leiste #btnPlanZus{flex:1.9 1 0}.plan-leiste #btnPlanWeg{flex:1.35 1 0}
+.plan-leiste #btnPlanZus{flex:2.3 1 0}.plan-leiste #btnPlanWeg{flex:1.35 1 0}   /* v1.225: „Zusammenlegen (3)“ in einer Zeile */
 @media (max-width:430px){ .plan-leiste .btn{font-size:14px;padding:0 3px} .plan-leiste{gap:6px} }
 .list-item.frei{cursor:default}
 /* v1.221: Vorschlag „Deckt … ab“ direkt unter dem FI in der Liste */
@@ -2446,6 +2464,8 @@ input.schalter:checked::after{transform:translateX(20px)}
 .ord-frei-ctl{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap}
 .ord-frei-ctl button{min-height:44px;min-width:44px;padding:0 10px;border:1.5px solid var(--field-border);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:15px}
 .ord-frei-ctl button.gewaehlt{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.ord-reihe{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;margin-top:6px;font-size:14px;color:var(--ink);background:var(--sig-bg);border-radius:8px;padding:4px 4px 4px 10px}
+.ord-reihe button{min-height:44px;padding:0 12px;border:1.5px solid var(--ink);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-weight:600}
 .ord-frei-ctl .te{min-width:44px;text-align:center;font-family:var(--f-data);font-weight:600;color:var(--ink)}
 .ord-zeile.an .ord-mark::after{content:"";position:absolute;left:6px;top:1px;width:5px;height:11px;
   border:solid var(--surface);border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
@@ -2456,7 +2476,7 @@ input.schalter:checked::after{transform:translateX(20px)}
   margin:-10px 0;font-size:24px;color:var(--ink-soft);touch-action:none;cursor:grab}
 .ord-zeile.zieht{position:relative;z-index:5;border-color:var(--ink);box-shadow:0 8px 20px rgba(0,0,0,.28)}
 .plan-leiste{margin-bottom:10px}
-.plan-leiste .btn{flex:1 1 0;width:auto;min-width:0;padding:0 6px;font-size:15px}
+.plan-leiste .btn{flex:1 1 0;width:auto;min-width:0;padding:0 6px;font-size:15px;white-space:nowrap}
 @media (max-width:360px){ .plan-leiste .btn{font-size:14px;padding:0 4px} }
 .list-item.ord-zeile .no{flex:0 0 auto;min-width:1.2em;max-width:4.2em}
 /* langes Blatt (Leitung hinzufügen): die Knöpfe bleiben unten stehen */
@@ -4173,7 +4193,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.224';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.225';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 20.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6322,15 +6342,31 @@ function planLeisteZeigen(){
   if(!ordnen) return;
   const sel = planZeilen().filter(c => ordnenWahl.has(c.cid));
   const trennen = sel.length === 1 && Array.isArray(sel[0].teile) && sel[0].teile.length > 1;
-  $('#btnPlanZus').textContent = trennen ? 'Trennen' : 'Zusammenlegen';
-  $('#btnPlanZus').disabled = !trennen && (sel.some(istFrei) || sel.filter(c => !istFiZeile(c) && !isSpecial(c)).length < 2);
-  $('#btnPlanWeg').disabled = !sel.length;
+  /* v1.225 (Prüfung Erfassen, Punkt 15): nur zeigen, was gerade geht – ohne
+     Markierung FI und Frei, mit Markierung FI, Zusammenlegen und Entfernen.
+     Vorher standen vier Knöpfe gedrängt, zwei davon meist gesperrt. */
+  const zus = sel.filter(c => !istFrei(c) && !istFiZeile(c) && !isSpecial(c)).length;
+  const kannZus = trennen || (!sel.some(istFrei) && !sel.some(c => istFiZeile(c) || isSpecial(c)) && zus >= 2);
+  $('#btnPlanFrei').hidden = sel.length > 0;
+  $('#btnPlanZus').hidden = !kannZus;
+  $('#btnPlanWeg').hidden = !sel.length;
+  $('#btnPlanZus').textContent = trennen ? 'Trennen' : `Zusammenlegen (${zus})`;
+  $('#btnPlanZus').disabled = false; $('#btnPlanWeg').disabled = false;
 }
 
 /* --- Liste im Ordnen-Modus --- */
 function ordnenZeigen(){
   if(nummernAnwenden()) saveProj();                 // v1.219: Nummern folgen der Liste
   const box = $('#boardBody');
+  /* v1.225 (Prüfung, Punkt 17): ein Gerät über das Reihenende (E-Herd auf 12–14)
+     passt im Verteiler nicht in die Reihe – Hinweis mit einem Tipp, der den Rest
+     der Reihe frei lässt */
+  const ueber = new Map();
+  nummernPlan().forEach(p => {
+    if(istFrei(p.c) || p.bis <= p.no) return;
+    const r = Math.ceil(p.no / ROW_SIZE);
+    if(Math.ceil(p.bis / ROW_SIZE) !== r) ueber.set(p.c.cid, {r, ab: r * ROW_SIZE + 1});
+  });
   box.innerHTML = planZeilen().map(c => {
     const an = ordnenWahl.has(c.cid);
     if(istFrei(c)){                                  // v1.218
@@ -6354,12 +6390,22 @@ function ordnenZeigen(){
       <span class="ord-mark" aria-hidden="true"></span>
       <span class="no">${esc(circuitLabel(c) || '–')}</span>
       <span class="body"><span class="t">${esc(c.name || 'Ohne Bezeichnung')}${c.room ? ' · ' + esc(c.room) : ''}</span>
-        <span class="s">${esc(unter)}</span></span>
+        <span class="s">${esc(unter)}</span>${ueber.has(c.cid) ? `
+        <span class="ord-reihe">Passt nicht mehr in Reihe ${ueber.get(c.cid).r}
+          <button type="button" data-reihe="1">Ab ${ueber.get(c.cid).ab} beginnen</button></span>` : ''}</span>
       <span class="ord-griff" aria-label="Verschieben">≡</span></div>`;
   }).join('') || `<div class="rail-empty">Noch keine Leitung aufgeschrieben.</div>`;
   $$('#boardBody .ord-zeile').forEach(z => {
     z.onclick = e => {
       if(e.target.closest('.ord-griff')) return;
+      if(e.target.closest('[data-reihe]')){            // v1.225: Rest der Reihe frei lassen
+        const c = PROJ.items.find(i => i.kind === 'circuit' && i.cid === z.dataset.ord);
+        if(!c) return;
+        PROJ.items.splice(PROJ.items.indexOf(c), 0, freiNeu(1, true));
+        saveProj(); renderBoard();
+        toast('Rest der Reihe bleibt frei');
+        return;
+      }
       const fb = e.target.closest('[data-frei]');
       if(fb){                                         // v1.218: Breite der freien Zeile
         const f = PROJ.items.find(i => istFrei(i) && i.cid === z.dataset.ord);
@@ -6462,9 +6508,20 @@ $('#btnPlanFi').onclick = () => {
     room:'', cable:'', covers:'', cid:neueKennung('K')});
   /* vor die erste markierte Zeile, sonst ganz nach oben – dort sitzt der FI meist */
   const cs = planZeilen(), ziel = cs.find(c => ordnenWahl.has(c.cid)) || cs[0];
-  PROJ.items.splice(ziel ? PROJ.items.indexOf(ziel) : PROJ.items.length, 0, fi);
+  /* v1.225 (Prüfung, Punkt 16): die markierten Leitungen kommen gleich hinter den
+     neuen FI – statt vieler Züge ein paar Tipper. Was dahinter folgt, bleibt in
+     seiner Reihenfolge; für den Rest gibt man den nächsten FI genauso dazu. */
+  const mit = cs.filter(c => ordnenWahl.has(c.cid) && !istFrei(c) && !istFiZeile(c));
+  if(mit.length){
+    const ab = cs.indexOf(ziel);
+    const neu = [...cs.slice(0, ab).filter(c => !mit.includes(c)), fi, ...mit, ...cs.slice(ab).filter(c => !mit.includes(c))];
+    PROJ.items.splice(PROJ.items.indexOf(ziel), 0, fi);
+    let k = 0;
+    PROJ.items = PROJ.items.map(it => (it.kind === 'circuit' || it.kind === 'frei') ? neu[k++] : it);
+  } else PROJ.items.splice(ziel ? PROJ.items.indexOf(ziel) : PROJ.items.length, 0, fi);
   ordnenWahl.clear(); saveProj(); renderBoard();
-  toast('FI eingefügt – am ≡ an seinen Platz ziehen');
+  toast(mit.length ? `FI eingefügt – deckt ${mit.length === 1 ? 'die markierte Leitung' : `die ${mit.length} markierten Leitungen`} ab`
+    : 'FI eingefügt – am ≡ an seinen Platz ziehen');
 };
 /* v1.218: freie TE vor die erste markierte Zeile, sonst ans Ende – meist bleibt
    der Rest einer Reihe frei */
@@ -6787,6 +6844,7 @@ function openCircuit(idx){
   samAendern = false;
   absAndere = false;                                 // v1.163: Listen der Absicherung zu
   kabelHand = !!(draft.cable && idx != null);        // v1.182: Gespeichertes gilt als gewählt
+  absHand = idx != null;                             // v1.225
   cableFilter = null;
   ratedFilter = null; fillSelect($('#cRated'), CFG.rated, draft.rated);
   autoRoom = null;                     // gespeicherter Ort gilt als von Hand gesetzt
@@ -7184,6 +7242,20 @@ $('#cName').onfocus = showNameSug;
 $('#cName').enterKeyHint = 'next'; $('#cRoom').enterKeyHint = 'done';
 $('#cName').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); if(!$('#fldRoom').hidden) $('#cRoom').focus(); else $('#cName').blur(); } });
 $('#cRoom').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); $('#cRoom').blur(); } });
+/* v1.225 (Prüfung): auch die Absicherung folgt der getippten Bezeichnung, bis sie
+   von Hand gewählt ist – vorher blieb nach „Licht“ der B16 stehen */
+function absJeArt(name){
+  const n = String(name || '');
+  if(/steckdose|herd/i.test(n)) return '16 A';
+  if(/beleuchtung|licht/i.test(n)) return '10 A';
+  return null;
+}
+$('#cName').addEventListener('change', () => {
+  const dev = segVal('#segDevice');
+  if(!draft || absHand || draft.special || (dev !== 'ls' && dev !== 'rcbo') || sugPath.length) return;
+  const r = absJeArt($('#cName').value);
+  if(r && r !== draft.rated && CFG.rated.includes(r)){ paintRatedList(r); kachelnMalen(); }
+});
 $('#cName').addEventListener('change', () => {     // v1.182 (QK F8): auch beim selbst getippten Namen
   if(!draft || kabelHand || segVal('#segDevice') === 'rcd' || draft.special) return;
   const k = kabelJeArt($('#cName').value);
@@ -7242,6 +7314,13 @@ $('#fCable').onchange = () => {
   $('#fCable').value = feedKabelJetzt;               // bis zur Wahl bleibt der bisherige Wert
   feedAndere();
 };
+/* v1.225 (Prüfung): ein älterer Wert wie „3× gG 35 A“ oder „3 x 35 A (gG)“ ist
+   dieselbe Sicherung wie die Kachel „35 A (gG)“ – sonst standen beide nebeneinander */
+function feedFuseNorm(v){
+  const t = String(v || ''), a = t.match(/(\d+)\s*A\b/), art = /gG/i.test(t) ? 'gG' : /\(E\)|\bE\b/.test(t) ? 'E' : '';
+  const k = a && art ? `${a[1]} A (${art})` : '';
+  return k && FEED_FUSES.includes(k) ? k : (v || '');
+}
 let feedDraft = null;   // Entwurf, damit "Zurück zur Eingabe" wirklich nichts speichert
 $('#btnFeed').onclick = () => vorVerlassen(feedOeffnen);
 function feedOeffnen(){
@@ -7253,6 +7332,7 @@ function feedOeffnen(){
   /* Ein früher gespeicherter Wert ohne Kennlinie steht sonst nicht mehr in der
      Liste und ginge beim nächsten Speichern still verloren. */
   const abs = [...FEED_FUSES];
+  f.fuse = feedFuseNorm(f.fuse);                     // v1.225
   if(f.fuse && !abs.includes(f.fuse)) abs.splice(1, 0, f.fuse);
   fillSelect($('#fFuse'), abs, f.fuse || FEED_FUSE_UNBEKANNT);
   feedKachelnMalen();
@@ -7438,6 +7518,9 @@ $('#cRated').onchange = () => {
   });
 };
 let kabelHand = false;                              // v1.182: Kabel von Hand gewählt – dann nicht mehr nachziehen
+let absHand = false;                                // v1.225: ebenso die Absicherung
+$('#cRated').addEventListener('change', () => { absHand = true; });
+$('#cChar').addEventListener('change', () => { absHand = true; });
 $('#cCable').addEventListener('change', () => { kabelHand = true; });
 $('#cCable').onchange = () => {
   if($('#cCable').value !== ANDERE){ draft.cable = $('#cCable').value; if(samKabelWahl !== null) samKabelWahl = draft.cable; return; }
@@ -9106,7 +9189,7 @@ function renderFinish(){
   $('#btnSigOeffnen').hidden = lesen;                // v1.173: erst nachbessern
   if(lesen && !sig) $('#sigVorschau').innerHTML = '<p class="muted small" style="margin-top:0">Ohne Unterschrift abgelegt.</p>';   // v1.181
   /* v1.181 (QK D9): im "nur ansehen" keine Bearbeiten-Knöpfe */
-  $('#btnPhotoFinish').hidden = lesen;
+  $('#btnPhotoFinish').hidden = lesen || !(PROJ.photos || []).length;   // v1.225: leer ist der Kasten der Knopf
   $$('#docActions button').forEach(b => b.hidden = lesen);
   const ag = $('#btnAg'); if(ag) ag.hidden = lesen;
   const za = $('#finZeitAendern'); if(za) za.hidden = lesen;
@@ -9796,8 +9879,13 @@ function renderPhotos(){
     ? `<div class="fotos">` + ps.map((f, i) =>
         `<div class="foto" data-fotoi="${i}"><img alt="Foto ${i + 1}">
            <button class="btn danger" data-fotodel="${i}">Löschen</button></div>`).join('') + `</div>`
-    : `<div class="rail-empty">Noch kein Foto</div>`;
+    : (archOffen && archLesen) ? `<div class="rail-empty">Noch kein Foto</div>`
+    /* v1.225 (Prüfung): der leere Kasten ist selbst der Knopf */
+    : `<button class="rail-empty foto-leer" type="button" data-fotoneu="1">Noch kein Foto<br><b>Antippen zum Aufnehmen</b></button>`;
   ['#photoBody', '#finishPhotos'].forEach(sel => { const b = $(sel); if(b) b.innerHTML = html; });
+  $$('[data-fotoneu]').forEach(b => b.onclick = () => fotoAufnehmen());
+  $('#btnPhoto').hidden = !ps.length;
+  if(!(archOffen && archLesen)) $('#btnPhotoFinish').hidden = !ps.length;
   $$('[data-fotodel]').forEach(b => b.onclick = () => {
     const i = +b.dataset.fotodel, f = PROJ.photos[i], pid = PROJ.id;
     PROJ.photos.splice(i, 1);
