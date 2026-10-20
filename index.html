@@ -10,6 +10,13 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.226 20.10.2026 Messwerte im Erfassen eingeklappt (Jean: erst alle Kreise
+                    erfassen, gebaut wird danach, gemessen am Ende): im Stromkreis
+                    und in der Zuleitung steht im Erfassen statt des Messblocks
+                    eine Zeile "Messwerte - werden im Messen erfasst" bzw. was
+                    schon eingetragen ist. Ein Tipp klappt sie fuer den
+                    Ausnahmefall auf. Im Messen bleibt alles wie bisher. Spart
+                    auf dem iPhone je Kreis zwei bis drei Bildschirme Rollweg.
   v1.225 20.10.2026 Erfassen, Paket 5 aus der Pruefung (Ordnen) und Kleinigkeiten:
                     - Die Leiste im Ordnen zeigt nur, was gerade geht: ohne
                       Markierung "+ FI" und "+ Frei", mit Markierung "+ FI",
@@ -2361,6 +2368,11 @@ input.schalter:checked::after{transform:translateX(20px)}
   border-radius:var(--r);background:var(--surface);color:var(--ink-soft)}
 .suche input{flex:1;min-width:0;border:0;background:none;height:44px;padding:0;font-size:16px}
 .suche input:focus{outline:none}
+.mess-zu{display:flex;align-items:center;gap:12px;width:100%;min-height:58px;margin:0 0 14px;padding:10px 14px;
+  border:1.5px solid var(--line);border-radius:var(--r);background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.mess-zu .mz-t{font-family:var(--f-label);font-size:15px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.mess-zu .mz-s{flex:1;min-width:0;color:var(--ink-soft);font-size:14px;font-variant-numeric:tabular-nums}
+.mess-zu .mz-p{font-size:20px;color:var(--ink-soft)}
 .loeschzeile.klein{margin:8px auto 0;padding:6px 12px;font-size:14px}
 .loeschzeile{display:block;margin:22px auto 6px;padding:12px 18px;min-height:44px;background:none;border:0;
   color:var(--fault);font-size:15px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
@@ -3684,8 +3696,10 @@ function nameGross(s){
             <div class="eyebrow">Kabelart</div>
             <div class="chk-grid sam-kabel" id="samKabelWahl"></div>
           </div>
-          <div class="eyebrow">Messwerte</div>
+          <div class="eyebrow" id="messTitel">Messwerte</div>
+          <button class="mess-zu" id="messZu" type="button" hidden></button>
           <p class="muted small" id="trafoHinweis" hidden>LS für den Trafo: wird nicht gemessen und steht nicht in der Messtabelle des Protokolls.</p>
+          <div id="messTeil">                  <!-- v1.226: im Erfassen eingeklappt -->
           <div class="seg" id="segStatus" style="margin-bottom:14px">
             <button data-v="measured" aria-pressed="true">Gemessen</button>
             <button data-v="nomeasure" aria-pressed="false">Keine Messung</button>
@@ -3716,6 +3730,7 @@ function nameGross(s){
                 <label class="field"><span>Schutzleiterwiderstand</span><span class="unit"><input id="mRpe" inputmode="decimal"><em>Ω</em></span></label>
               </div>
             </div>
+          </div>
           </div>
         </div>
       </div>
@@ -3748,7 +3763,9 @@ function nameGross(s){
             <div class="eyebrow">Absicherung</div>
             <div class="chk-grid sam-kabel" id="samFeedAbs"></div>
           </div>
-          <div class="eyebrow">Messwerte</div>
+          <div class="eyebrow" id="feedMessTitel">Messwerte</div>
+          <button class="mess-zu" id="feedMessZu" type="button" hidden></button>
+          <div id="feedMessTeil">              <!-- v1.226: im Erfassen eingeklappt -->
           <div class="seg" id="segFeedStatus" style="margin-bottom:14px">
             <button data-v="measured" aria-pressed="true">Gemessen</button>
             <button data-v="nomeasure" aria-pressed="false">Keine Messung</button>
@@ -3766,6 +3783,7 @@ function nameGross(s){
               <label class="field"><span>Schleifen&shy;impedanz</span><span class="unit"><input id="fZs" inputmode="decimal"><em>Ω</em></span></label>
             </div>
             <div class="chk-grid" id="fIsoSug" hidden style="margin:0 0 14px"><button class="sug" type="button">999</button></div>
+          </div>
           </div>
         </div>
       </div>
@@ -4193,7 +4211,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.225';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.226';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 20.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6842,6 +6860,7 @@ function openCircuit(idx){
   draft.status = normStatus(draft.status);
   samKabelWahl = draft.sam ? (draft.cable || '') : null;
   samAendern = false;
+  messAuf = false;                                   // v1.226: beim Öffnen immer eingeklappt
   absAndere = false;                                 // v1.163: Listen der Absicherung zu
   kabelHand = !!(draft.cable && idx != null);        // v1.182: Gespeichertes gilt als gewählt
   absHand = idx != null;                             // v1.225
@@ -7325,6 +7344,7 @@ let feedDraft = null;   // Entwurf, damit "Zurück zur Eingabe" wirklich nichts 
 $('#btnFeed').onclick = () => vorVerlassen(feedOeffnen);
 function feedOeffnen(){
   feedAendern = false;                               // v1.182
+  feedMessAuf = false;                               // v1.226
   feedDraft = JSON.parse(JSON.stringify(PROJ.feed));
   feedDraft.m = feedDraft.m || {}; feedDraft.extras = feedDraft.extras || [];
   const f = feedDraft;
@@ -7355,6 +7375,7 @@ function syncFeedUi(){
   $('#fldFeedReason').hidden = st !== 'nomeasure';
   $('#fldFeedNote').hidden   = !(st === 'nomeasure' && $('#fReason').value === 'other');
   $('#feedMeasBlock').style.display = st === 'measured' ? '' : 'none';
+  feedKlappe();
 }
 function collectFeed(){
   const f = feedDraft;
@@ -7410,6 +7431,7 @@ function feedModus(){
   const ka = $('#feedAendernKnopf');
   if(ka) ka.onclick = () => { feedAendern = true; feedModus(); };
   samFeedZeigen(false);
+  feedKlappe();                                      // v1.226
   /* Im Messen-Modus führt die Zuleitung direkt zum ersten offenen Kreis weiter;
      der schlichte Knopf tritt dann zurück. */
   $('#btnSaveFeedNext').hidden  = !mess;
@@ -7882,6 +7904,35 @@ function weiterZumKreis(ref){
 function trafoEntwurf(){
   return !!draft && !draft.special && segVal('#segDevice') === 'ls' && /trafo/i.test($('#cName').value || '');
 }
+/* v1.226 (Jean: erst alle Kreise erfassen, gebaut wird danach, gemessen am
+   Ende): im Erfassen ist der Messblock eingeklappt – eine Zeile nennt, was
+   schon eingetragen ist, ein Tipp klappt ihn für den Ausnahmefall auf. Beim
+   Öffnen ist er immer zu (Jean), im Messen immer offen. */
+let messAuf = false, feedMessAuf = false;
+function messZeile(knopf, st, grund, werte){
+  const w = werte.filter(([, v]) => String(v || '').trim()).map(([t, v, e]) => `${t} ${String(v).trim()} ${e}`);
+  const text = st === 'nomeasure' ? 'Keine Messung' + (grund ? ' – ' + grund : '')
+    : w.length ? w.join(' · ') : 'werden im Messen erfasst';
+  knopf.innerHTML = `<span class="mz-t">Messwerte</span><span class="mz-s">${esc(text)}</span><span class="mz-p" aria-hidden="true">▸</span>`;
+}
+const grundText = (sel, note) => sel.value === 'other' ? (note.value.trim() || 'Andere')
+  : (sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : '');
+function messKlappe(){
+  if(!draft) return;
+  const zu = !messModus() && !messAuf && !draft.special && !trafoEntwurf();
+  $('#messTeil').hidden = zu; $('#messZu').hidden = !zu; $('#messTitel').hidden = zu;
+  if(zu) messZeile($('#messZu'), segVal('#segStatus'), grundText($('#cReason'), $('#cNote')),
+    [['Riso', $('#mIso').value, 'MΩ'], ['Zs', $('#mZs').value, 'Ω'], ['IΔ', $('#mIdn').value, 'mA'],
+     ['tA', $('#mT').value, 'ms'], ['RPE', $('#mRpe').value, 'Ω']]);
+}
+$('#messZu').onclick = () => { messAuf = true; messteilZeigen(); };
+function feedKlappe(){
+  const zu = !messModus() && !feedMessAuf;
+  $('#feedMessTeil').hidden = zu; $('#feedMessZu').hidden = !zu; $('#feedMessTitel').hidden = zu;
+  if(zu) messZeile($('#feedMessZu'), segVal('#segFeedStatus'), grundText($('#fReason'), $('#fNote')),
+    [['Riso', $('#fIso').value, 'MΩ'], ['Zs', $('#fZs').value, 'Ω']]);
+}
+$('#feedMessZu').onclick = () => { feedMessAuf = true; feedKlappe(); };
 function messteilZeigen(){
   if(!draft) return;
   const st = segVal('#segStatus'), trafo = trafoEntwurf(), ohne = !!draft.special || trafo;
@@ -7890,6 +7941,7 @@ function messteilZeigen(){
   $('#fldNote').hidden   = ohne || !(st === 'nomeasure' && $('#cReason').value === 'other');
   $('#measBlock').style.display = (!ohne && st === 'measured') ? '' : 'none';
   $('#trafoHinweis').hidden = !trafo;
+  messKlappe();
 }
 function syncCircuitUi(){
   const dev = segVal('#segDevice'), st = segVal('#segStatus');

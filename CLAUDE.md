@@ -274,8 +274,13 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   folgt der getippten Bezeichnung (`absJeArt`, nur ohne Kachelpfad und solange nicht `absHand`).
   Leerer Fotokasten ist der Knopf (`[data-fotoneu]`, „Foto aufnehmen“ erst bei Fotos).
   Zuleitung: `feedFuseNorm` legt „3× gG 35 A“ auf die Kachel „35 A (gG)“.
+- **Messwerte eingeklappt (v1.226, Jean: erst alles erfassen, dann bauen, am Ende messen):**
+  im Erfassen ersetzt `#messZu` (Zeile mit eingetragenen Werten bzw. „werden im Messen erfasst“,
+  `messZeile`) den Block `#messTeil` samt Überschrift `#messTitel`; `messKlappe` am Ende von
+  `messteilZeigen`, `messAuf` beim Öffnen immer zurück (Jean: auch bei gemessenen Kreisen zu).
+  Zuleitung ebenso (`feedKlappe`, `#feedMessZu`/`#feedMessTeil`). Im Messen immer offen.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.225, 20.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.226, 20.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
