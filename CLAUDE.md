@@ -279,8 +279,11 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   `messZeile`) den Block `#messTeil` samt Überschrift `#messTitel`; `messKlappe` am Ende von
   `messteilZeigen`, `messAuf` beim Öffnen immer zurück (Jean: auch bei gemessenen Kreisen zu).
   Zuleitung ebenso (`feedKlappe`, `#feedMessZu`/`#feedMessTeil`). Im Messen immer offen.
+- **„+ Gerät“ im Ordnen (v1.227, Jean: Leitungen erfassen, zusammenlegen, dann FIs und Geräte
+  einfügen):** `#btnPlanGeraet` (nur ohne Markierung) bietet `specialList()` per `waehlDialog`,
+  setzt das Gerät mit seiner TE-Breite oben ein; Unterzeile im Ordnen „n TE“ statt des Namens.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.226, 20.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.227, 20.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-

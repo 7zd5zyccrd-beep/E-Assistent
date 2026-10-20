@@ -10,6 +10,13 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.227 20.10.2026 Ordnen: neuer Knopf "+ Geraet" (Jean: nach dem Zusammenlegen
+                    kommen FIs und andere Geraete dazu). Er bietet die sonstigen
+                    Geraete aus den Einstellungen an (Hauptschalter,
+                    Ueberspannungsableiter, Stromstossschalter, Trafo ...) und
+                    setzt das gewaehlte mit seiner Breite oben in die Liste; von
+                    dort an seinen Platz ziehen. Vorher ging das nur ueber
+                    "+ Stromkreis" und landete am Ende.
   v1.226 20.10.2026 Messwerte im Erfassen eingeklappt (Jean: erst alle Kreise
                     erfassen, gebaut wird danach, gemessen am Ende): im Stromkreis
                     und in der Zuleitung steht im Erfassen statt des Messblocks
@@ -2461,7 +2468,7 @@ input.schalter:checked::after{transform:translateX(20px)}
 .ord-zeile.ord-frei,.list-item.frei{border-style:dashed;background:transparent;color:var(--ink-soft)}
 .ord-zeile.ord-frei,.list-item.frei{border-left-color:var(--field-border);border-left-width:2px}
 /* vier Knöpfe in einer Zeile (v1.218): die kurzen schmaler, „Zusammenlegen“ am breitesten */
-.plan-leiste #btnPlanFi{flex:.8 1 0}.plan-leiste #btnPlanFrei{flex:.95 1 0}
+.plan-leiste #btnPlanFi{flex:.8 1 0}.plan-leiste #btnPlanFrei{flex:.95 1 0}.plan-leiste #btnPlanGeraet{flex:1.1 1 0}
 .plan-leiste #btnPlanZus{flex:2.3 1 0}.plan-leiste #btnPlanWeg{flex:1.35 1 0}   /* v1.225: „Zusammenlegen (3)“ in einer Zeile */
 @media (max-width:430px){ .plan-leiste .btn{font-size:14px;padding:0 3px} .plan-leiste{gap:6px} }
 .list-item.frei{cursor:default}
@@ -3626,6 +3633,7 @@ function nameGross(s){
         <!-- v1.192: Ordnen-Modus der Leitungsplanung -->
         <div class="btn-row plan-leiste" id="planLeiste" hidden>
           <button class="btn ghost" id="btnPlanFi" type="button">+ FI</button>
+          <button class="btn ghost" id="btnPlanGeraet" type="button">+ Gerät</button>
           <button class="btn ghost" id="btnPlanFrei" type="button">+ Frei</button>
           <button class="btn ghost" id="btnPlanZus" type="button">Zusammenlegen</button>
           <button class="btn ghost" id="btnPlanWeg" type="button">Entfernen</button>
@@ -4211,7 +4219,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.226';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.227';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 20.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6366,6 +6374,7 @@ function planLeisteZeigen(){
   const zus = sel.filter(c => !istFrei(c) && !istFiZeile(c) && !isSpecial(c)).length;
   const kannZus = trennen || (!sel.some(istFrei) && !sel.some(c => istFiZeile(c) || isSpecial(c)) && zus >= 2);
   $('#btnPlanFrei').hidden = sel.length > 0;
+  $('#btnPlanGeraet').hidden = sel.length > 0;      // v1.227
   $('#btnPlanZus').hidden = !kannZus;
   $('#btnPlanWeg').hidden = !sel.length;
   $('#btnPlanZus').textContent = trennen ? 'Trennen' : `Zusammenlegen (${zus})`;
@@ -6402,7 +6411,7 @@ function ordnenZeigen(){
         <span class="ord-griff" aria-label="Verschieben">≡</span></div>`;
     }
     const fi = istFiZeile(c);
-    const unter = fi ? (c.breaker || '')
+    const unter = fi ? (c.breaker || '') : isSpecial(c) ? `${Math.max(1, parseInt(c.te, 10) || 1)} TE`   // v1.227: nicht zweimal der Name
       : [c.breaker, kabelText(c.cable), Array.isArray(c.teile) && c.teile.length > 1 ? `aus ${c.teile.length} Leitungen` : ''].filter(Boolean).join(' · ');
     return `<div class="list-item ord-zeile${fi ? ' ord-fi' : ''}${an ? ' an' : ''}" data-ord="${esc(c.cid)}" role="button">
       <span class="ord-mark" aria-hidden="true"></span>
@@ -6540,6 +6549,22 @@ $('#btnPlanFi').onclick = () => {
   ordnenWahl.clear(); saveProj(); renderBoard();
   toast(mit.length ? `FI eingefügt – deckt ${mit.length === 1 ? 'die markierte Leitung' : `die ${mit.length} markierten Leitungen`} ab`
     : 'FI eingefügt – am ≡ an seinen Platz ziehen');
+};
+/* v1.227 (Jean: nach dem Zusammenlegen kommen FIs und andere Geräte dazu):
+   sonstige Geräte aus den Einstellungen mit ihrer Breite oben einsetzen – dort
+   sitzen Hauptschalter und Überspannungsableiter meist; der Rest wird gezogen */
+$('#btnPlanGeraet').onclick = () => {
+  const liste = specialList();
+  if(!liste.length){ toast('Keine Einträge unter Einstellungen › Listen › Sonstige Geräte'); return; }
+  waehlDialog('Gerät einfügen', '', [...liste.map(e => ({t:e.name, cls:'ghost', fn:() => {
+    const g = Object.assign(blankCircuit(), {no:'', special:e.name, device:'other', name:e.name, room:'',
+      cable:'', covers:'', te:(e.te && TE_OPTIONS.includes(e.te)) ? e.te : '1', status:'measured', m:{}, extras:[], cid:neueKennung('K')});
+    g.breaker = breakerOf(g);
+    const erste = planZeilen()[0];
+    PROJ.items.splice(erste ? PROJ.items.indexOf(erste) : PROJ.items.length, 0, g);
+    ordnenWahl.clear(); saveProj(); renderBoard();
+    toast(`${e.name} eingefügt – am ≡ an seinen Platz ziehen`);
+  }})), {t:'Abbrechen', cls:'ghost', fn:null}]);
 };
 /* v1.218: freie TE vor die erste markierte Zeile, sonst ans Ende – meist bleibt
    der Rest einer Reihe frei */
