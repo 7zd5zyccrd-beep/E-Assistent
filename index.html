@@ -10,6 +10,14 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.242 21.10.2026 Darstellung beim Ziehen (Jean, alle vier Punkte): ein gestrichelter
+                    Platzhalter zeigt, wo die Zeile landet, mit Zielnummer und Reihe,
+                    in der Zwischenstufe mit "1 frei" davor; alle Zeilen zeigen schon
+                    beim Ziehen ihre neue Nummer (geaenderte hervorgehoben); im
+                    freien Block eine TE-Skala mit Nummern und Markierung; die
+                    gezogene Zeile ist halb durchsichtig, das Schild auf ihr entfaellt.
+                    Behoben: am Reihenanfang oeffnete sich die Luecke an falscher
+                    Stelle (Ueberschriften ruecken jetzt mit).
   v1.241 21.10.2026 Antippen einer freien Zeile sowie -/+ und "bis Reihenende" halten
                     die Lage der Liste (Jean: Ansicht verspringt).
   v1.240 21.10.2026 Griff erst nach kurzem Halten (Jean: beim Scrollen oft ungewollt
@@ -2582,6 +2590,20 @@ input.schalter:checked::after{transform:translateX(20px)}
   margin:-10px 0;font-size:24px;color:var(--ink-soft);touch-action:pan-y;cursor:grab}
 .ord-zeile.halten .ord-griff{color:var(--ink)}       /* v1.240: Halten wird angenommen */
 .zieh-ziel:empty{display:none}
+/* v1.242: Platzhalter, mitlaufende Nummern, TE-Skala, halb durchsichtige Zeile */
+.zieh-platz{position:absolute;left:0;right:0;border:2px dashed var(--ink);border-radius:var(--r);background:var(--enclosure-2);
+  display:flex;flex-direction:column;justify-content:flex-start;align-items:flex-start;gap:4px;padding:6px 14px 0 60px;pointer-events:none;z-index:1}
+.zieh-platz .ziel{font-family:var(--f-label);font-size:17px;font-weight:700;color:var(--ink);letter-spacing:.03em}
+.zieh-platz .frei1{font-size:13px;color:var(--ink-soft);border:1.5px dashed var(--field-border);border-radius:6px;padding:1px 8px;background:var(--surface)}
+.ord-zeile.zieht{opacity:.8}
+.ord-zeile.nr-neu .no{color:var(--brand-dark, #5f8a14)}
+.frei-skala{position:absolute;inset:0;border-radius:inherit;background:var(--surface);pointer-events:none;z-index:2}
+.ord-zeile.zieht.ueber-frei{opacity:.6}
+.ord-zeile.zieht .zieh-text{font-family:var(--f-label);font-size:16px;font-weight:700;color:var(--ink);letter-spacing:.03em}
+.frei-skala .stufe{position:absolute;left:0;right:0;border-top:1px dashed var(--field-border);display:flex;align-items:center;padding-left:60px;font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.frei-skala .stufe:first-child{border-top:0}
+.frei-skala .stufe.an{background:var(--brand);color:var(--ink);font-weight:700;font-family:var(--f-label);font-size:16px;border-radius:6px}
+.ord-zeile.ord-frei{position:relative}
 .zieh-ziel{position:absolute;right:52px;top:-13px;padding:3px 10px;border-radius:999px;background:var(--ink);color:var(--surface);
   font-family:var(--f-label);font-size:15px;font-weight:700;letter-spacing:.04em;white-space:nowrap;pointer-events:none}
 #boardBody .row-head{transition:color .12s,background .12s}
@@ -4327,7 +4349,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.241';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.242';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 21.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6684,9 +6706,17 @@ function ordnenZiehen(zeile, e){
   let mitteJetzt = lagen[von].top + lagen[von].h / 2;
   /* v1.231 (Jean: vor dem Loslassen nicht erkennbar, ob es in die nächste Reihe
      rutscht): Ziel laufend an der Zeile zeigen, die Reihe leuchtet, die sie beginnt */
-  const schild = document.createElement('span');
-  schild.className = 'zieh-ziel';
-  zeile.appendChild(schild);
+  /* v1.242 (Jean): statt des Schilds ein Platzhalter in der Liste, dort wo die Zeile
+     landet; dazu laufen alle Nummern mit, freie Blöcke zeigen eine TE-Skala */
+  box.style.position = 'relative';
+  const platzEl = document.createElement('div');
+  platzEl.className = 'zieh-platz';
+  platzEl.hidden = true;
+  box.appendChild(platzEl);
+  const nrAlt = new Map(zeilen.map(z => [z, (z.querySelector('.no') || {}).textContent]));
+  const elems = [...box.children].filter(el => el.classList.contains('ord-zeile') || el.classList.contains('row-head'));
+  const elLagen = new Map(elems.map(el => { const q = el.getBoundingClientRect(); return [el, {top:q.top + bildY(), h:q.height}]; }));
+  const boxTop = () => box.getBoundingClientRect().top + bildY();
   const kopfEl = {};
   box.querySelectorAll('.row-head[data-r]').forEach(k => { kopfEl[k.dataset.r] = k; });
   const selbst = planZeilen().find(c => c.cid === zeile.dataset.ord);
@@ -6697,7 +6727,7 @@ function ordnenZiehen(zeile, e){
     const te = Math.max(1, parseInt(selbst.te, 10) || 1);
     for(let i = 0; i < zeilen.length; i++){
       if(i === von || !zeilen[i].classList.contains('ord-frei')) continue;
-      const f = planZeilen().find(c => c.cid === zeilen[i].dataset.ord), w = f ? parseInt(f.te, 10) || 0 : 0;
+      const f = planZeilen().find(c => c.cid === zeilen[i].dataset.ord), w = f ? freiBreiteOhne(planZeilen(), selbst, f) : 0;   // v1.242
       if(!f || w < 1 || mitteJetzt < lagen[i].top || mitteJetzt >= lagen[i].top + lagen[i].h) continue;
       const kmax = Math.max(0, w - te);
       return {f, i, k: Math.min(kmax, Math.floor((mitteJetzt - lagen[i].top) / lagen[i].h * (kmax + 1)))};
@@ -6721,40 +6751,76 @@ function ordnenZiehen(zeile, e){
     const ende = !luecke && !anfang && !istFrei(selbst) && v && v !== selbst && ((istFrei(v) && v.rest) || (!istFrei(v) && v.amEnde)) ? zeile.dataset.ord : null;
     return {ids, r, anfang, ende, luecke};
   };
-  const zielZeigen = () => {
-    const w = wohin();
-    Object.entries(kopfEl).forEach(([r, k]) => k.classList.toggle('ziel', !!w.anfang && +r === w.r));
-    if(w.frei){                                      // v1.234: gedacht in den freien Block
-      const war = selbst.amEnde;
-      const p = nummernPlan(freiEinsetzenListe(planZeilen(), selbst, w.frei.f, w.frei.k)).find(x => x.c === selbst);
-      if(war) selbst.amEnde = war; else delete selbst.amEnde;
-      if(p){
-        const nr = p.bis > p.no ? p.no + '–' + p.bis : String(p.no);
-        schild.textContent = `→ ${nr} · Reihe ${Math.ceil(p.no / ROW_SIZE)}${w.frei.k ? ` (${w.frei.k} frei davor)` : ''}`;
-        const noEl = zeile.querySelector('.no'); if(noEl) noEl.textContent = nr;
-      }
-      return;
+  /* gedachte Reihenfolge zum Ziel w – wie ordnenUebernehmen bzw. ordnenFreiUebernehmen */
+  const gedacht = w => {
+    const war = selbst.amEnde;
+    let voll;
+    if(w.frei) voll = freiEinsetzenListe(planZeilen(), selbst, w.frei.f, w.frei.k);
+    else {
+      voll = ordnenVollstaendig(w.ids, zeile.dataset.ord).map(id => planZeilen().find(c => c.cid === id)).filter(Boolean);
+      if(w.anfang){ const i = voll.indexOf(selbst), v = voll[i - 1]; if(i > 0 && !(istFrei(v) && v.rest)) voll.splice(i, 0, freiNeu(1, true)); }
+      if(w.luecke){ voll.splice(voll.indexOf(selbst), 0, freiNeu(1)); voll = reiheUeberlauf(voll, selbst); }   // v1.235
+      if(w.ende) selbst.amEnde = true; else delete selbst.amEnde;   // v1.232: gedacht ans Reihenende
     }
-    /* gedachte Reihenfolge samt Reihenrest wie in ordnenUebernehmen durchzählen */
-    let voll = ordnenVollstaendig(w.ids, zeile.dataset.ord).map(id => planZeilen().find(c => c.cid === id)).filter(Boolean);
-    if(w.anfang){ const i = voll.indexOf(selbst), v = voll[i - 1]; if(i > 0 && !(istFrei(v) && v.rest)) voll.splice(i, 0, freiNeu(1, true)); }
-    if(w.luecke){ voll.splice(voll.indexOf(selbst), 0, freiNeu(1)); voll = reiheUeberlauf(voll, selbst); }   // v1.235
-    const war = selbst.amEnde;                       // v1.232: gedacht ans Reihenende
-    if(w.ende) selbst.amEnde = true; else delete selbst.amEnde;
-    const p = nummernPlan(voll).find(x => x.c === selbst);
+    const plan = nummernPlan(voll);
     if(war) selbst.amEnde = war; else delete selbst.amEnde;
-    if(!p || istFrei(selbst)){ schild.textContent = ''; return; }
-    const nr = p.bis > p.no ? p.no + '–' + p.bis : String(p.no);
-    schild.textContent = `→ ${nr} · Reihe ${Math.ceil(p.no / ROW_SIZE)}${w.luecke ? ' (1 frei davor)' : ''}`;
-    const noEl = zeile.querySelector('.no'); if(noEl) noEl.textContent = nr;   // die Nummer läuft mit
+    return plan;
+  };
+  const nrText = p => p.bis > p.no ? p.no + '–' + p.bis : String(p.no);
+  /* v1.242: TE-Skala in jedem freien Block – je Stufe die Nummer, die die Zeile dort bekäme */
+  const skalen = new Map();
+  if(!istFrei(selbst)) zeilen.forEach((z, i) => {
+    if(i === von || !z.classList.contains('ord-frei')) return;
+    const f = planZeilen().find(c => c.cid === z.dataset.ord), w = f ? freiBreiteOhne(planZeilen(), selbst, f) : 0;
+    if(!f || w < 1) return;
+    const kmax = Math.max(0, w - Math.max(1, parseInt(selbst.te, 10) || 1));
+    const sk = document.createElement('div');
+    sk.className = 'frei-skala';
+    for(let k = 0; k <= kmax; k++){
+      const p = gedacht({frei:{f, i, k}}).find(x => x.c === selbst);
+      const st = document.createElement('div');
+      st.className = 'stufe';
+      st.style.top = (k * 100 / (kmax + 1)) + '%'; st.style.height = (100 / (kmax + 1)) + '%';
+      st.dataset.t = p ? nrText(p) : '';
+      st.innerHTML = `<span>${esc(st.dataset.t)}</span>`;
+      sk.appendChild(st);
+    }
+    z.appendChild(sk);
+    skalen.set(i, sk);
+  });
+  const zielZeigen = w => {
+    Object.entries(kopfEl).forEach(([r, k]) => k.classList.toggle('ziel', !!w.anfang && +r === w.r));
+    const plan = gedacht(w), p = plan.find(x => x.c === selbst);
+    /* alle Nummern laufen mit; was sich ändert, ist hervorgehoben */
+    zeilen.forEach(z => {
+      const c = planZeilen().find(x => x.cid === z.dataset.ord), q = c && plan.find(x => x.c === c), noEl = z.querySelector('.no');
+      if(!noEl || !q || (istFrei(c) && q.te < 1)) return;
+      noEl.textContent = nrText(q);
+      z.classList.toggle('nr-neu', z !== zeile && noEl.textContent !== nrAlt.get(z));
+    });
+    skalen.forEach((sk, i) => [...sk.children].forEach((st, k) => st.classList.toggle('an', !!w.frei && w.frei.i === i && w.frei.k === k)));
+    const text = p && !istFrei(selbst) ? `→ ${nrText(p)} · Reihe ${Math.ceil(p.no / ROW_SIZE)}` : '';
+    skalen.forEach(sk => [...sk.children].forEach(st => { st.innerHTML = `<span>${esc(st.dataset.t)}</span>`; }));
+    zeile.classList.toggle('ueber-frei', !!w.frei);
+    /* das Ziel steht auch in der Unterzeile der gezogenen Zeile – der Platzhalter liegt
+       oft genau unter dem Finger; die Bezeichnung bleibt frei */
+    const extra = w.frei ? (w.frei.k ? ` · ${w.frei.k} frei davor` : '') : w.luecke ? ' · 1 frei davor' : '';
+    const sEl = zeile.querySelector('.s');
+    if(sEl && text) sEl.innerHTML = `<b class="zieh-text">${esc(text + extra)}</b>`;
+    if(w.frei){
+      platzEl.hidden = true;
+      const st = skalen.get(w.frei.i) && skalen.get(w.frei.i).children[w.frei.k];
+      return;                                        // die Zielangabe steht in der gezogenen Zeile
+    }
+    platzEl.innerHTML = w.luecke ? `<span class="frei1">1 frei</span>` : '';
   };
   const abstand = zeilen.length > 1 ? Math.max(0, lagen[1].top - lagen[0].top - lagen[0].h) : 8;
   const platz = lagen[von].h + abstand;                    // so weit rücken die anderen
   const y0 = (e.clientY - vorTop) + lagen[von].top;   // v1.234: Griffpunkt an der Zeile, auch wenn nicht nachgerollt werden konnte
-  let y = e.clientY, ziel = von, lauf = 0;
+  let y = e.clientY, ziel = von, lauf = 0, platzTop = lagen[von].top;
   zeile.classList.add('zieht');
   zeile.style.transition = 'none';
-  zeilen.forEach(z => { if(z !== zeile) z.style.transition = 'transform .16s ease'; });
+  elems.forEach(el => { if(el !== zeile) el.style.transition = 'transform .16s ease'; });   // v1.242: auch Überschriften
   const malen = () => {
     const d = y + bildY() - y0;
     zeile.style.transform = `translateY(${d}px)`;
@@ -6769,14 +6835,32 @@ function ordnenZiehen(zeile, e){
       if(mitte >= lagen[j].top + lagen[j].h * 0.35 && mitte < lagen[j].top + lagen[j].h * 0.65){ zwischen = j; break; }
     }
     if(zwischen != null) ziel = zwischen < von ? zwischen : zwischen - 1;
-    const fr = imFrei();                             // v1.234: der Block bleibt stehen, darin wird gezählt
-    if(fr) ziel = von < fr.i ? fr.i - 1 : fr.i + 1;
-    zeilen.forEach((z, i) => {
-      if(i === von) return;
-      const s = von < ziel && i > von && i <= ziel ? -platz : von > ziel && i >= ziel && i < von ? platz : 0;
-      z.style.transform = s ? `translateY(${s}px)` : '';
+    const w = wohin();
+    /* v1.242: die Lücke öffnet sich genau dort, wo die Zeile landet – Überschriften rücken
+       mit (vorher blieb am Reihenanfang die Lücke über der Überschrift). Im freien Block
+       rückt nichts, dort zeigt die Skala das Ziel. */
+    const d0 = elems.indexOf(zeile);
+    let ins = d0;
+    if(!w.frei){
+      const sId = w.ids[w.ids.indexOf(zeile.dataset.ord) + 1], sEl = sId && zeilen.find(z => z.dataset.ord === sId);
+      ins = sEl ? elems.indexOf(sEl) : elems.length;
+      if(sEl && !w.anfang && ins > 0 && elems[ins - 1].classList.contains('row-head')) ins--;
+    }
+    elems.forEach((el, i) => {
+      if(el === zeile) return;
+      const sh = ins > d0 && i > d0 && i < ins ? -platz : ins < d0 && i >= ins && i < d0 ? platz : 0;
+      el.style.transform = sh ? `translateY(${sh}px)` : '';
     });
-    zielZeigen();
+    const lage = el => elLagen.get(el);
+    let pTop;
+    if(ins > d0 + 1){ const v = lage(elems[ins - 1]); pTop = v.top + v.h - platz + abstand; }
+    else if(ins < d0){ pTop = lage(elems[ins]).top; }
+    else pTop = lagen[von].top;
+    platzTop = pTop;
+    platzEl.style.top = (pTop - boxTop()) + 'px';
+    platzEl.style.height = lagen[von].h + 'px';
+    platzEl.hidden = !!w.frei;
+    zielZeigen(w);
   };
   const kanten = () => {
     const r = m.getBoundingClientRect();
@@ -6797,11 +6881,10 @@ function ordnenZiehen(zeile, e){
     document.removeEventListener('pointermove', mv);
     document.removeEventListener('pointerup', ende);
     document.removeEventListener('pointercancel', ende);
-    /* an den neuen Platz gleiten lassen, dann die Reihenfolge übernehmen */
-    const zielTop = ziel > von ? lagen[ziel].top + lagen[ziel].h - lagen[von].h : lagen[ziel].top;
-    zeile.style.transition = 'transform .16s ease';
-    zeile.style.transform = `translateY(${zielTop - lagen[von].top}px)`;
+    /* an den neuen Platz gleiten lassen (v1.242: in den Platzhalter), dann übernehmen */
     const w = wohin();
+    zeile.style.transition = 'transform .16s ease';
+    if(!w.frei) zeile.style.transform = `translateY(${platzTop - lagen[von].top}px)`;
     /* v1.239 (Jean: nach dem Verschieben eines FI sprang die Liste auf dem iPhone nach oben) */
     if(w.frei){ setTimeout(() => lageHalten(() => ordnenFreiUebernehmen(selbst, w.frei.f, w.frei.k), ausgleich), 170); return; }
     setTimeout(() => lageHalten(() => ordnenUebernehmen(w.ids, w.anfang, zeile.dataset.ord, !!w.ende, w.luecke), ausgleich), 170);
@@ -6815,11 +6898,17 @@ function ordnenZiehen(zeile, e){
    dort fest wie in v1.232). Setzt selbst.amEnde; liefert die neue Reihenfolge. */
 const FREI_STUFE = 30;
 const GRIFF_HALTEN = 250;                            // v1.240: so lange halten, bis die Zeile mitgeht (ms)                               // Fingerweg je TE beim Ziehen (px, etwa 8 mm)
+/* v1.242: Breite des freien Blocks, wenn die gezogene Zeile ihren Platz verlassen hat –
+   kommt sie aus derselben Reihe, wächst „bis Reihenende“ um ihre Breite */
+function freiBreiteOhne(liste, selbst, f){
+  const p = nummernPlan(liste.filter(z => z !== selbst)).find(x => x.c === f);
+  return p ? p.te : (parseInt(f.te, 10) || 0);
+}
 function freiEinsetzenListe(liste, selbst, f, k){
   const rest = liste.filter(z => z !== selbst);
   const i = rest.indexOf(f);
   if(i < 0) return liste;
-  const te = Math.max(1, parseInt(selbst.te, 10) || 1), w = parseInt(f.te, 10) || 0;
+  const te = Math.max(1, parseInt(selbst.te, 10) || 1), w = freiBreiteOhne(liste, selbst, f);
   delete selbst.amEnde;
   let einsatz;
   if(f.rest){

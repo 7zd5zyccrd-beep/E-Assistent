@@ -347,9 +347,17 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Maus sofort. `lageHalten(fn, abzug)`: der beim Anfassen mitgerollte Ausgleich für die
   erhöhten freien Blöcke wird beim Loslassen abgezogen (Jean: sprang eine Zeile höher).
   Testen mit CDP `Input.dispatchTouchEvent` (touchStart, warten, touchMove …, touchEnd).
+  Darstellung beim Ziehen (v1.242, Jean alle vier + halb durchsichtig): Lücke über `elems`
+  (Zeilen und Überschriften rücken gemeinsam; Einfügestelle aus `w.ids`, am Reihenanfang hinter
+  der Überschrift), gestrichelter Platzhalter `.zieh-platz` (absolut in `#boardBody`, „1 frei“
+  bei der Zwischenstufe); `gedacht(w)` rechnet die Reihenfolge wie beim Ablegen – alle `.no`
+  laufen mit (`.nr-neu`); TE-Skala `.frei-skala` in jedem freien Block (Stufen mit Zielnummer,
+  aktive grün), Breite ohne die gezogene Zeile (`freiBreiteOhne`, auch in `imFrei` und
+  `freiEinsetzenListe`); Zielangabe in der Unterzeile der gezogenen Zeile (`.zieh-text`), Schild
+  `.zieh-ziel` entfällt; Zeile `opacity:.8`, über freiem Block `.6`. Tests lesen `.zieh-text`.
   v1.241: auch Antippen der freien Zeile und −/+/„bis Reihenende“ über `lageHalten`.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.241, 21.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.242, 21.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
