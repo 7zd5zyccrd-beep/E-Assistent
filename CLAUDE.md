@@ -298,8 +298,11 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   (Jean). „Nächste Reihe“ (`#btnPlanReihe`, Frage 2 a): Markierte vor die erste Zeile der
   folgenden Reihe, davor `freiNeu(1, true)`. `planProjekt()`: `#cNo` nur lesbar, kein
   `nummernPruefen`, kein `freiAnpassen`. Neue Kreise/Leitungen ans Ende (Jean).
+  Ziehen an den Reihenanfang (v1.230, Jean): `ordnenZiehen` merkt die Mitte der Überschriften
+  (`.row-head[data-r]`); landet die Zeile vor dem ersten Kreis einer Reihe und wurde unterhalb der
+  Überschrift losgelassen, setzt `ordnenUebernehmen(ids, anfang)` davor `freiNeu(1, true)`.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.229, 21.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.230, 21.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
