@@ -286,8 +286,20 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   `#btnPlanFi`, entfällt); „+ Gerät“ daher auch mit Markierung: FI holt die Markierten hinter
   sich, andere Geräte kommen vor die erste markierte Zeile. Leiste: „+ Gerät“/„+ Frei“ bzw.
   „+ Gerät“/„Zusammenlegen (n)“/„Entfernen“.
+- **Eine Liste (v1.229, Jean: Ordnen und Bearbeiten zusammen):** bei der Neuinstallation ist die
+  Erfassen-Liste immer die Ordnen-Liste (`ordnen = planBar()` in `renderBoard`, kein `#btnOrdnen`,
+  kein `#btnPlanFertig`). Zeile: `.ord-wahl` (eigener Tippbereich, nur dort markieren), Tipp
+  sonst öffnet den Kreis (`data-idx`, auch für `kreisHervorheben`/`picked`), Griff rechts; Reihen-
+  Überschriften. `ordnenVorbereiten` (in `go` beim Hereinkommen) sortiert einmal und macht Lücken
+  zu freien Zeilen – nie nach dem Ziehen. Reihenrest ohne Breite wird nicht gezeigt,
+  `ordnenUebernehmen` setzt ihn hinter seinen Vorgänger. Leiste: `#planLeiste` („+ Leitung“
+  `#btnPlanLeitung`, „+ Gerät“, „+ Frei“ bzw. mit Markierung „+ Gerät“, „Nächste Reihe“) und
+  `#planLeiste2` („Zusammenlegen“, „Entfernen“); `#addZeile` mit „+ Stromkreis“ entfällt dort
+  (Jean). „Nächste Reihe“ (`#btnPlanReihe`, Frage 2 a): Markierte vor die erste Zeile der
+  folgenden Reihe, davor `freiNeu(1, true)`. `planProjekt()`: `#cNo` nur lesbar, kein
+  `nummernPruefen`, kein `freiAnpassen`. Neue Kreise/Leitungen ans Ende (Jean).
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.228, 20.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.229, 21.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
@@ -297,6 +309,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   gewählt hat (Ränder dann von ihm nachgemessen).
 - **Leitung hinzufügen (v1.211–v1.217):** Zweck-Kacheln wie im Stromkreis, Dunstabzug/Kühlschrank mit Folgekacheln; Feld bleibt
   mit Tastatur im Bild (v1.213) – am Gerät ansehen.
+- **Eine Liste (v1.229):** Markieren, Antippen, Ziehen, „Nächste Reihe“ am Gerät ausprobieren.
 - **Prüfung Erfassen (v1.221–v1.225):** alle fünf Pakete am Gerät durchgehen, besonders
   Listenlage (v1.223), Kacheln (v1.224) und Ordnen mit „+ FI“/Reihenende (v1.225).
 - **Freie TE (v1.218–v1.220):** Ordnen mit „+ Frei“, Lücken bleiben, Nummern sofort beim Ziehen – am Gerät ausprobieren.

@@ -10,6 +10,19 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.229 21.10.2026 Neuinstallation: Ordnen und Bearbeiten in einer Liste (Jean).
+                    Jede Zeile hat links das Kaestchen (nur dort wird markiert)
+                    und rechts den Griff zum Ziehen; ein Tipp auf die
+                    Beschreibung oeffnet den Stromkreis, FI oder das Geraet.
+                    "Ordnen" und "Fertig" entfallen, die Nummern folgen immer der
+                    Reihenfolge, die Liste steht in Reihen. Fussleiste ohne
+                    Markierung "+ Leitung", "+ Geraet", "+ Frei"; mit Markierung
+                    "+ Geraet", "Naechste Reihe", "Zusammenlegen" und
+                    "Entfernen". "Naechste Reihe" setzt die markierten Zeilen an
+                    den Anfang der naechsten Reihe, der Rest rueckt auf.
+                    "+ Stromkreis" gibt es bei der Neuinstallation nicht mehr;
+                    die Nummer im Stromkreis ist dort nicht mehr von Hand
+                    einzugeben.
   v1.228 20.10.2026 Ordnen: der FI steht jetzt an erster Stelle unter "+ Geraet"
                     (Jean), der eigene Knopf "+ FI" entfaellt. "+ Geraet" gibt es
                     darum auch mit Markierung: ein FI holt die markierten
@@ -2501,7 +2514,15 @@ input.schalter:checked::after{transform:translateX(20px)}
 .ord-zeile .ord-griff{flex:0 0 46px;align-self:stretch;display:flex;align-items:center;justify-content:center;
   margin:-10px 0;font-size:24px;color:var(--ink-soft);touch-action:none;cursor:grab}
 .ord-zeile.zieht{position:relative;z-index:5;border-color:var(--ink);box-shadow:0 8px 20px rgba(0,0,0,.28)}
-.plan-leiste{margin-bottom:10px}
+.plan-leiste{margin-bottom:0}
+.plan-leiste + .plan-leiste{margin-top:10px}
+.plan-leiste #btnPlanLeitung{flex:1.2 1 0}.plan-leiste #btnPlanReihe{flex:1.5 1 0}
+/* v1.229: Kästchen mit eigenem Tippbereich über die ganze Zeilenhöhe; der Rest der Zeile öffnet */
+.ord-zeile .ord-wahl{flex:0 0 48px;align-self:stretch;display:flex;align-items:center;justify-content:center;margin:-10px 0 -10px -14px;cursor:pointer}
+.ord-zeile .ord-wahl + .no{margin-left:-4px}
+.ord-zeile .body{cursor:pointer}
+#boardBody .row-head:first-child{margin-top:0}
+#cNo[readonly]{background:var(--enclosure-2);color:var(--ink-soft)}   /* v1.229: Nummer folgt der Liste */
 .plan-leiste .btn{flex:1 1 0;width:auto;min-width:0;padding:0 6px;font-size:15px;white-space:nowrap}
 @media (max-width:360px){ .plan-leiste .btn{font-size:14px;padding:0 4px} }
 .list-item.ord-zeile .no{flex:0 0 auto;min-width:1.2em;max-width:4.2em}
@@ -3639,8 +3660,12 @@ function nameGross(s){
         </div>
         <!-- v1.192: Ordnen-Modus der Leitungsplanung -->
         <div class="btn-row plan-leiste" id="planLeiste" hidden>
+          <button class="btn primary" id="btnPlanLeitung" type="button">+ Leitung</button>
           <button class="btn ghost" id="btnPlanGeraet" type="button">+ Gerät</button>
           <button class="btn ghost" id="btnPlanFrei" type="button">+ Frei</button>
+          <button class="btn ghost" id="btnPlanReihe" type="button">Nächste Reihe</button>
+        </div>
+        <div class="btn-row plan-leiste" id="planLeiste2" hidden>   <!-- v1.229: nur mit Markierung -->
           <button class="btn ghost" id="btnPlanZus" type="button">Zusammenlegen</button>
           <button class="btn ghost" id="btnPlanWeg" type="button">Entfernen</button>
         </div>
@@ -4225,8 +4250,8 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.228';                    // siehe Änderungsliste im Dateikopf
-const BUILD        = VERSION + ' · 20.10.2026';
+const VERSION      = 'v1.229';                    // siehe Änderungsliste im Dateikopf
+const BUILD        = VERSION + ' · 21.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
 const DAUER_WARN   = 100;                        // zu lang: unplausibel im Protokoll
@@ -5214,7 +5239,10 @@ function go(name, push = true){
   if(push && name !== current) stack.push(current);
   if(LAGE_ANSICHTEN.has(current) && current !== name) bildLagen[lageSchluessel(current)] = bildY();   // v1.223
   const vonKreis = current === 'circuit', vorherAnsicht = current;
-  if(name !== 'board'){ ordnen = false; ordnenWahl.clear(); }   // v1.192: Ordnen gilt nur in der Liste
+  /* v1.229: Ordnen ist bei der Neuinstallation die Liste selbst – Markierungen
+     überstehen das Öffnen eines Kreises, beim Wiederkommen wird einmal sortiert */
+  if(name !== 'board' && name !== 'circuit' && name !== 'feed') ordnenWahl.clear();
+  if(name === 'board' && current !== 'board') ordnenVorbereiten = true;
   if(current === 'kamprobe' && name !== 'kamprobe') kpStoppen();   // v1.139: Kamera und Licht aus
   if(!$('#samKam').hidden) samKamSchliessen();                      // v1.143
   /* Die Blattvorschau steht als verkleinertes 1024-Pixel-Blatt in einer eigenen
@@ -6001,7 +6029,20 @@ function renderBoard(){
   weiterMessenKnopf();                               // v1.161
   bereicheZeigen(current);                           // Zähler in der Leiste mitführen
   planKopfZeigen(n);                                 // v1.192
-  if(ordnen){ ordnenZeigen(); renderPhotos(); renderBoardDocs(); return; }
+  ordnen = planBar();                                // v1.229: kein eigener Modus mehr
+  if(ordnen){
+    if(ordnenVorbereiten){                           // nur beim Hereinkommen, nie nach dem Ziehen
+      ordnenVorbereiten = false;
+      sortCircuits();
+      circuits().forEach(c => { if(!c.cid) c.cid = neueKennung('K'); });
+      lueckenAlsFrei();
+    }
+    ordnenZeigen(); renderPhotos(); renderBoardDocs();
+    if(splitAktiv() && current === 'circuit' && editIdx != null){
+      const el = $(`#boardBody [data-idx="${editIdx}"]`); if(el) el.classList.add('picked');
+    }
+    return;
+  }
   $('#boardBody').innerHTML = n === 0
     ? `<div class="rail-empty">Noch kein Stromkreis erfasst.<br>${messModus() ? 'Stromkreise legst du unter Erfassen an.' : 'Unten beginnen.'}</div>`
     : listHtml();
@@ -6137,10 +6178,13 @@ function listHtml(){
    dem Zweck, späteres Neunummerieren mit Rückfrage, beim Zusammenlegen zählt
    die zusammengeführte Bezeichnung.
    ============================================================ */
-let ordnen = false;                 // Ordnen-Modus der Erfassen-Liste
+let ordnen = false;                 // Liste mit Kästchen und Griff (seit v1.229 = planBar())
+var ordnenVorbereiten = true;        // v1.229: beim Hereinkommen einmal sortieren und Lücken zeigen
 const ordnenWahl = new Set();       // markierte Zeilen (Kennungen der Kreise)
 const planBar = () => !!PROJ && (PROJ.mode || 'wdh') === 'neu' && !messModus() && !abwNr() && !(archOffen && archLesen);
 const ohneNr = c => !String(c.no == null ? '' : c.no).trim();
+/* v1.229: Neuinstallation mit Nummern nach der Reihenfolge – auch im Kreis und im Messen */
+const planProjekt = () => !!PROJ && (PROJ.mode || 'wdh') === 'neu' && !abwNr();
 const istFiZeile = c => c.device === 'rcd' && !isSpecial(c);
 /* v1.218 (Jean: im Verteiler bleiben oft TE frei, „Fertig“ schob alles
    zusammen): freie Teilungseinheiten sind eigene Zeilen {kind:'frei'} mit
@@ -6176,7 +6220,7 @@ function lueckenAlsFrei(){
 function freiAnpassen(){
   /* v1.220: im Ordnen entscheidet die Reihenfolge (nummernAnwenden) – sonst schrumpfte
      eine freie Zeile, die eben breiter wurde, bevor die Folgenden aufrücken konnten */
-  if(!PROJ || abwNr() || ordnen || !PROJ.items.some(istFrei)) return;
+  if(!PROJ || abwNr() || ordnen || planProjekt() || !PROJ.items.some(istFrei)) return;   // v1.229
   const belegt = new Set();
   circuits().forEach(c => kreisNummern(c).forEach(n => belegt.add(n)));
   const neu = [];
@@ -6341,38 +6385,54 @@ function leitungBlatt(zuletzt, vorher){
   $('#modal').hidden = false;
 }
 $('#btnLeitung').onclick = () => vorVerlassen(() => { if(current !== 'board') backToBoard(); leitungBlatt(); });
+$('#btnPlanLeitung').onclick = () => $('#btnLeitung').click();      // v1.229
+/* v1.229 (Jean, Frage 2 a): die markierten Zeilen an den Anfang der nächsten
+   Reihe – der Rest ihrer Reihe rückt auf, die folgende Reihe bleibt, wo sie ist
+   (davor „frei bis Reihenende“). Ziehen über den ganzen Bildschirm entfällt. */
+$('#btnPlanReihe').onclick = () => {
+  nummernAnwenden();
+  const cs = planZeilen();
+  const mit = cs.filter(c => ordnenWahl.has(c.cid) && !istFrei(c));
+  if(!mit.length) return;
+  const r = Math.ceil((parseInt(mit[0].no, 10) || 1) / ROW_SIZE);
+  const rest = cs.filter(c => !mit.includes(c));
+  /* erste Zeile, die schon in einer späteren Reihe begann (ohne leere Reihenreste) */
+  let ab = rest.findIndex(c => (parseInt(c.no, 10) || 0) > r * ROW_SIZE && !(istFrei(c) && !(parseInt(c.te, 10) > 0)));
+  if(ab < 0) ab = rest.length;
+  const vor = rest[ab - 1];
+  const block = (vor && istFrei(vor) && vor.rest) ? [...mit] : [freiNeu(1, true), ...mit];
+  const neu = [...rest.slice(0, ab), ...block, ...rest.slice(ab)];
+  const extra = neu.filter(c => !cs.includes(c));
+  extra.forEach(f => PROJ.items.push(f));            // Platzhalter, die Reihenfolge setzt die nächste Zeile
+  let k = 0;
+  PROJ.items = PROJ.items.map(it => (it.kind === 'circuit' || it.kind === 'frei') ? neu[k++] : it);
+  ordnenWahl.clear(); saveProj(); renderBoard();
+  toast(`${mit.length === 1 ? 'Zeile' : mit.length + ' Zeilen'} an den Anfang von Reihe ${r + 1}`);
+};
 
 /* --- Kopf über der Liste und Fußleiste --- */
 function planKopfZeigen(n){
   const k = $('#planKopf');
   if(!planBar()){ ordnen = false; k.innerHTML = ''; return; }
   const ohne = circuits().filter(ohneNr).length;
-  k.innerHTML = ordnen
-    ? `<p class="muted small plan-hinweis">Am ≡ ziehen zum Verschieben, antippen zum Markieren. Die Nummern folgen der Reihenfolge.</p>`
-    : (ohne || n >= 2)
-      ? `<div class="plan-kopf"><span class="muted small">${ohne ? `${ohne} ${ohne === 1 ? 'Leitung' : 'Leitungen'} ohne Nummer` : 'Reihenfolge, Zusammenlegen, FI'}</span>
-           <button class="btn ghost" id="btnOrdnen" type="button">Ordnen</button></div>`
-      : '';
-  const b = $('#btnOrdnen');
-  if(b) b.onclick = () => vorVerlassen(() => {
-    if(current !== 'board') backToBoard();
-    sortCircuits();
-    circuits().forEach(c => { if(!c.cid) c.cid = neueKennung('K'); });
-    lueckenAlsFrei();                                 // v1.218
-    ordnen = true; ordnenWahl.clear();
-    saveProj(); renderBoard(); bildNach(imBild($('#planKopf')) - 12);
-  });
+  /* v1.229 (Jean): kein „Ordnen“ mehr – die Liste kann es immer */
+  k.innerHTML = n ? `<p class="muted small plan-hinweis">Kästchen markieren, Zeile antippen zum Bearbeiten, am ≡ ziehen. Die Nummern folgen der Reihenfolge.</p>` : '';
 }
 function planLeisteZeigen(){
   const pb = planBar();
   if(!pb) ordnen = false;
-  $('#btnLeitung').hidden    = !pb || ordnen;
-  $('#btnAddCircuit').hidden = messModus() || ordnen;
-  $('#btnAddCircuit').textContent = pb ? '+ Stromkreis' : 'Stromkreis hinzufügen';
-  $('#planLeiste').hidden    = !ordnen;
-  $('#btnPlanFertig').hidden = !ordnen;
-  if(!ordnen) return;
+  /* v1.229: bei der Neuinstallation nur die eigene Leiste – „+ Stromkreis“ entfällt (Jean) */
+  $('#addZeile').hidden      = pb;
+  $('#btnLeitung').hidden    = true;
+  $('#btnAddCircuit').hidden = messModus() || pb;
+  $('#btnAddCircuit').textContent = 'Stromkreis hinzufügen';
+  $('#planLeiste').hidden    = !pb;
+  $('#btnPlanFertig').hidden = true;
+  if(!pb){ $('#planLeiste2').hidden = true; return; }
   const sel = planZeilen().filter(c => ordnenWahl.has(c.cid));
+  $('#btnPlanLeitung').hidden = sel.length > 0;
+  $('#btnPlanReihe').hidden   = !sel.some(c => !istFrei(c));
+  $('#planLeiste2').hidden    = !sel.length;
   const trennen = sel.length === 1 && Array.isArray(sel[0].teile) && sel[0].teile.length > 1;
   /* v1.225 (Prüfung Erfassen, Punkt 15): nur zeigen, was gerade geht – ohne
      Markierung FI und Frei, mit Markierung FI, Zusammenlegen und Entfernen.
@@ -6399,12 +6459,23 @@ function ordnenZeigen(){
     const r = Math.ceil(p.no / ROW_SIZE);
     if(Math.ceil(p.bis / ROW_SIZE) !== r) ueber.set(p.c.cid, {r, ab: r * ROW_SIZE + 1});
   });
+  /* v1.229: in Reihen, wie die übrige Liste */
+  let reihe = null;
+  const kopf = c => {
+    const n = parseInt(c.no, 10);
+    if(!isFinite(n) || (istFrei(c) && !(parseInt(c.te, 10) > 0))) return '';
+    const r = Math.ceil(n / ROW_SIZE);
+    if(r === reihe) return '';
+    reihe = r; return `<div class="row-head">Reihe ${r}</div>`;
+  };
+  const wahl = an => `<span class="ord-wahl" role="checkbox" aria-checked="${an}" aria-label="Markieren"><span class="ord-mark"></span></span>`;
   box.innerHTML = planZeilen().map(c => {
     const an = ordnenWahl.has(c.cid);
     if(istFrei(c)){                                  // v1.218
       const b = Math.max(1, parseInt(c.te, 10) || 1);
-      return `<div class="list-item ord-zeile ord-frei${an ? ' an' : ''}" data-ord="${esc(c.cid)}" role="button">
-        <span class="ord-mark" aria-hidden="true"></span>
+      if(c.rest && !(parseInt(c.te, 10) > 0) && !an) return '';   // v1.229: steht am Reihenanfang, belegt nichts
+      return kopf(c) + `<div class="list-item ord-zeile ord-frei${an ? ' an' : ''}" data-ord="${esc(c.cid)}" role="button">
+        ${wahl(an)}
         <span class="no">${esc(c.no ? (c.rest ? c.no : b > 1 ? `${c.no}–${+c.no + b - 1}` : c.no) : '–')}</span>
         <span class="body"><span class="t">frei</span>
           <span class="ord-frei-ctl">
@@ -6418,8 +6489,8 @@ function ordnenZeigen(){
     const fi = istFiZeile(c);
     const unter = fi ? (c.breaker || '') : isSpecial(c) ? `${Math.max(1, parseInt(c.te, 10) || 1)} TE`   // v1.227: nicht zweimal der Name
       : [c.breaker, kabelText(c.cable), Array.isArray(c.teile) && c.teile.length > 1 ? `aus ${c.teile.length} Leitungen` : ''].filter(Boolean).join(' · ');
-    return `<div class="list-item ord-zeile${fi ? ' ord-fi' : ''}${an ? ' an' : ''}" data-ord="${esc(c.cid)}" role="button">
-      <span class="ord-mark" aria-hidden="true"></span>
+    return kopf(c) + `<div class="list-item ord-zeile${fi ? ' ord-fi' : ''}${an ? ' an' : ''}" data-ord="${esc(c.cid)}" data-idx="${PROJ.items.indexOf(c)}" role="button">
+      ${wahl(an)}
       <span class="no">${esc(circuitLabel(c) || '–')}</span>
       <span class="body"><span class="t">${esc(c.name || 'Ohne Bezeichnung')}${c.room ? ' · ' + esc(c.room) : ''}</span>
         <span class="s">${esc(unter)}</span>${ueber.has(c.cid) ? `
@@ -6449,9 +6520,16 @@ function ordnenZeigen(){
         return;
       }
       const id = z.dataset.ord;
+      /* v1.229 (Jean): nur das Kästchen markiert, der Rest der Zeile öffnet */
+      if(!e.target.closest('.ord-wahl')){
+        const i = PROJ.items.findIndex(it => it.kind === 'circuit' && it.cid === id);
+        if(i >= 0) vorVerlassen(() => { const k = kreisNachKennung(id); if(k >= 0) openCircuit(k); });
+        return;
+      }
       if(ordnenWahl.has(id)) ordnenWahl.delete(id); else ordnenWahl.add(id);
       z.classList.toggle('an', ordnenWahl.has(id));
-      planLeisteZeigen();
+      const w = z.querySelector('.ord-wahl'); if(w) w.setAttribute('aria-checked', ordnenWahl.has(id));
+      planLeisteZeigen(); leistenPlatz();
     };
     const g = z.querySelector('.ord-griff');
     g.addEventListener('pointerdown', e => ordnenZiehen(z, e));
@@ -6520,6 +6598,12 @@ function ordnenZiehen(zeile, e){
 }
 function ordnenUebernehmen(ids){
   const zeilenArt = it => it.kind === 'circuit' || it.kind === 'frei';      // v1.218: mit freien Zeilen
+  /* v1.229: ein Reihenrest ohne Breite steht nicht in der Liste – er bleibt hinter seinem Vorgänger */
+  const alle = planZeilen().map(c => c.cid);
+  alle.filter(id => !ids.includes(id)).forEach(id => {
+    const vor = alle[alle.indexOf(id) - 1], j = vor ? ids.indexOf(vor) : -1;
+    ids.splice(j + 1, 0, id);
+  });
   const cs = ids.map(id => PROJ.items.find(c => zeilenArt(c) && c.cid === id)).filter(Boolean);
   if(cs.length !== planZeilen().length){ renderBoard(); return; }
   const vorher = planZeilen().map(c => c.cid).join('|');
@@ -7043,6 +7127,8 @@ function refreshNoField(){
     if($('#noUeber')) $('#noUeber').hidden = true;
     return;
   }
+  /* v1.229: bei der Neuinstallation ergibt sich die Nummer aus der Reihenfolge der Liste */
+  $('#cNo').readOnly = planProjekt();
   /* v1.192: eine aufgeschriebene Leitung bleibt ohne Nummer, bis „Ordnen“ sie
      nummeriert – oder bis hier von Hand eine eingetragen wird */
   const alt = editIdx != null ? PROJ.items[editIdx] : null;
@@ -8298,7 +8384,8 @@ function coversVerschieben(txt, nummern, delta){
 function nummernPruefen(fertig, obj){
   /* Ohne Positionen kann sich nichts überschneiden – dann entfällt die Frage
      samt Mitführen der Abdeckung. */
-  const c = abwNr() ? null : (obj && PROJ.items.includes(obj)) ? obj : editIdx != null ? PROJ.items[editIdx] : null;
+  /* v1.229: bei der Neuinstallation nummeriert die Liste von selbst – keine Frage */
+  const c = abwNr() || planProjekt() ? null : (obj && PROJ.items.includes(obj)) ? obj : editIdx != null ? PROJ.items[editIdx] : null;
   const plan = c ? verschiebePlan(c) : null;
   if(!plan){ if(fertig) fertig(); return; }
   const {delta, betroffen, erste} = plan;
