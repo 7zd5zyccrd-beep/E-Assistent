@@ -327,8 +327,13 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   davor)“; `ordnenUebernehmen(…, luecke)` fügt `freiNeu(1)` ein. Reicht der Platz nicht und
   endet die Reihe mit einem Reihenrest, schiebt `reiheUeberlauf` den Rest vor den ersten
   überzähligen Kreis – der beginnt die nächste Reihe, die übrigen rücken nach.
+  Freie Zeile kompakt (v1.236, Jean: zu hoch): zu wie eine Kreiszeile („frei · n TE“), Tipp
+  öffnet −/+ und „bis Reihenende“ (`freiOffen`). `lageHalten` um Zusammenlegen/Trennen,
+  Entfernen und „Nächste Reihe“ (Fokus lösen, Rolllage über den Bildaufbau halten – Jean: auf
+  dem iPhone sprang die Liste nach oben, im Test nicht nachstellbar). `ordnenVollstaendig(ids,
+  bewegt)`: Reihenrest ohne Breite bleibt vor seinem Nachfolger, wenn sein Vorgänger gezogen wird.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.235, 21.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.236, 21.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
