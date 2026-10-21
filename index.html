@@ -10,6 +10,13 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.235 21.10.2026 Zwischenstufe beim Ziehen (Jean): ueber jedem Kreis gibt es
+                    zwischen "davor" und "dahinter" eine Stufe (mittleres Drittel
+                    der Zeile), in der die gezogene Zeile vor dem Kreis landet, aber
+                    mit einer freien TE davor - Schild "(1 frei davor)". So entsteht
+                    Freiraum ohne Eintippen. Reicht der Platz hinten in der Reihe
+                    nicht, rutschen die ueberzaehligen Kreise an den Anfang der
+                    naechsten Reihe.
   v1.234 21.10.2026 Ziehen in freien Platz stufenweise (Jean: FI nicht auf 14 zu
                     bekommen): ueber einem freien Block zaehlt das Ziehen in TE -
                     Schild und Nummer zeigen 13, 14, 15 ...; der Block wird beim
@@ -4289,7 +4296,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.234';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.235';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 21.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6625,6 +6632,7 @@ function ordnenZiehen(zeile, e){
     }
     return null;
   };
+  let zwischen = null;                               // v1.235: Zwischenstufe über diesem Kreis (Index)
   const wohin = () => {
     const fr = imFrei();
     if(fr) return {ids: zeilen.map(z => z.dataset.ord), r: 0, anfang: null, ende: null, frei: fr};
@@ -6637,8 +6645,9 @@ function ordnenZiehen(zeile, e){
     /* v1.232: direkt hinter „bis Reihenende“ (oder hinter einem Kreis am Reihenende)
        und nicht unter die nächste Überschrift gezogen – ans Ende der Reihe */
     const voll = ordnenVollstaendig(ids), v = planZeilen().find(c => c.cid === voll[voll.indexOf(zeile.dataset.ord) - 1]);
-    const ende = !anfang && !istFrei(selbst) && v && v !== selbst && ((istFrei(v) && v.rest) || (!istFrei(v) && v.amEnde)) ? zeile.dataset.ord : null;
-    return {ids, r, anfang, ende};
+    const luecke = zwischen != null;
+    const ende = !luecke && !anfang && !istFrei(selbst) && v && v !== selbst && ((istFrei(v) && v.rest) || (!istFrei(v) && v.amEnde)) ? zeile.dataset.ord : null;
+    return {ids, r, anfang, ende, luecke};
   };
   const zielZeigen = () => {
     const w = wohin();
@@ -6655,15 +6664,16 @@ function ordnenZiehen(zeile, e){
       return;
     }
     /* gedachte Reihenfolge samt Reihenrest wie in ordnenUebernehmen durchzählen */
-    const voll = ordnenVollstaendig(w.ids).map(id => planZeilen().find(c => c.cid === id)).filter(Boolean);
+    let voll = ordnenVollstaendig(w.ids).map(id => planZeilen().find(c => c.cid === id)).filter(Boolean);
     if(w.anfang){ const i = voll.indexOf(selbst), v = voll[i - 1]; if(i > 0 && !(istFrei(v) && v.rest)) voll.splice(i, 0, freiNeu(1, true)); }
+    if(w.luecke){ voll.splice(voll.indexOf(selbst), 0, freiNeu(1)); voll = reiheUeberlauf(voll, selbst); }   // v1.235
     const war = selbst.amEnde;                       // v1.232: gedacht ans Reihenende
     if(w.ende) selbst.amEnde = true; else delete selbst.amEnde;
     const p = nummernPlan(voll).find(x => x.c === selbst);
     if(war) selbst.amEnde = war; else delete selbst.amEnde;
     if(!p || istFrei(selbst)){ schild.textContent = ''; return; }
     const nr = p.bis > p.no ? p.no + '–' + p.bis : String(p.no);
-    schild.textContent = `→ ${nr} · Reihe ${Math.ceil(p.no / ROW_SIZE)}`;
+    schild.textContent = `→ ${nr} · Reihe ${Math.ceil(p.no / ROW_SIZE)}${w.luecke ? ' (1 frei davor)' : ''}`;
     const noEl = zeile.querySelector('.no'); if(noEl) noEl.textContent = nr;   // die Nummer läuft mit
   };
   const abstand = zeilen.length > 1 ? Math.max(0, lagen[1].top - lagen[0].top - lagen[0].h) : 8;
@@ -6679,6 +6689,14 @@ function ordnenZiehen(zeile, e){
     const mitte = lagen[von].top + d + lagen[von].h / 2;
     mitteJetzt = mitte;
     ziel = lagen.filter((l, i) => i !== von && l.top + l.h / 2 < mitte).length;
+    /* v1.235 (Jean): mittleres Drittel eines Kreises = Zwischenstufe – vor ihm, mit
+       einer freien TE davor */
+    zwischen = null;
+    if(!istFrei(selbst)) for(let j = 0; j < zeilen.length; j++){
+      if(j === von || zeilen[j].classList.contains('ord-frei')) continue;
+      if(mitte >= lagen[j].top + lagen[j].h * 0.35 && mitte < lagen[j].top + lagen[j].h * 0.65){ zwischen = j; break; }
+    }
+    if(zwischen != null) ziel = zwischen < von ? zwischen : zwischen - 1;
     const fr = imFrei();                             // v1.234: der Block bleibt stehen, darin wird gezählt
     if(fr) ziel = von < fr.i ? fr.i - 1 : fr.i + 1;
     zeilen.forEach((z, i) => {
@@ -6713,7 +6731,7 @@ function ordnenZiehen(zeile, e){
     zeile.style.transform = `translateY(${zielTop - lagen[von].top}px)`;
     const w = wohin();
     if(w.frei){ setTimeout(() => ordnenFreiUebernehmen(selbst, w.frei.f, w.frei.k), 170); return; }
-    setTimeout(() => ordnenUebernehmen(w.ids, w.anfang, zeile.dataset.ord, !!w.ende), 170);
+    setTimeout(() => ordnenUebernehmen(w.ids, w.anfang, zeile.dataset.ord, !!w.ende, w.luecke), 170);
   };
   document.addEventListener('pointermove', mv);
   document.addEventListener('pointerup', ende);
@@ -6754,7 +6772,23 @@ function ordnenVollstaendig(ids){
   });
   return ids;
 }
-function ordnenUebernehmen(ids, anfang, gezogen, amEnde){
+/* v1.235 (Jean): läuft eine Reihe durch eine eingefügte freie TE über und steht
+   dahinter ein Reihenrest (die Reihe endete fest), wandert der Rest vor den ersten
+   überzähligen Kreis – der rutscht an den Anfang der nächsten Reihe, statt dass
+   die ganze nächste Reihe eine Reihe weiter springt. Liefert die neue Reihenfolge. */
+function reiheUeberlauf(liste, selbst){
+  const plan = nummernPlan(liste), i = plan.findIndex(p => p.c === selbst);
+  if(i < 0) return liste;
+  const grenze = Math.ceil(plan[i].no / ROW_SIZE) * ROW_SIZE;
+  const j = plan.findIndex((p, k) => k > i && istFrei(p.c) && p.c.rest);
+  if(j < 0 || plan[j].no <= grenze + 1) return liste;
+  const m = plan.findIndex((p, k) => k > i && k < j && p.bis > grenze);
+  if(m < 0) return liste;
+  const neu = liste.filter(c => c !== plan[j].c);
+  neu.splice(neu.indexOf(plan[m].c), 0, plan[j].c);
+  return neu;
+}
+function ordnenUebernehmen(ids, anfang, gezogen, amEnde, luecke){
   const zeilenArt = it => it.kind === 'circuit' || it.kind === 'frei';      // v1.218: mit freien Zeilen
   ids = ordnenVollstaendig(ids);
   const cs = ids.map(id => PROJ.items.find(c => zeilenArt(c) && c.cid === id)).filter(Boolean);
@@ -6771,6 +6805,11 @@ function ordnenUebernehmen(ids, anfang, gezogen, amEnde){
   if(anfang){
     const z = planZeilen(), i = z.findIndex(c => c.cid === anfang), vor = z[i - 1];
     if(i > 0 && !(istFrei(vor) && vor.rest)){ PROJ.items.splice(PROJ.items.indexOf(z[i]), 0, freiNeu(1, true)); neu = true; }
+  }
+  if(luecke && g){                                   // v1.235: Zwischenstufe – eine freie TE davor
+    PROJ.items.splice(PROJ.items.indexOf(g), 0, freiNeu(1));
+    PROJ.items = [...reiheUeberlauf(planZeilen(), g), ...PROJ.items.filter(it => it.kind !== 'circuit' && it.kind !== 'frei')];
+    neu = true;
   }
   if(neu || planZeilen().map(c => c.cid).join('|') !== vorher) saveProj();
   renderBoard();

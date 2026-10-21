@@ -322,8 +322,13 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   davor, Rest dahinter, bis ans Ende → `amEnde`). Nummer innerhalb der eigenen Breite
   (`planVersetzen(c, N, bisher)`, FI 13–16 → 14): Kreis samt Folgenden um k nach hinten, frei
   davor, bezahlt vom Rest bzw. festen freien TE derselben Reihe; sonst Hinweis, Nummer bleibt.
+  Zwischenstufe (v1.235, Jean a / immer): mittleres Drittel (0,35–0,65) jeder Kreiszeile →
+  `zwischen`, Ziel „vor diesem Kreis mit einer freien TE davor“ (`luecke`), Schild „(1 frei
+  davor)“; `ordnenUebernehmen(…, luecke)` fügt `freiNeu(1)` ein. Reicht der Platz nicht und
+  endet die Reihe mit einem Reihenrest, schiebt `reiheUeberlauf` den Rest vor den ersten
+  überzähligen Kreis – der beginnt die nächste Reihe, die übrigen rücken nach.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.234, 21.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.235, 21.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
