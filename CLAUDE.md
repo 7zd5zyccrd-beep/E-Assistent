@@ -304,8 +304,14 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Seit v1.231 (Jean: vor dem Loslassen nicht erkennbar) zeigt `zielZeigen` beim Ziehen das Ziel:
   Schild `.zieh-ziel` („→ 13 · Reihe 2“, gezählt mit `nummernPlan(voll)` über die gedachte
   Reihenfolge, `ordnenVollstaendig`), Nummer der Zeile läuft mit, Überschrift `.row-head.ziel` grün.
+  Kreise hinter „bis Reihenende“ (v1.232, Jean): Kreis mit `amEnde` direkt hinter dem Rest (oder
+  hinter einem anderen `amEnde`) steht hinten in der Reihe; `nummernPlan` zieht ihre TE vom Rest ab.
+  `wohin()` in `ordnenZiehen` setzt `ende`, wenn der Vorgänger der Rest bzw. ein `amEnde` ist und
+  nicht `anfang` gilt; `ordnenUebernehmen(ids, anfang, gezogen, amEnde)` setzt/löscht das Merkmal,
+  `nummernAnwenden` löscht es, wo die Kette nicht mehr stimmt. Rest ohne Breite behält seine
+  Nummer (sonst sortierte `sortCircuits` ihn ans Ende). Freie Zeile zeigt echte Breite.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.231, 21.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.232, 21.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-

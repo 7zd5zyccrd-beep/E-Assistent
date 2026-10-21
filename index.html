@@ -10,6 +10,13 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.232 21.10.2026 Kreise hinter "frei bis Reihenende" (Jean: man landete davor oder
+                    in der naechsten Reihe): wird ein Kreis direkt hinter den freien
+                    Block gezogen und oberhalb der naechsten Reihen-Ueberschrift
+                    losgelassen, steht er an der letzten Stelle der Reihe, und das
+                    freie Stueck wird um seine Breite kleiner. Weitere Kreise bauen
+                    die Reihe so von hinten auf. Ausserdem rutschte ein Reihenrest
+                    ohne Breite beim Wiederoeffnen ans Ende der Liste.
   v1.231 21.10.2026 Ziehen zeigt das Ziel (Jean: man sah vor dem Loslassen nicht,
                     ob die Zeile in die naechste Reihe rutscht): an der gezogenen
                     Zeile steht laufend, wo sie landet ("-> 13 · Reihe 2"), und
@@ -4266,7 +4273,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.231';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.232';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 21.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6410,6 +6417,7 @@ $('#btnPlanReihe').onclick = () => {
   const cs = planZeilen();
   const mit = cs.filter(c => ordnenWahl.has(c.cid) && !istFrei(c));
   if(!mit.length) return;
+  mit.forEach(c => delete c.amEnde);                 // v1.232: sie beginnen die Reihe
   const r = Math.ceil((parseInt(mit[0].no, 10) || 1) / ROW_SIZE);
   const rest = cs.filter(c => !mit.includes(c));
   /* erste Zeile, die schon in einer späteren Reihe begann (ohne leere Reihenreste) */
@@ -6492,11 +6500,11 @@ function ordnenZeigen(){
       if(c.rest && !(parseInt(c.te, 10) > 0) && !an) return '';   // v1.229: steht am Reihenanfang, belegt nichts
       return kopf(c) + `<div class="list-item ord-zeile ord-frei${an ? ' an' : ''}" data-ord="${esc(c.cid)}" role="button">
         ${wahl(an)}
-        <span class="no">${esc(c.no ? (c.rest ? c.no : b > 1 ? `${c.no}–${+c.no + b - 1}` : c.no) : '–')}</span>
+        <span class="no">${esc(c.no ? (b > 1 ? `${c.no}–${+c.no + b - 1}` : c.no) : '–')}</span>
         <span class="body"><span class="t">frei</span>
           <span class="ord-frei-ctl">
             <button type="button" data-frei="-"${c.rest ? ' disabled' : ''} aria-label="Weniger">−</button>
-            <span class="te">${c.rest ? '…' : b} TE</span>
+            <span class="te">${b} TE</span>
             <button type="button" data-frei="+"${c.rest ? ' disabled' : ''} aria-label="Mehr">+</button>
             <button type="button" data-frei="rest" class="${c.rest ? 'gewaehlt' : ''}">bis Reihenende</button>
           </span></span>
@@ -6583,7 +6591,12 @@ function ordnenZiehen(zeile, e){
     const nach = planZeilen().find(c => c.cid === ids[ids.indexOf(zeile.dataset.ord) + 1]);
     const nn = nach ? parseInt(nach.no, 10) : NaN;
     const r = isFinite(nn) && nn > 1 && (nn - 1) % ROW_SIZE === 0 ? (nn - 1) / ROW_SIZE + 1 : 0;
-    return {ids, r, anfang: r && koepfe[r] != null && mitteJetzt > koepfe[r] ? zeile.dataset.ord : null};
+    const anfang = r && koepfe[r] != null && mitteJetzt > koepfe[r] ? zeile.dataset.ord : null;
+    /* v1.232: direkt hinter „bis Reihenende“ (oder hinter einem Kreis am Reihenende)
+       und nicht unter die nächste Überschrift gezogen – ans Ende der Reihe */
+    const voll = ordnenVollstaendig(ids), v = planZeilen().find(c => c.cid === voll[voll.indexOf(zeile.dataset.ord) - 1]);
+    const ende = !anfang && !istFrei(selbst) && v && v !== selbst && ((istFrei(v) && v.rest) || (!istFrei(v) && v.amEnde)) ? zeile.dataset.ord : null;
+    return {ids, r, anfang, ende};
   };
   const zielZeigen = () => {
     const w = wohin();
@@ -6591,7 +6604,10 @@ function ordnenZiehen(zeile, e){
     /* gedachte Reihenfolge samt Reihenrest wie in ordnenUebernehmen durchzählen */
     const voll = ordnenVollstaendig(w.ids).map(id => planZeilen().find(c => c.cid === id)).filter(Boolean);
     if(w.anfang){ const i = voll.indexOf(selbst), v = voll[i - 1]; if(i > 0 && !(istFrei(v) && v.rest)) voll.splice(i, 0, freiNeu(1, true)); }
+    const war = selbst.amEnde;                       // v1.232: gedacht ans Reihenende
+    if(w.ende) selbst.amEnde = true; else delete selbst.amEnde;
     const p = nummernPlan(voll).find(x => x.c === selbst);
+    if(war) selbst.amEnde = war; else delete selbst.amEnde;
     if(!p || istFrei(selbst)){ schild.textContent = ''; return; }
     const nr = p.bis > p.no ? p.no + '–' + p.bis : String(p.no);
     schild.textContent = `→ ${nr} · Reihe ${Math.ceil(p.no / ROW_SIZE)}`;
@@ -6640,8 +6656,8 @@ function ordnenZiehen(zeile, e){
     const zielTop = ziel > von ? lagen[ziel].top + lagen[ziel].h - lagen[von].h : lagen[ziel].top;
     zeile.style.transition = 'transform .16s ease';
     zeile.style.transform = `translateY(${zielTop - lagen[von].top}px)`;
-    const {ids, anfang} = wohin();
-    setTimeout(() => ordnenUebernehmen(ids, anfang), 170);
+    const w = wohin();
+    setTimeout(() => ordnenUebernehmen(w.ids, w.anfang, zeile.dataset.ord, !!w.ende), 170);
   };
   document.addEventListener('pointermove', mv);
   document.addEventListener('pointerup', ende);
@@ -6657,7 +6673,7 @@ function ordnenVollstaendig(ids){
   });
   return ids;
 }
-function ordnenUebernehmen(ids, anfang){
+function ordnenUebernehmen(ids, anfang, gezogen, amEnde){
   const zeilenArt = it => it.kind === 'circuit' || it.kind === 'frei';      // v1.218: mit freien Zeilen
   ids = ordnenVollstaendig(ids);
   const cs = ids.map(id => PROJ.items.find(c => zeilenArt(c) && c.cid === id)).filter(Boolean);
@@ -6668,6 +6684,9 @@ function ordnenUebernehmen(ids, anfang){
   /* v1.230: an den Anfang einer Reihe gezogen – davor „frei bis Reihenende“,
      sonst rückte die Zeile in die Lücke am Ende der Reihe davor */
   let neu = false;
+  /* v1.232: die gezogene Zeile steht am Reihenende oder nicht mehr */
+  const g = PROJ.items.find(c => c.kind === 'circuit' && c.cid === (gezogen || anfang));
+  if(g && !!g.amEnde !== !!amEnde){ if(amEnde) g.amEnde = true; else delete g.amEnde; neu = true; }
   if(anfang){
     const z = planZeilen(), i = z.findIndex(c => c.cid === anfang), vor = z[i - 1];
     if(i > 0 && !(istFrei(vor) && vor.rest)){ PROJ.items.splice(PROJ.items.indexOf(z[i]), 0, freiNeu(1, true)); neu = true; }
@@ -6791,8 +6810,16 @@ function bereicheText(nr){
 function nummernPlan(zeilen){                        // v1.231: auch für eine gedachte Reihenfolge
   let n = 1;
   /* v1.218: freie Zeilen belegen ihre TE mit – so bleiben Lücken stehen */
-  const plan = (zeilen || planZeilen()).map(c => {
-    const te = istFrei(c) ? freiBreite(c, n) : Math.max(1, parseInt(c.te, 10) || 1);
+  const liste = zeilen || planZeilen();
+  const plan = liste.map((c, i) => {
+    let te = istFrei(c) ? freiBreite(c, n) : Math.max(1, parseInt(c.te, 10) || 1);
+    /* v1.232 (Jean): Kreise am Reihenende (amEnde, direkt hinter „bis Reihenende“)
+       stehen hinten in der Reihe – der freie Rest wird um ihre Breite kleiner */
+    if(istFrei(c) && c.rest){
+      let hinten = 0;
+      for(let j = i + 1; j < liste.length && liste[j].amEnde && !istFrei(liste[j]); j++) hinten += Math.max(1, parseInt(liste[j].te, 10) || 1);
+      te = Math.max(0, te - hinten);
+    }
     const p = {c, no:n, bis:n + te - 1, te}; n += te; return p;
   });
   plan.forEach((p, i) => {
@@ -6813,9 +6840,16 @@ function nummernPlan(zeilen){                        // v1.231: auch für eine g
    neuen Nummern stehen ja schon beim Ziehen da. */
 function nummernAnwenden(){
   let geaendert = false;
+  let davor = null;                                  // v1.232: amEnde gilt nur in der Kette hinter „bis Reihenende“
+  planZeilen().forEach(c => {
+    const gilt = !!davor && ((istFrei(davor) && davor.rest) || (!istFrei(davor) && davor.amEnde));
+    if(c.amEnde && (!gilt || istFrei(c))){ delete c.amEnde; geaendert = true; }
+    davor = c;
+  });
   nummernPlan().forEach(p => {
     const vorher = [p.c.no, p.c.te, p.c.covers].join('|');
-    if(istFrei(p.c)){ p.c.no = p.te ? String(p.no) : ''; p.c.te = String(p.te); }   // v1.218
+    /* v1.218; v1.232: auch ohne Breite mit Nummer – sonst sortierte sie sortCircuits ans Ende */
+    if(istFrei(p.c)){ p.c.no = p.te || p.c.rest ? String(p.no) : ''; p.c.te = String(p.te); }
     else { p.c.no = String(p.no); if(p.covers != null) p.c.covers = p.covers; }
     if([p.c.no, p.c.te, p.c.covers].join('|') !== vorher) geaendert = true;
   });
