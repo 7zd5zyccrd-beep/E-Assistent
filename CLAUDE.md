@@ -355,9 +355,13 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   aktive grün), Breite ohne die gezogene Zeile (`freiBreiteOhne`, auch in `imFrei` und
   `freiEinsetzenListe`); Zielangabe in der Unterzeile der gezogenen Zeile (`.zieh-text`), Schild
   `.zieh-ziel` entfällt; Zeile `opacity:.8`, über freiem Block `.6`. Tests lesen `.zieh-text`.
+  Freie TE (v1.243, Jean): `nummernAnwenden` fasst freie Blöcke direkt hintereinander in
+  derselben Reihe zusammen (fest + fest addiert, fest + Rest → Rest; ein Rest bleibt). Beim Ziehen
+  jede TE ein Streifen der Skala (Nummer ohne die gezogene Zeile), `imFrei` zählt je TE (`… * w`),
+  grün sind alle Streifen, die die Zeile belegt; Vergrößerung nach `freiBreiteOhne`.
   v1.241: auch Antippen der freien Zeile und −/+/„bis Reihenende“ über `lageHalten`.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.242, 21.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.243, 21.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-

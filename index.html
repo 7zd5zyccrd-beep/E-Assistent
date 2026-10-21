@@ -10,6 +10,12 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.243 21.10.2026 Freie TE (Jean): liegen freie Bloecke direkt hintereinander in
+                    derselben Reihe, werden sie zu einem zusammengefasst ("frei 2 TE"
+                    + "bis Reihenende" -> ein Block bis Reihenende). Beim Ziehen zeigt
+                    der Block jede TE einzeln als schmalen Streifen mit Nummer; die
+                    Stellen, die der gezogene Kreis belegen wuerde, leuchten gruen
+                    (beim FI vier Streifen).
   v1.242 21.10.2026 Darstellung beim Ziehen (Jean, alle vier Punkte): ein gestrichelter
                     Platzhalter zeigt, wo die Zeile landet, mit Zielnummer und Reihe,
                     in der Zwischenstufe mit "1 frei" davor; alle Zeilen zeigen schon
@@ -2602,7 +2608,8 @@ input.schalter:checked::after{transform:translateX(20px)}
 .ord-zeile.zieht .zieh-text{font-family:var(--f-label);font-size:16px;font-weight:700;color:var(--ink);letter-spacing:.03em}
 .frei-skala .stufe{position:absolute;left:0;right:0;border-top:1px dashed var(--field-border);display:flex;align-items:center;padding-left:60px;font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
 .frei-skala .stufe:first-child{border-top:0}
-.frei-skala .stufe.an{background:var(--brand);color:var(--ink);font-weight:700;font-family:var(--f-label);font-size:16px;border-radius:6px}
+.frei-skala .stufe.an{background:var(--brand);color:var(--ink);font-weight:700;font-family:var(--f-label);font-size:16px}
+.frei-skala .stufe.an + .stufe.an{border-top:1px solid color-mix(in srgb, var(--ink) 25%, transparent)}
 .ord-zeile.ord-frei{position:relative}
 .zieh-ziel{position:absolute;right:52px;top:-13px;padding:3px 10px;border-radius:999px;background:var(--ink);color:var(--surface);
   font-family:var(--f-label);font-size:15px;font-weight:700;letter-spacing:.04em;white-space:nowrap;pointer-events:none}
@@ -4349,7 +4356,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.242';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.243';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 21.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6690,7 +6697,8 @@ function ordnenZiehen(zeile, e){
   const vorTop = zeile.getBoundingClientRect().top;
   zeilen.forEach(z => {
     if(z === zeile || !z.classList.contains('ord-frei')) return;
-    const f = planZeilen().find(c => c.cid === z.dataset.ord), w = f ? parseInt(f.te, 10) || 0 : 0;
+    const sb = planZeilen().find(c => c.cid === zeile.dataset.ord);
+    const f = planZeilen().find(c => c.cid === z.dataset.ord), w = f ? (sb && !istFrei(sb) ? freiBreiteOhne(planZeilen(), sb, f) : parseInt(f.te, 10) || 0) : 0;   // v1.243: Breite beim Ziehen
     if(w > 1) z.style.minHeight = Math.max(z.getBoundingClientRect().height, w * FREI_STUFE) + 'px';
   });
   const versatz = zeile.getBoundingClientRect().top - vorTop;
@@ -6730,7 +6738,8 @@ function ordnenZiehen(zeile, e){
       const f = planZeilen().find(c => c.cid === zeilen[i].dataset.ord), w = f ? freiBreiteOhne(planZeilen(), selbst, f) : 0;   // v1.242
       if(!f || w < 1 || mitteJetzt < lagen[i].top || mitteJetzt >= lagen[i].top + lagen[i].h) continue;
       const kmax = Math.max(0, w - te);
-      return {f, i, k: Math.min(kmax, Math.floor((mitteJetzt - lagen[i].top) / lagen[i].h * (kmax + 1)))};
+      /* v1.243: jede TE ein Streifen – Finger auf Streifen k, so weit die Zeile passt */
+      return {f, i, k: Math.min(kmax, Math.floor((mitteJetzt - lagen[i].top) / lagen[i].h * w))};
     }
     return null;
   };
@@ -6773,15 +6782,16 @@ function ordnenZiehen(zeile, e){
     if(i === von || !z.classList.contains('ord-frei')) return;
     const f = planZeilen().find(c => c.cid === z.dataset.ord), w = f ? freiBreiteOhne(planZeilen(), selbst, f) : 0;
     if(!f || w < 1) return;
-    const kmax = Math.max(0, w - Math.max(1, parseInt(selbst.te, 10) || 1));
+    /* v1.243 (Jean): jede TE einzeln, mit ihrer Nummer (so wie sie ohne die gezogene Zeile läge) */
+    const pf = nummernPlan(planZeilen().filter(c => c !== selbst)).find(x => x.c === f);
+    const ab = pf ? pf.no : (parseInt(f.no, 10) || 1);
     const sk = document.createElement('div');
     sk.className = 'frei-skala';
-    for(let k = 0; k <= kmax; k++){
-      const p = gedacht({frei:{f, i, k}}).find(x => x.c === selbst);
+    for(let k = 0; k < w; k++){
       const st = document.createElement('div');
       st.className = 'stufe';
-      st.style.top = (k * 100 / (kmax + 1)) + '%'; st.style.height = (100 / (kmax + 1)) + '%';
-      st.dataset.t = p ? nrText(p) : '';
+      st.style.top = (k * 100 / w) + '%'; st.style.height = (100 / w) + '%';
+      st.dataset.t = String(ab + k);
       st.innerHTML = `<span>${esc(st.dataset.t)}</span>`;
       sk.appendChild(st);
     }
@@ -6798,7 +6808,8 @@ function ordnenZiehen(zeile, e){
       noEl.textContent = nrText(q);
       z.classList.toggle('nr-neu', z !== zeile && noEl.textContent !== nrAlt.get(z));
     });
-    skalen.forEach((sk, i) => [...sk.children].forEach((st, k) => st.classList.toggle('an', !!w.frei && w.frei.i === i && w.frei.k === k)));
+    const teS = Math.max(1, parseInt(selbst.te, 10) || 1);   // v1.243: alle Streifen, die die Zeile belegt
+    skalen.forEach((sk, i) => [...sk.children].forEach((st, k) => st.classList.toggle('an', !!w.frei && w.frei.i === i && k >= w.frei.k && k < w.frei.k + teS)));
     const text = p && !istFrei(selbst) ? `→ ${nrText(p)} · Reihe ${Math.ceil(p.no / ROW_SIZE)}` : '';
     skalen.forEach(sk => [...sk.children].forEach(st => { st.innerHTML = `<span>${esc(st.dataset.t)}</span>`; }));
     zeile.classList.toggle('ueber-frei', !!w.frei);
@@ -7221,6 +7232,24 @@ function planVersetzen(c, N, bisher){
    neuen Nummern stehen ja schon beim Ziehen da. */
 function nummernAnwenden(){
   let geaendert = false;
+  /* v1.243 (Jean): freie Blöcke direkt hintereinander in derselben Reihe sind einer –
+     fest + fest addiert, fest + „bis Reihenende“ wird „bis Reihenende“. Ein Reihenrest
+     (füllt bis zum Ende, oder ohne Breite als Reihenwechsel) bleibt, wie er ist. */
+  for(let weiter = true; weiter; ){
+    weiter = false;
+    const plan = nummernPlan();
+    for(let i = 0; i + 1 < plan.length; i++){
+      const a = plan[i], b = plan[i + 1];
+      if(!istFrei(a.c) || !istFrei(b.c) || a.c.rest) continue;
+      const ende = Math.ceil(a.no / ROW_SIZE) * ROW_SIZE;
+      if(b.no > ende + (b.c.rest && b.te === 0 ? 1 : 0)) continue;   // b liegt schon in der nächsten Reihe
+      if(b.c.rest) a.c.rest = true; else a.c.te = String(a.te + b.te);
+      if(freiOffen === b.c.cid) freiOffen = a.c.cid;
+      PROJ.items.splice(PROJ.items.indexOf(b.c), 1);
+      weiter = geaendert = true;
+      break;
+    }
+  }
   let davor = null;                                  // v1.232: amEnde gilt nur in der Kette hinter „bis Reihenende“
   planZeilen().forEach(c => {
     const gilt = !!davor && ((istFrei(davor) && davor.rest) || (!istFrei(davor) && davor.amEnde));
