@@ -347,8 +347,9 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Maus sofort. `lageHalten(fn, abzug)`: der beim Anfassen mitgerollte Ausgleich für die
   erhöhten freien Blöcke wird beim Loslassen abgezogen (Jean: sprang eine Zeile höher).
   Testen mit CDP `Input.dispatchTouchEvent` (touchStart, warten, touchMove …, touchEnd).
+  v1.241: auch Antippen der freien Zeile und −/+/„bis Reihenende“ über `lageHalten`.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.240, 21.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.241, 21.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
