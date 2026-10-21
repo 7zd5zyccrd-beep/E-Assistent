@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.238 21.10.2026 Liste der Neuinstallation: Bezeichnung immer vollstaendig (Jean:
+                    bei zusammengelegten Kreisen abgeschnitten). Die Raeume stehen
+                    vorn in der Unterzeile ("Kueche · B10 · NYM-J 3x1,5 · 2 Leitungen"),
+                    beide Zeilen brechen bei Bedarf um. Kaestchen und Griff etwas
+                    schmaler, damit mehr Text in die Zeile passt.
   v1.237 21.10.2026 Zusammenlegen fuehrt gleiche Arten zusammen (Jean): aus
                     "Steckdosen Arbeitsflaeche links" und "Steckdose Dunstabzug"
                     wird "Steckdosen Arbeitsflaeche links, Dunstabzug" statt beide
@@ -2562,7 +2567,7 @@ input.schalter:checked::after{transform:translateX(20px)}
 /* v1.222: im Ordnen ist noch nichts gemessen – kein grüner Streifen; der FI bleibt dunkel abgesetzt */
 .list-item.ord-zeile{border-left-color:var(--line)}
 .list-item.ord-zeile.ord-fi{border-left-color:var(--ink);border-left-width:5px}
-.ord-zeile .ord-griff{flex:0 0 46px;align-self:stretch;display:flex;align-items:center;justify-content:center;
+.ord-zeile .ord-griff{flex:0 0 40px;align-self:stretch;display:flex;align-items:center;justify-content:center;
   margin:-10px 0;font-size:24px;color:var(--ink-soft);touch-action:none;cursor:grab}
 .zieh-ziel:empty{display:none}
 .zieh-ziel{position:absolute;right:52px;top:-13px;padding:3px 10px;border-radius:999px;background:var(--ink);color:var(--surface);
@@ -2574,10 +2579,14 @@ input.schalter:checked::after{transform:translateX(20px)}
 .plan-leiste + .plan-leiste{margin-top:10px}
 .plan-leiste #btnPlanLeitung{flex:1.2 1 0}.plan-leiste #btnPlanReihe{flex:1.5 1 0}
 /* v1.229: Kästchen mit eigenem Tippbereich über die ganze Zeilenhöhe; der Rest der Zeile öffnet */
-.ord-zeile .ord-wahl{flex:0 0 48px;align-self:stretch;display:flex;align-items:center;justify-content:center;margin:-10px 0 -10px -14px;cursor:pointer}
+.ord-zeile .ord-wahl{flex:0 0 42px;align-self:stretch;display:flex;align-items:center;justify-content:center;margin:-10px 0 -10px -14px;cursor:pointer}
 .ord-zeile .ord-wahl + .no{margin-left:-4px}
 .ord-zeile .body{cursor:pointer}
 #boardBody .row-head:first-child{margin-top:0}
+/* v1.238 (Jean: zusammengelegte Bezeichnungen abgeschnitten): in der Planliste alles vollständig */
+.list-item.ord-zeile .t,.list-item.ord-zeile .s{display:block;white-space:normal;overflow:visible;-webkit-line-clamp:unset;text-overflow:clip;line-height:1.3}
+.list-item.ord-zeile .s{margin-top:2px}
+.list-item.ord-zeile .s .tl{white-space:nowrap}
 #cNo[readonly]{background:var(--enclosure-2);color:var(--ink-soft)}   /* v1.229: Nummer folgt der Liste */
 .plan-leiste .btn{flex:1 1 0;width:auto;min-width:0;padding:0 6px;font-size:15px;white-space:nowrap}
 @media (max-width:360px){ .plan-leiste .btn{font-size:14px;padding:0 4px} }
@@ -4306,7 +4315,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.237';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.238';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 21.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6515,6 +6524,12 @@ function planLeisteZeigen(){
   $('#btnPlanZus').disabled = false; $('#btnPlanWeg').disabled = false;
 }
 
+/* v1.238: Unterzeile bricht nur zwischen den Angaben um, nicht in „NYM-J 3×2,5“ –
+   die Räume dürfen selbst umbrechen */
+function ordUnter(c, unter){
+  const teile = String(unter || '').split(' · ').filter(Boolean);
+  return teile.map(t => t === c.room ? esc(t) : `<span class="tl">${esc(t)}</span>`).join(' · ');
+}
 /* --- Liste im Ordnen-Modus --- */
 function ordnenZeigen(){
   if(nummernAnwenden()) saveProj();                 // v1.219: Nummern folgen der Liste
@@ -6559,12 +6574,12 @@ function ordnenZeigen(){
     }
     const fi = istFiZeile(c);
     const unter = fi ? (c.breaker || '') : isSpecial(c) ? `${Math.max(1, parseInt(c.te, 10) || 1)} TE`   // v1.227: nicht zweimal der Name
-      : [c.breaker, kabelText(c.cable), Array.isArray(c.teile) && c.teile.length > 1 ? `aus ${c.teile.length} Leitungen` : ''].filter(Boolean).join(' · ');
+      : [c.room, c.breaker, kabelText(c.cable), Array.isArray(c.teile) && c.teile.length > 1 ? `${c.teile.length} Leitungen` : ''].filter(Boolean).join(' · ');   // v1.238: Räume vorn
     return kopf(c) + `<div class="list-item ord-zeile${fi ? ' ord-fi' : ''}${an ? ' an' : ''}" data-ord="${esc(c.cid)}" data-idx="${PROJ.items.indexOf(c)}" role="button">
       ${wahl(an)}
       <span class="no">${esc(circuitLabel(c) || '–')}</span>
-      <span class="body"><span class="t">${esc(c.name || 'Ohne Bezeichnung')}${c.room ? ' · ' + esc(c.room) : ''}</span>
-        <span class="s">${esc(unter)}</span>${ueber.has(c.cid) ? `
+      <span class="body"><span class="t">${esc(c.name || 'Ohne Bezeichnung')}</span>
+        <span class="s">${ordUnter(c, unter)}</span>${ueber.has(c.cid) ? `
         <span class="ord-reihe">Passt nicht mehr in Reihe ${ueber.get(c.cid).r}
           <button type="button" data-reihe="1">Ab ${ueber.get(c.cid).ab} beginnen</button></span>` : ''}</span>
       <span class="ord-griff" aria-label="Verschieben">≡</span></div>`;

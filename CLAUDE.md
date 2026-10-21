@@ -336,8 +336,11 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   (`NAMEN_ARTEN`: Steckdose(n), Beleuchtung, Licht) zu einem Teil mit allen Zusätzen zusammen
   („Steckdosen Arbeitsfläche links, Dunstabzug“), Teile ohne Art gehören zur Art davor,
   mehrere Steckdosen → Mehrzahl. Räume weiter `teileVereinen`.
+  Zeile der Planliste (v1.238, Jean B): Bezeichnung vollständig (umbrechend, ohne Räume),
+  Unterzeile „Räume · Absicherung · Kabel · n Leitungen“ über `ordUnter` (bricht nur zwischen den
+  Angaben, `.tl` nowrap); `.ord-wahl` 42 px, `.ord-griff` 40 px.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.237, 21.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.238, 21.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
