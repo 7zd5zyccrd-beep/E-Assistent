@@ -315,8 +315,15 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Lücke → teilen; im Reihenrest bis ans Ende → `amEnde` hinter den Rest, sonst fester Freiraum
   davor; hinter allem → freie TE davor (gleiche Reihe und Reihenende: Rest + `amEnde`).
   `planEndeNr`. Kein Überschneidungs-Hinweis (`#noUeber`) bei der Neuinstallation.
+  Stufen über freiem Platz (v1.234, Jean): beim Ziehen werden freie Blöcke auf `FREI_STUFE`
+  (30 px) je TE erhöht (Zeile bleibt per Scroll unter dem Finger, `y0` aus dem Griffpunkt);
+  `imFrei()` zählt in der Höhe des Blocks k TE, der Block bleibt dabei stehen; Schild „(k frei
+  davor)“; Ablegen `ordnenFreiUebernehmen` → `freiEinsetzenListe` (fest: teilen; Rest: frei k
+  davor, Rest dahinter, bis ans Ende → `amEnde`). Nummer innerhalb der eigenen Breite
+  (`planVersetzen(c, N, bisher)`, FI 13–16 → 14): Kreis samt Folgenden um k nach hinten, frei
+  davor, bezahlt vom Rest bzw. festen freien TE derselben Reihe; sonst Hinweis, Nummer bleibt.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.233, 21.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.234, 21.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
