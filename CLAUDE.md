@@ -332,8 +332,12 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Entfernen und „Nächste Reihe“ (Fokus lösen, Rolllage über den Bildaufbau halten – Jean: auf
   dem iPhone sprang die Liste nach oben, im Test nicht nachstellbar). `ordnenVollstaendig(ids,
   bewegt)`: Reihenrest ohne Breite bleibt vor seinem Nachfolger, wenn sein Vorgänger gezogen wird.
+  Zusammenlegen der Bezeichnungen (v1.237, Jean): `namenVereinen` fasst gleiche Arten
+  (`NAMEN_ARTEN`: Steckdose(n), Beleuchtung, Licht) zu einem Teil mit allen Zusätzen zusammen
+  („Steckdosen Arbeitsfläche links, Dunstabzug“), Teile ohne Art gehören zur Art davor,
+  mehrere Steckdosen → Mehrzahl. Räume weiter `teileVereinen`.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.236, 21.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.237, 21.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
