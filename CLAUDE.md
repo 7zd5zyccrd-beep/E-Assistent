@@ -372,6 +372,12 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **Leitung hinzufügen (v1.211–v1.217):** Zweck-Kacheln wie im Stromkreis, Dunstabzug/Kühlschrank mit Folgekacheln; Feld bleibt
   mit Tastatur im Bild (v1.213) – am Gerät ansehen.
 - **Eine Liste (v1.229):** Markieren, Antippen, Ziehen, „Nächste Reihe“ am Gerät ausprobieren.
+- **Ordnen im praktischen Einsatz (v1.230–v1.243, Jean testet demnächst auf der Baustelle):**
+  Ziehen an den Reihenanfang und hinter „bis Reihenende“, Stufen im freien Block (je TE ein
+  Streifen, `FREI_STUFE` 30 px), Zwischenstufe (mittleres Drittel), Nummer eintippen, Halten am
+  Griff (`GRIFF_HALTEN` 250 ms), Platzhalter/mitlaufende Nummern, zusammengefasste freie TE,
+  `namenVereinen`. Werte bei Bedarf nachjustieren. Bekannt: am Bildschirmrand rollt die Liste
+  beim Ziehen mit, dann läuft die Stufe schnell hoch.
 - **Prüfung Erfassen (v1.221–v1.225):** alle fünf Pakete am Gerät durchgehen, besonders
   Listenlage (v1.223), Kacheln (v1.224) und Ordnen mit „+ FI“/Reihenende (v1.225).
 - **Freie TE (v1.218–v1.220):** Ordnen mit „+ Frei“, Lücken bleiben, Nummern sofort beim Ziehen – am Gerät ausprobieren.
