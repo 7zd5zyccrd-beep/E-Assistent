@@ -339,8 +339,10 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Zeile der Planliste (v1.238, Jean B): Bezeichnung vollständig (umbrechend, ohne Räume),
   Unterzeile „Räume · Absicherung · Kabel · n Leitungen“ über `ordUnter` (bricht nur zwischen den
   Angaben, `.tl` nowrap); `.ord-wahl` 42 px, `.ord-griff` 40 px.
+  Seit v1.239 läuft auch das Übernehmen nach dem Ziehen durch `lageHalten` (Jean: FI ziehen →
+  Liste sprang auf dem iPhone nach oben; im Test nicht nachstellbar).
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.238, 21.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.239, 21.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
