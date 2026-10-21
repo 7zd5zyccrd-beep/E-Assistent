@@ -341,8 +341,14 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Angaben, `.tl` nowrap); `.ord-wahl` 42 px, `.ord-griff` 40 px.
   Seit v1.239 läuft auch das Übernehmen nach dem Ziehen durch `lageHalten` (Jean: FI ziehen →
   Liste sprang auf dem iPhone nach oben; im Test nicht nachstellbar).
+  Griff (v1.240, Jean: beim Scrollen ungewollt verschoben): Finger erst nach `GRIFF_HALTEN`
+  (250 ms) ruhigem Halten → `ordnenZiehen`; vorher bewegt (> 8 px) oder `pointercancel` → nichts,
+  die Liste rollt (`.ord-griff` `touch-action:pan-y`, `touchmove` nur bei `.zieht` verhindert);
+  Maus sofort. `lageHalten(fn, abzug)`: der beim Anfassen mitgerollte Ausgleich für die
+  erhöhten freien Blöcke wird beim Loslassen abgezogen (Jean: sprang eine Zeile höher).
+  Testen mit CDP `Input.dispatchTouchEvent` (touchStart, warten, touchMove …, touchEnd).
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.239, 21.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.240, 21.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-

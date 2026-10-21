@@ -10,6 +10,12 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.240 21.10.2026 Griff erst nach kurzem Halten (Jean: beim Scrollen oft ungewollt
+                    verschoben): mit dem Finger setzt sich die Zeile erst nach etwa
+                    einer Viertelsekunde Halten in Bewegung; wer gleich wischt,
+                    scrollt die Liste. Nach dem Loslassen springt die Liste nicht
+                    mehr um etwa eine Zeile nach oben (die beim Ziehen erhoehten
+                    freien Bloecke werden beim Zurueckrollen beruecksichtigt).
   v1.239 21.10.2026 Nach dem Ziehen bleibt die Liste an ihrer Stelle (Jean: beim
                     Verschieben eines FI sprang die Ansicht nach ganz oben) - wie
                     seit v1.236 beim Zusammenlegen.
@@ -2571,7 +2577,8 @@ input.schalter:checked::after{transform:translateX(20px)}
 .list-item.ord-zeile{border-left-color:var(--line)}
 .list-item.ord-zeile.ord-fi{border-left-color:var(--ink);border-left-width:5px}
 .ord-zeile .ord-griff{flex:0 0 40px;align-self:stretch;display:flex;align-items:center;justify-content:center;
-  margin:-10px 0;font-size:24px;color:var(--ink-soft);touch-action:none;cursor:grab}
+  margin:-10px 0;font-size:24px;color:var(--ink-soft);touch-action:pan-y;cursor:grab}
+.ord-zeile.halten .ord-griff{color:var(--ink)}       /* v1.240: Halten wird angenommen */
 .zieh-ziel:empty{display:none}
 .zieh-ziel{position:absolute;right:52px;top:-13px;padding:3px 10px;border-radius:999px;background:var(--ink);color:var(--surface);
   font-family:var(--f-label);font-size:15px;font-weight:700;letter-spacing:.04em;white-space:nowrap;pointer-events:none}
@@ -4318,7 +4325,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.239';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.240';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 21.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6458,8 +6465,8 @@ $('#btnPlanLeitung').onclick = () => $('#btnLeitung').click();      // v1.229
 /* v1.236 (Jean: nach Zusammenlegen/Trennen sprang die Liste nach oben – auf dem
    iPhone, nicht im Test): der angetippte Knopf verschwindet danach aus der Leiste;
    Fokus lösen und die Rolllage über den nächsten Bildaufbau hinweg festhalten */
-function lageHalten(fn){
-  const y = bildY();
+function lageHalten(fn, abzug){
+  const y = bildY() - (abzug || 0);                  // v1.240: beim Ziehen mitgerollter Ausgleich
   if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
   fn();
   bildNach(y);
@@ -6622,8 +6629,26 @@ function ordnenZeigen(){
       planLeisteZeigen(); leistenPlatz();
     };
     const g = z.querySelector('.ord-griff');
-    g.addEventListener('pointerdown', e => ordnenZiehen(z, e));
-    g.addEventListener('touchmove', e => e.preventDefault(), {passive:false});   // iOS: nicht die Liste rollen
+    /* v1.240 (Jean: beim Scrollen am Griff ungewollt verschoben): mit dem Finger erst
+       nach kurzem Halten ziehen – bewegt er sich vorher, rollt die Liste (touch-action
+       pan-y am Griff, der Browser meldet dann pointercancel) */
+    g.addEventListener('pointerdown', e => {
+      if(e.pointerType === 'mouse'){ ordnenZiehen(z, e); return; }
+      const x0 = e.clientX, y0 = e.clientY;
+      z.classList.add('halten');
+      const weg = () => {
+        clearTimeout(t); z.classList.remove('halten');
+        document.removeEventListener('pointermove', mv);
+        document.removeEventListener('pointerup', weg);
+        document.removeEventListener('pointercancel', weg);
+      };
+      const mv = ev => { if(Math.hypot(ev.clientX - x0, ev.clientY - y0) > 8) weg(); };
+      const t = setTimeout(() => { weg(); ordnenZiehen(z, e); }, GRIFF_HALTEN);
+      document.addEventListener('pointermove', mv);
+      document.addEventListener('pointerup', weg);
+      document.addEventListener('pointercancel', weg);
+    });
+    g.addEventListener('touchmove', e => { if(z.classList.contains('zieht')) e.preventDefault(); }, {passive:false});   // iOS: beim Ziehen nicht rollen
   });
 }
 /* Ziehen am Griff: die Zeile hängt am Finger und gleitet mit (v1.195, Jean:
@@ -6645,7 +6670,9 @@ function ordnenZiehen(zeile, e){
     if(w > 1) z.style.minHeight = Math.max(z.getBoundingClientRect().height, w * FREI_STUFE) + 'px';
   });
   const versatz = zeile.getBoundingClientRect().top - vorTop;
+  const yVor = bildY();
   if(versatz) bildNach(bildY() + versatz);
+  const ausgleich = bildY() - yVor;                  // v1.240: beim Loslassen wieder abziehen
   const lagen = zeilen.map(z => { const q = z.getBoundingClientRect(); return {top:q.top + bildY(), h:q.height}; });
   /* v1.230: die Reihen-Überschriften entscheiden, ob eine Zeile vor dem ersten Kreis
      einer Reihe diese beginnt (unter der Überschrift losgelassen) oder die Reihe
@@ -6774,8 +6801,8 @@ function ordnenZiehen(zeile, e){
     zeile.style.transform = `translateY(${zielTop - lagen[von].top}px)`;
     const w = wohin();
     /* v1.239 (Jean: nach dem Verschieben eines FI sprang die Liste auf dem iPhone nach oben) */
-    if(w.frei){ setTimeout(() => lageHalten(() => ordnenFreiUebernehmen(selbst, w.frei.f, w.frei.k)), 170); return; }
-    setTimeout(() => lageHalten(() => ordnenUebernehmen(w.ids, w.anfang, zeile.dataset.ord, !!w.ende, w.luecke)), 170);
+    if(w.frei){ setTimeout(() => lageHalten(() => ordnenFreiUebernehmen(selbst, w.frei.f, w.frei.k), ausgleich), 170); return; }
+    setTimeout(() => lageHalten(() => ordnenUebernehmen(w.ids, w.anfang, zeile.dataset.ord, !!w.ende, w.luecke), ausgleich), 170);
   };
   document.addEventListener('pointermove', mv);
   document.addEventListener('pointerup', ende);
@@ -6784,7 +6811,8 @@ function ordnenZiehen(zeile, e){
 /* v1.234: Zeile in einen freien Block setzen – k freie TE davor, der Rest dahinter
    („bis Reihenende“ bleibt anpassbar; reicht die Zeile bis ans Ende, steht sie
    dort fest wie in v1.232). Setzt selbst.amEnde; liefert die neue Reihenfolge. */
-const FREI_STUFE = 30;                               // Fingerweg je TE beim Ziehen (px, etwa 8 mm)
+const FREI_STUFE = 30;
+const GRIFF_HALTEN = 250;                            // v1.240: so lange halten, bis die Zeile mitgeht (ms)                               // Fingerweg je TE beim Ziehen (px, etwa 8 mm)
 function freiEinsetzenListe(liste, selbst, f, k){
   const rest = liste.filter(z => z !== selbst);
   const i = rest.indexOf(f);
