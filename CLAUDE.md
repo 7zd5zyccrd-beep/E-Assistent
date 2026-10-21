@@ -373,7 +373,8 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Mängelfeld gibt mit `rechtsOben` nach; Ordner der Neuinstallation nach
   `angelegt` statt `startedAt`, das bei der ersten Messung rückt), Tastatur-Darstellung (v1.185), Lager-Namen (v1.187),
   Verteilerbeschreibung auf einem Blatt (v1.190), Zusammenlegen ohne Markierung
-  (v1.194), Ziehen gleitend (v1.195, „sehr schön“).
+  (v1.194), Ziehen gleitend (v1.195, „sehr schön“), Griff mit Halten und ruhige Liste beim
+  Ziehen, Zusammenlegen und Antippen freier TE (v1.236–v1.241, 21.10.2026).
 
 ## SAM (Beta)
 
