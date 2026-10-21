@@ -10,6 +10,13 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.233 21.10.2026 Nummer im Stromkreis wieder eintippbar (Jean), auch bei der
+                    Neuinstallation: beim Speichern springt der Kreis an die neue
+                    Stelle. Die anderen Kreise seiner Reihe ruecken auf, der Raum bis
+                    zur neuen Stelle wird frei (freie TE statt nachgezogener Geraete).
+                    Ist die Nummer belegt, wird er dort eingefuegt und die anderen
+                    ruecken nach hinten. Ans Reihenende gesetzt bleibt er dort, auch
+                    wenn vorne etwas dazukommt.
   v1.232 21.10.2026 Kreise hinter "frei bis Reihenende" (Jean: man landete davor oder
                     in der naechsten Reihe): wird ein Kreis direkt hinter den freien
                     Block gezogen und oberhalb der naechsten Reihen-Ueberschrift
@@ -4273,7 +4280,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.232';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.233';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 21.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6834,6 +6841,47 @@ function nummernPlan(zeilen){                        // v1.231: auch für eine g
   });
   return plan;
 }
+/* erste freie Nummer hinter allem (v1.233) */
+function planEndeNr(zeilen){
+  const plan = nummernPlan(zeilen);
+  return plan.length ? plan[plan.length - 1].no + plan[plan.length - 1].te : 1;
+}
+/* v1.233 (Jean: Nummer eintippen soll den Kreis versetzen): der Kreis verlässt
+   seinen Platz, die Folgenden rücken auf (Frage 1 b). Auf belegter Nummer wird er
+   davor eingefügt, die anderen rücken nach hinten (Frage 2 a). Liegt die Nummer in
+   einer Lücke oder hinter allem, füllen freie TE den Raum davor; reicht er bis ans
+   Reihenende, steht er dort fest hinter „bis Reihenende“ (Frage 3, wie v1.232). */
+function planVersetzen(c, N){
+  delete c.amEnde;
+  const rest = planZeilen().filter(z => z !== c);
+  const plan = nummernPlan(rest);
+  const te = Math.max(1, parseInt(c.te, 10) || 1), ende = N + te - 1;
+  const reiheEnde = Math.ceil(N / ROW_SIZE) * ROW_SIZE;
+  const p = plan.find(q => q.te > 0 && N >= q.no && N <= q.bis);
+  let neu;
+  if(!p){                                            // hinter allem
+    const naechste = planEndeNr(rest);
+    if(N <= naechste) neu = [...rest, c];
+    else if(ende === reiheEnde && Math.ceil(naechste / ROW_SIZE) === Math.ceil(N / ROW_SIZE)){ c.amEnde = true; neu = [...rest, freiNeu(1, true), c]; }
+    else neu = [...rest, freiNeu(N - naechste), c];
+  } else if(!istFrei(p.c)){                          // belegt: davor einfügen
+    const i = rest.indexOf(p.c);
+    neu = [...rest.slice(0, i), c, ...rest.slice(i)];
+  } else {
+    const i = rest.indexOf(p.c), vor = N - p.no;
+    if(p.c.rest && ende >= p.bis){                   // bis ans Reihenende: hinter den Rest
+      c.amEnde = true;
+      neu = [...rest.slice(0, i + 1), c, ...rest.slice(i + 1)];
+    } else if(p.c.rest){                             // mitten im Rest: fester Freiraum davor
+      neu = [...rest.slice(0, i), ...(vor > 0 ? [freiNeu(vor)] : []), c, ...rest.slice(i)];
+    } else {                                         // feste freie TE teilen
+      const nach = p.bis - ende;
+      neu = [...rest.slice(0, i), ...(vor > 0 ? [freiNeu(vor)] : []), c, ...(nach > 0 ? [freiNeu(nach)] : []), ...rest.slice(i + 1)];
+    }
+  }
+  PROJ.items = [...neu, ...PROJ.items.filter(it => it.kind !== 'circuit' && it.kind !== 'frei')];
+  nummernAnwenden();
+}
 /* v1.219 (Jean): die Nummern ergeben sich sofort aus der Lage in der Liste –
    jede Änderung im Ordnen nummeriert neu (ordnenZeigen). Die Rückfrage vor
    dem Neunummerieren (Frage 4, v1.192) ist auf Jeans Wunsch entfallen: die
@@ -7224,8 +7272,9 @@ function refreshNoField(){
     if($('#noUeber')) $('#noUeber').hidden = true;
     return;
   }
-  /* v1.229: bei der Neuinstallation ergibt sich die Nummer aus der Reihenfolge der Liste */
-  $('#cNo').readOnly = planProjekt();
+  /* v1.229: bei der Neuinstallation ergab sich die Nummer nur aus der Liste; seit
+     v1.233 (Jean) wieder eintippbar – planVersetzen setzt den Kreis beim Speichern um */
+  $('#cNo').readOnly = false;
   /* v1.192: eine aufgeschriebene Leitung bleibt ohne Nummer, bis „Ordnen“ sie
      nummeriert – oder bis hier von Hand eine eingetragen wird */
   const alt = editIdx != null ? PROJ.items[editIdx] : null;
@@ -7241,7 +7290,8 @@ function refreshNoField(){
   draft.no = String(start);
   $('#cNo').value = te > 1 ? `${start}–${start + te - 1}` : String(start);
   coversHint();
-  noUeberZeigen(start, start + te - 1);
+  if(planProjekt()){ if($('#noUeber')) $('#noUeber').hidden = true; }   // v1.233: dort wird eingefügt, nicht überschnitten
+  else noUeberZeigen(start, start + te - 1);
   kreisTitel();                                      // v1.223
 }
 /* v1.175 (QK G33): Überschneidung im Moment des Tippens zeigen – am Verteiler
@@ -8399,8 +8449,13 @@ function persistCircuit(){
   }
   if(!c.cid) c.cid = neueKennung('K');               // v1.223: zum Wiederfinden in der Liste
   boardMarke = c.cid;
+  /* v1.233: bei der Neuinstallation zählt die eingetippte Nummer als Wunschplatz */
+  const altC = editIdx != null ? PROJ.items[editIdx] : null;
+  const wunsch = parseInt(c.no, 10);
+  const bisher = altC ? parseInt(altC.no, 10) : planEndeNr();
   if(editIdx == null) PROJ.items.push(c); else PROJ.items[editIdx] = c;
-  sortCircuits();                                     // eingefügte Kreise rutschen an ihre Position
+  if(planProjekt() && isFinite(wunsch) && wunsch > 0 && wunsch !== bisher) planVersetzen(c, wunsch);
+  else sortCircuits();                                // eingefügte Kreise rutschen an ihre Position
   noteFirstMeasure(c);
   saveProj();
   return c;                                           // v1.221: für die Prüfung auf belegte Nummern

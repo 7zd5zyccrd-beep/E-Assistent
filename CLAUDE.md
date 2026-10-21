@@ -296,8 +296,8 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   `#btnPlanLeitung`, „+ Gerät“, „+ Frei“ bzw. mit Markierung „+ Gerät“, „Nächste Reihe“) und
   `#planLeiste2` („Zusammenlegen“, „Entfernen“); `#addZeile` mit „+ Stromkreis“ entfällt dort
   (Jean). „Nächste Reihe“ (`#btnPlanReihe`, Frage 2 a): Markierte vor die erste Zeile der
-  folgenden Reihe, davor `freiNeu(1, true)`. `planProjekt()`: `#cNo` nur lesbar, kein
-  `nummernPruefen`, kein `freiAnpassen`. Neue Kreise/Leitungen ans Ende (Jean).
+  folgenden Reihe, davor `freiNeu(1, true)`. `planProjekt()`: kein
+  `nummernPruefen`, kein `freiAnpassen` (`#cNo` war v1.229–v1.232 nur lesbar). Neue Kreise/Leitungen ans Ende (Jean).
   Ziehen an den Reihenanfang (v1.230, Jean): `ordnenZiehen` merkt die Mitte der Überschriften
   (`.row-head[data-r]`); landet die Zeile vor dem ersten Kreis einer Reihe und wurde unterhalb der
   Überschrift losgelassen, setzt `ordnenUebernehmen(ids, anfang)` davor `freiNeu(1, true)`.
@@ -310,8 +310,13 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   nicht `anfang` gilt; `ordnenUebernehmen(ids, anfang, gezogen, amEnde)` setzt/löscht das Merkmal,
   `nummernAnwenden` löscht es, wo die Kette nicht mehr stimmt. Rest ohne Breite behält seine
   Nummer (sonst sortierte `sortCircuits` ihn ans Ende). Freie Zeile zeigt echte Breite.
+  Nummer eintippen (v1.233, Jean 1 b / 2 a / 3 ja): `persistCircuit` ruft bei geänderter Nummer
+  `planVersetzen(c, N)` – Kreis raus, Folgende rücken auf; belegt → davor einfügen; in fester
+  Lücke → teilen; im Reihenrest bis ans Ende → `amEnde` hinter den Rest, sonst fester Freiraum
+  davor; hinter allem → freie TE davor (gleiche Reihe und Reihenende: Rest + `amEnde`).
+  `planEndeNr`. Kein Überschneidungs-Hinweis (`#noUeber`) bei der Neuinstallation.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.232, 21.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.233, 21.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
