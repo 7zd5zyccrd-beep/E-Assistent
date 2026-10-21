@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.231 21.10.2026 Ziehen zeigt das Ziel (Jean: man sah vor dem Loslassen nicht,
+                    ob die Zeile in die naechste Reihe rutscht): an der gezogenen
+                    Zeile steht laufend, wo sie landet ("-> 13 · Reihe 2"), und
+                    die Ueberschrift der Reihe leuchtet gruen, wenn die Zeile
+                    diese Reihe beginnen wuerde.
   v1.230 21.10.2026 Ziehen an den Anfang einer Reihe (Jean: landete am Ende der
                     Reihe davor, man musste an die zweite Stelle ziehen): wird
                     eine Zeile unterhalb der Ueberschrift "Reihe 2" losgelassen,
@@ -2519,6 +2524,11 @@ input.schalter:checked::after{transform:translateX(20px)}
 .list-item.ord-zeile.ord-fi{border-left-color:var(--ink);border-left-width:5px}
 .ord-zeile .ord-griff{flex:0 0 46px;align-self:stretch;display:flex;align-items:center;justify-content:center;
   margin:-10px 0;font-size:24px;color:var(--ink-soft);touch-action:none;cursor:grab}
+.zieh-ziel:empty{display:none}
+.zieh-ziel{position:absolute;right:52px;top:-13px;padding:3px 10px;border-radius:999px;background:var(--ink);color:var(--surface);
+  font-family:var(--f-label);font-size:15px;font-weight:700;letter-spacing:.04em;white-space:nowrap;pointer-events:none}
+#boardBody .row-head{transition:color .12s,background .12s}
+#boardBody .row-head.ziel{color:var(--ink);background:var(--brand);border-radius:6px;padding:4px 8px;margin-left:-8px;margin-right:-8px}
 .ord-zeile.zieht{position:relative;z-index:5;border-color:var(--ink);box-shadow:0 8px 20px rgba(0,0,0,.28)}
 .plan-leiste{margin-bottom:0}
 .plan-leiste + .plan-leiste{margin-top:10px}
@@ -4256,7 +4266,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.230';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.231';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 21.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6559,6 +6569,34 @@ function ordnenZiehen(zeile, e){
   const koepfe = {};
   box.querySelectorAll('.row-head[data-r]').forEach(k => { const q = k.getBoundingClientRect(); koepfe[k.dataset.r] = q.top + bildY() + q.height / 2; });
   let mitteJetzt = lagen[von].top + lagen[von].h / 2;
+  /* v1.231 (Jean: vor dem Loslassen nicht erkennbar, ob es in die nächste Reihe
+     rutscht): Ziel laufend an der Zeile zeigen, die Reihe leuchtet, die sie beginnt */
+  const schild = document.createElement('span');
+  schild.className = 'zieh-ziel';
+  zeile.appendChild(schild);
+  const kopfEl = {};
+  box.querySelectorAll('.row-head[data-r]').forEach(k => { kopfEl[k.dataset.r] = k; });
+  const selbst = planZeilen().find(c => c.cid === zeile.dataset.ord);
+  const wohin = () => {
+    const ids = zeilen.map(z => z.dataset.ord);
+    ids.splice(ziel, 0, ids.splice(von, 1)[0]);
+    const nach = planZeilen().find(c => c.cid === ids[ids.indexOf(zeile.dataset.ord) + 1]);
+    const nn = nach ? parseInt(nach.no, 10) : NaN;
+    const r = isFinite(nn) && nn > 1 && (nn - 1) % ROW_SIZE === 0 ? (nn - 1) / ROW_SIZE + 1 : 0;
+    return {ids, r, anfang: r && koepfe[r] != null && mitteJetzt > koepfe[r] ? zeile.dataset.ord : null};
+  };
+  const zielZeigen = () => {
+    const w = wohin();
+    Object.entries(kopfEl).forEach(([r, k]) => k.classList.toggle('ziel', !!w.anfang && +r === w.r));
+    /* gedachte Reihenfolge samt Reihenrest wie in ordnenUebernehmen durchzählen */
+    const voll = ordnenVollstaendig(w.ids).map(id => planZeilen().find(c => c.cid === id)).filter(Boolean);
+    if(w.anfang){ const i = voll.indexOf(selbst), v = voll[i - 1]; if(i > 0 && !(istFrei(v) && v.rest)) voll.splice(i, 0, freiNeu(1, true)); }
+    const p = nummernPlan(voll).find(x => x.c === selbst);
+    if(!p || istFrei(selbst)){ schild.textContent = ''; return; }
+    const nr = p.bis > p.no ? p.no + '–' + p.bis : String(p.no);
+    schild.textContent = `→ ${nr} · Reihe ${Math.ceil(p.no / ROW_SIZE)}`;
+    const noEl = zeile.querySelector('.no'); if(noEl) noEl.textContent = nr;   // die Nummer läuft mit
+  };
   const abstand = zeilen.length > 1 ? Math.max(0, lagen[1].top - lagen[0].top - lagen[0].h) : 8;
   const platz = lagen[von].h + abstand;                    // so weit rücken die anderen
   const y0 = e.clientY + bildY();
@@ -6577,6 +6615,7 @@ function ordnenZiehen(zeile, e){
       const s = von < ziel && i > von && i <= ziel ? -platz : von > ziel && i >= ziel && i < von ? platz : 0;
       z.style.transform = s ? `translateY(${s}px)` : '';
     });
+    zielZeigen();
   };
   const kanten = () => {
     const r = m.getBoundingClientRect();
@@ -6601,26 +6640,26 @@ function ordnenZiehen(zeile, e){
     const zielTop = ziel > von ? lagen[ziel].top + lagen[ziel].h - lagen[von].h : lagen[ziel].top;
     zeile.style.transition = 'transform .16s ease';
     zeile.style.transform = `translateY(${zielTop - lagen[von].top}px)`;
-    const ids = zeilen.map(z => z.dataset.ord);
-    ids.splice(ziel, 0, ids.splice(von, 1)[0]);
-    const nach = planZeilen().find(c => c.cid === ids[ids.indexOf(zeile.dataset.ord) + 1]);
-    const nn = nach ? parseInt(nach.no, 10) : NaN;
-    const r = isFinite(nn) && nn > 1 && (nn - 1) % ROW_SIZE === 0 ? (nn - 1) / ROW_SIZE + 1 : 0;
-    const anfang = r && koepfe[r] != null && mitteJetzt > koepfe[r] ? zeile.dataset.ord : null;
+    const {ids, anfang} = wohin();
     setTimeout(() => ordnenUebernehmen(ids, anfang), 170);
   };
   document.addEventListener('pointermove', mv);
   document.addEventListener('pointerup', ende);
   document.addEventListener('pointercancel', ende);
 }
-function ordnenUebernehmen(ids, anfang){
-  const zeilenArt = it => it.kind === 'circuit' || it.kind === 'frei';      // v1.218: mit freien Zeilen
-  /* v1.229: ein Reihenrest ohne Breite steht nicht in der Liste – er bleibt hinter seinem Vorgänger */
+/* v1.229: ein Reihenrest ohne Breite steht nicht in der Liste – er bleibt hinter seinem Vorgänger */
+function ordnenVollstaendig(ids){
+  ids = [...ids];
   const alle = planZeilen().map(c => c.cid);
   alle.filter(id => !ids.includes(id)).forEach(id => {
     const vor = alle[alle.indexOf(id) - 1], j = vor ? ids.indexOf(vor) : -1;
     ids.splice(j + 1, 0, id);
   });
+  return ids;
+}
+function ordnenUebernehmen(ids, anfang){
+  const zeilenArt = it => it.kind === 'circuit' || it.kind === 'frei';      // v1.218: mit freien Zeilen
+  ids = ordnenVollstaendig(ids);
   const cs = ids.map(id => PROJ.items.find(c => zeilenArt(c) && c.cid === id)).filter(Boolean);
   if(cs.length !== planZeilen().length){ renderBoard(); return; }
   const vorher = planZeilen().map(c => c.cid).join('|');
@@ -6749,10 +6788,10 @@ function bereicheText(nr){
   if(a != null) t.push(a === b ? String(a) : `${a}–${b}`);
   return t.join(', ');
 }
-function nummernPlan(){
+function nummernPlan(zeilen){                        // v1.231: auch für eine gedachte Reihenfolge
   let n = 1;
   /* v1.218: freie Zeilen belegen ihre TE mit – so bleiben Lücken stehen */
-  const plan = planZeilen().map(c => {
+  const plan = (zeilen || planZeilen()).map(c => {
     const te = istFrei(c) ? freiBreite(c, n) : Math.max(1, parseInt(c.te, 10) || 1);
     const p = {c, no:n, bis:n + te - 1, te}; n += te; return p;
   });

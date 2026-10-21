@@ -301,8 +301,11 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Ziehen an den Reihenanfang (v1.230, Jean): `ordnenZiehen` merkt die Mitte der Überschriften
   (`.row-head[data-r]`); landet die Zeile vor dem ersten Kreis einer Reihe und wurde unterhalb der
   Überschrift losgelassen, setzt `ordnenUebernehmen(ids, anfang)` davor `freiNeu(1, true)`.
+  Seit v1.231 (Jean: vor dem Loslassen nicht erkennbar) zeigt `zielZeigen` beim Ziehen das Ziel:
+  Schild `.zieh-ziel` („→ 13 · Reihe 2“, gezählt mit `nummernPlan(voll)` über die gedachte
+  Reihenfolge, `ordnenVollstaendig`), Nummer der Zeile läuft mit, Überschrift `.row-head.ziel` grün.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.230, 21.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.231, 21.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
