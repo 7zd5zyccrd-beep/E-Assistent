@@ -388,8 +388,13 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   geleerte Reihen mit; `leereReihenHalten(…, zielR)` hält die geleerte Reihe auch dann frei,
   wenn nur die gezogene Zeile in sie rückte, solange sie an den Anfang einer späteren Reihe
   (`w.anfang`, `w.r`) gezogen wurde.
+  Freie TE am Reihenende (v1.250, Jean: erste Kreise einer Reihe blieben in der Reihe davor
+  hängen): `nummernAnwenden` macht feste freie Zeilen, die genau am Reihenende enden und nicht
+  am Reihenanfang beginnen, zu `rest` (eine ganz freie Reihe bleibt fest – Rest am Anfang hätte
+  0 TE). „−“ auch beim Rest: feste Breite eins kleiner. „Nächste Reihe“ wirft nur Reste ohne
+  Breite vom Ende von `davor` (vorher auch den Rest der Reihe davor).
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.249, 25.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.250, 25.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
@@ -401,7 +406,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   mit Tastatur im Bild (v1.213) – am Gerät ansehen.
 - **Eine Liste (v1.229):** Markieren, Antippen, Ziehen, „Nächste Reihe“ am Gerät ausprobieren;
   ganze Reihe frei über „Nächste Reihe“ (v1.244); „+ Frei“ ohne Sprung nach oben (v1.245 –
-  im Test sprang es nie, am iPhone prüfen); Gruppe ziehen und „Reihe n (neu)“ (v1.247), geleerte Reihen bleiben frei (v1.248, letzte Reihe v1.249).
+  im Test sprang es nie, am iPhone prüfen); Gruppe ziehen und „Reihe n (neu)“ (v1.247), geleerte Reihen bleiben frei (v1.248, letzte Reihe v1.249), freie TE am Reihenende halten die Reihe (v1.250).
 - **Ordnen im praktischen Einsatz (v1.230–v1.243, Jean testet demnächst auf der Baustelle):**
   Ziehen an den Reihenanfang und hinter „bis Reihenende“, Stufen im freien Block (je TE ein
   Streifen, `FREI_STUFE` 30 px), Zwischenstufe (mittleres Drittel), Nummer eintippen, Halten am

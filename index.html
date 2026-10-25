@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.250 25.10.2026 Freie TE am Reihenende halten die Reihe (Jean: die ersten Kreise einer
+                    Reihe blieben in der Reihe davor haengen, wenn an deren Ende TE frei
+                    waren): reichen feste freie TE genau bis ans Reihenende, gelten sie als
+                    "bis Reihenende" - kommt vorn in der Reihe etwas weg, wird der freie
+                    Platz groesser, statt dass die naechste Reihe nachrueckt.
   v1.249 25.10.2026 Letzte Reihe in eine neue Reihe ziehen (Jean: nur Reihe 2 nach Reihe 3
                     ging nicht): beim Ziehen der ganzen letzten Reihe heisst das Ziel jetzt
                     "Reihe 3 (neu)", die geleerte Reihe 2 bleibt frei.
@@ -4386,7 +4391,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.249';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.250';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 25.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6564,7 +6569,9 @@ $('#btnPlanReihe').onclick = () => {
   const block = leer ? [freiNeu(ROW_SIZE), ...mit]
     : (vor && istFrei(vor) && vor.rest) ? [...mit] : [freiNeu(1, true), ...mit];
   const davor = rest.slice(0, ab);
-  if(leer) while(davor.length && istFrei(davor[davor.length - 1]) && davor[davor.length - 1].rest) davor.pop();   // leerer Reihenrest entfällt
+  /* leerer Reihenrest entfällt – nur einer ohne Breite (v1.250: nicht der Rest der Reihe davor) */
+  const ohneBreite = () => { const pl = nummernPlan(davor); return pl.length && pl[pl.length - 1].te === 0; };
+  if(leer) while(davor.length && istFrei(davor[davor.length - 1]) && davor[davor.length - 1].rest && ohneBreite()) davor.pop();
   const danach = rest.slice(ab);
   while(danach.length && istFrei(danach[0]) && danach[0].rest && !(parseInt(danach[0].te, 10) > 0)) danach.shift();   // leerer Reihenwechsel
   if(danach.length) block.push(freiNeu(1, true));    // v1.246: Rest der neuen Reihe frei, die folgenden rücken ganz weiter
@@ -6654,7 +6661,7 @@ function ordnenZeigen(){
           ? `<span class="body"><span class="t">frei</span><span class="s">${b} TE${c.rest ? ' · bis Reihenende' : ''}</span></span>`
           : `<span class="body"><span class="t">frei</span>
           <span class="ord-frei-ctl">
-            <button type="button" data-frei="-"${c.rest ? ' disabled' : ''} aria-label="Weniger">−</button>
+            <button type="button" data-frei="-"${b < 2 ? ' disabled' : ''} aria-label="Weniger">−</button>
             <span class="te">${b} TE</span>
             <button type="button" data-frei="+"${c.rest ? ' disabled' : ''} aria-label="Mehr">+</button>
             <button type="button" data-frei="rest" class="${c.rest ? 'gewaehlt' : ''}">bis Reihenende</button>
@@ -6690,6 +6697,8 @@ function ordnenZeigen(){
         if(!f) return;
         const b = Math.max(1, parseInt(f.te, 10) || 1);
         if(fb.dataset.frei === 'rest') f.rest = !f.rest;
+        /* v1.250: „−“ auch bei „bis Reihenende“ – dann feste Breite eins kleiner */
+        else if(f.rest && fb.dataset.frei === '-'){ f.rest = false; f.te = String(Math.max(1, b - 1)); }
         else f.te = String(Math.min(ROW_SIZE, Math.max(1, b + (fb.dataset.frei === '+' ? 1 : -1))));
         lageHalten(() => { saveProj(); renderBoard(); });   // v1.241
         return;
@@ -7416,6 +7425,14 @@ function nummernAnwenden(){
       break;
     }
   }
+  /* v1.250 (Jean: die ersten Kreise einer Reihe blieben in der Reihe davor hängen, wenn an
+     deren Ende TE frei waren): feste freie TE, die genau bis ans Reihenende reichen, werden
+     „bis Reihenende“ – sonst rückte die nächste Reihe nach, sobald vorn etwas wegkam. Eine
+     ganz freie Reihe (beginnt am Reihenanfang) bleibt fest, ein Rest dort hätte keine Breite. */
+  nummernPlan().forEach(p => {
+    if(!istFrei(p.c) || p.c.rest || p.te < 1) return;
+    if(p.bis % ROW_SIZE === 0 && (p.no - 1) % ROW_SIZE !== 0){ p.c.rest = true; geaendert = true; }
+  });
   let davor = null;                                  // v1.232: amEnde gilt nur in der Kette hinter „bis Reihenende“
   planZeilen().forEach(c => {
     const gilt = !!davor && ((istFrei(davor) && davor.rest) || (!istFrei(davor) && davor.amEnde));
