@@ -360,8 +360,11 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   jede TE ein Streifen der Skala (Nummer ohne die gezogene Zeile), `imFrei` zählt je TE (`… * w`),
   grün sind alle Streifen, die die Zeile belegt; Vergrößerung nach `freiBreiteOhne`.
   v1.241: auch Antippen der freien Zeile und −/+/„bis Reihenende“ über `lageHalten`.
+  Ganze Reihe frei (v1.244, Jean: Reihe markiert, „Nächste Reihe“ – Kreise rutschten wieder
+  hoch): bliebe von der Reihe nichts, setzt `#btnPlanReihe` statt des 0-TE-Rests `freiNeu(12)`
+  davor und lässt einen leeren Reihenrest am Ende davor weg.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.243, 21.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.244, 25.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
@@ -371,7 +374,8 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   gewählt hat (Ränder dann von ihm nachgemessen).
 - **Leitung hinzufügen (v1.211–v1.217):** Zweck-Kacheln wie im Stromkreis, Dunstabzug/Kühlschrank mit Folgekacheln; Feld bleibt
   mit Tastatur im Bild (v1.213) – am Gerät ansehen.
-- **Eine Liste (v1.229):** Markieren, Antippen, Ziehen, „Nächste Reihe“ am Gerät ausprobieren.
+- **Eine Liste (v1.229):** Markieren, Antippen, Ziehen, „Nächste Reihe“ am Gerät ausprobieren;
+  ganze Reihe frei über „Nächste Reihe“ (v1.244).
 - **Ordnen im praktischen Einsatz (v1.230–v1.243, Jean testet demnächst auf der Baustelle):**
   Ziehen an den Reihenanfang und hinter „bis Reihenende“, Stufen im freien Block (je TE ein
   Streifen, `FREI_STUFE` 30 px), Zwischenstufe (mittleres Drittel), Nummer eintippen, Halten am
