@@ -377,8 +377,15 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Neue Reihe: `ordnenZiehen` setzt unter die letzte Zeile `.row-head.neu` „Reihe n (neu)“;
   darunter losgelassen (`!nach`) gilt `anfang` mit `r = neuR`. „Nächste Reihe“ bleibt vorerst.
   Test: Ziel nicht in die Randzone (70 px) legen, sonst rollt die Liste mit.
+  Geleerte Reihen (v1.248, Jean: Reihe 1 nach Reihe 3 gezogen – Reihe 2 rückte nach, „tauschten
+  nur“): beim Anfassen `ziehLeer = leereReihen(bewegt)` (Reihen, deren Kreise alle gezogen
+  werden, samt ihren freien Zeilen); `leereReihenHalten(liste, ziehLeer, gezogen)` nimmt deren
+  freie Zeilen heraus und setzt `freiNeu(12)` vor das, was in die Reihe gerückt wäre (nicht vor
+  die gezogene Zeile selbst). Läuft in `gedacht`, für `neuR`, in `ordnenUebernehmen` und
+  `ordnenFreiUebernehmen`. Ziehen begrenzt auf die Liste (`dMin`/`dMax`) – vorher wuchs die
+  Seite unter dem Finger, und am Rand rollte es ins Leere.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.247, 25.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.248, 25.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
@@ -390,7 +397,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   mit Tastatur im Bild (v1.213) – am Gerät ansehen.
 - **Eine Liste (v1.229):** Markieren, Antippen, Ziehen, „Nächste Reihe“ am Gerät ausprobieren;
   ganze Reihe frei über „Nächste Reihe“ (v1.244); „+ Frei“ ohne Sprung nach oben (v1.245 –
-  im Test sprang es nie, am iPhone prüfen); Gruppe ziehen und „Reihe n (neu)“ (v1.247).
+  im Test sprang es nie, am iPhone prüfen); Gruppe ziehen und „Reihe n (neu)“ (v1.247), geleerte Reihen bleiben frei (v1.248).
 - **Ordnen im praktischen Einsatz (v1.230–v1.243, Jean testet demnächst auf der Baustelle):**
   Ziehen an den Reihenanfang und hinter „bis Reihenende“, Stufen im freien Block (je TE ein
   Streifen, `FREI_STUFE` 30 px), Zwischenstufe (mittleres Drittel), Nummer eintippen, Halten am
