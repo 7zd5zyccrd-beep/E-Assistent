@@ -236,7 +236,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   zwischen Nummern zu freien Zeilen (endet die Lücke am Reihenende: `rest`);
   `nummernPlan` zählt sie mit. `freiAnpassen` (in `saveProj`, nicht während `ordnen` – v1.220) lässt sie schrumpfen, wenn ein
   Kreis ihren Platz belegt; `verschiebePlan` behandelt sie als Lücke. Sichtbar in der
-  Erfassen-Liste (nicht antippbar) und in der Verteilerbeschreibung (seit v1.251 nur die Nummer, Felder leer); nicht in
+  Erfassen-Liste (nicht antippbar) und in der Verteilerbeschreibung nicht (v1.218 „frei“, v1.251 nur Nummer, seit v1.253 gar nicht); nicht in
   Messen/Protokoll. Abweichende Nummerierung entfernt sie. `teLage` (Material: Reihen,
   Phasenschiene, durchgeschliffene FI) nimmt seit v1.218 die Nummern statt der lückenlosen TE.
 - **K-Nummern (v1.193):** `kNummernSetzen` läuft in `saveProj` – Stromstoßschalter
@@ -399,7 +399,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   über `leereReihenHalten(…, null)`. `bundZiehen`: lässt sich oben nicht nachrollen, bekommt
   `ordnenZiehen` ein verschobenes `clientY`, die erste Bewegung holt die Karte unter den Finger.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.252, 25.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.253, 25.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-

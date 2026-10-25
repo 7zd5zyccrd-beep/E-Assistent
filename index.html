@@ -10,6 +10,8 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.253 25.10.2026 Verteilerbeschreibung (Jean): unbelegte TE stehen gar nicht mehr darin,
+                    auch nicht mit ihrer Nummer.
   v1.252 25.10.2026 Ziehen in eine freie Reihe (Jean: Reihe 3 nach Reihe 4, dann Reihe 2 in
                     die frei gewordene Reihe 3 - alles stand wieder am Anfang): die Reihe,
                     in deren freie TE man zieht, gilt als Ziel; die geleerte Reihe davor
@@ -4399,7 +4401,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.252';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.253';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 25.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -13738,12 +13740,9 @@ function blaetterBauen(nur){
         <div class="pvf d"><i></i><span>Datum</span></div>
         <div class="pvf u"><i></i><span>Unterschrift</span></div></div></div>
       <table class="besch BESCH_STUFE"><thead><tr><th style="width:90px">Nr.</th><th>Bezeichnung</th><th style="width:39%">Ort</th></tr></thead><tbody>` +
-      /* v1.218 (Jean): freie TE stehen mit, damit Blatt und Verteiler übereinstimmen;
-         seit v1.251 (Jean) nur mit Nummer, das Feld bleibt leer statt „frei“ */
-      (abwNr() ? cs : planZeilen().filter(z => !istFrei(z) || (z.no && (parseInt(z.te, 10) || 0) > 0)))
-        .map(c => istFrei(c)
-          ? `<tr class="frei"><td>${esc((parseInt(c.te, 10) || 1) > 1 ? `${c.no}–${+c.no + (parseInt(c.te, 10) || 1) - 1}` : c.no)}</td><td></td><td></td></tr>`
-          : `<tr><td>${esc(circuitLabel(c))}</td><td>${esc(beschrName(c))}</td><td>${esc(c.room)}</td></tr>`).join('') +
+      /* v1.218 standen freie TE als „frei“ mit, v1.251 nur mit Nummer; seit v1.253 (Jean)
+         gar nicht mehr – die Lücke zeigt sich an den Nummern */
+      cs.map(c => `<tr><td>${esc(circuitLabel(c))}</td><td>${esc(beschrName(c))}</td><td>${esc(c.room)}</td></tr>`).join('') +
       `</tbody></table>` +
       /* Das Blatt bleibt am Verteiler, deshalb der Prüfhinweis darunter – nur
          wenn dort auch ein FI oder FI/LS sitzt. */
