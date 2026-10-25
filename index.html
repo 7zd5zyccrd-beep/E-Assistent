@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.246 25.10.2026 "Naechste Reihe" (Jean, 2 a): die markierten Zeilen werden eine eigene
+                    neue Reihe, alle folgenden Reihen ruecken als Ganzes eine Reihe
+                    weiter. Vorher rueckte die belegte naechste Reihe hinter die
+                    markierten und lief in die uebernaechste ueber - sah aus wie
+                    vertauscht. Gilt auch fuer einen Teil der Reihe.
   v1.245 25.10.2026 "+ Frei" (Jean: Ansicht sprang nach ganz oben): die neue freie Zeile
                     steht danach aufgeklappt in der Mitte des Bildes, Breite und "bis
                     Reihenende" gleich zur Hand.
@@ -4363,7 +4368,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.245';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.246';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 25.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6512,8 +6517,12 @@ function lageHalten(fn, abzug){
   setTimeout(() => bildNach(y), 80);
 }
 /* v1.229 (Jean, Frage 2 a): die markierten Zeilen an den Anfang der nächsten
-   Reihe – der Rest ihrer Reihe rückt auf, die folgende Reihe bleibt, wo sie ist
-   (davor „frei bis Reihenende“). Ziehen über den ganzen Bildschirm entfällt. */
+   Reihe – der Rest ihrer Reihe rückt auf (davor „frei bis Reihenende“). Ziehen
+   über den ganzen Bildschirm entfällt.
+   v1.246 (Jean 2 a: war die nächste Reihe belegt, rückte sie hinter die markierten
+   Zeilen und lief in die übernächste über – sah aus wie vertauscht): die markierten
+   Zeilen werden eine eigene neue Reihe, alle folgenden Reihen rücken als Ganzes eine
+   Reihe weiter. Gilt auch, wenn nur ein Teil der Reihe markiert ist. */
 $('#btnPlanReihe').onclick = () => {
   nummernAnwenden();
   const cs = planZeilen();
@@ -6535,13 +6544,16 @@ $('#btnPlanReihe').onclick = () => {
     : (vor && istFrei(vor) && vor.rest) ? [...mit] : [freiNeu(1, true), ...mit];
   const davor = rest.slice(0, ab);
   if(leer) while(davor.length && istFrei(davor[davor.length - 1]) && davor[davor.length - 1].rest) davor.pop();   // leerer Reihenrest entfällt
-  const neu = [...davor, ...block, ...rest.slice(ab)];
+  const danach = rest.slice(ab);
+  while(danach.length && istFrei(danach[0]) && danach[0].rest && !(parseInt(danach[0].te, 10) > 0)) danach.shift();   // leerer Reihenwechsel
+  if(danach.length) block.push(freiNeu(1, true));    // v1.246: Rest der neuen Reihe frei, die folgenden rücken ganz weiter
+  const neu = [...davor, ...block, ...danach];
   const extra = neu.filter(c => !cs.includes(c));
   extra.forEach(f => PROJ.items.push(f));            // Platzhalter, die Reihenfolge setzt die nächste Zeile
   let k = 0;
   PROJ.items = PROJ.items.map(it => (it.kind === 'circuit' || it.kind === 'frei') ? neu[k++] : it).filter(Boolean);   // v1.244: ohne den entfallenen Rest
   ordnenWahl.clear(); saveProj(); renderBoard();
-  toast(`${mit.length === 1 ? 'Zeile' : mit.length + ' Zeilen'} an den Anfang von Reihe ${r + 1}`);
+  toast(`${mit.length === 1 ? 'Zeile' : mit.length + ' Zeilen'} als neue Reihe ${r + 1}`);
 };
 
 /* --- Kopf über der Liste und Fußleiste --- */

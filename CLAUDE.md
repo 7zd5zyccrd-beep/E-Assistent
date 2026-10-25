@@ -365,8 +365,11 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   davor und lässt einen leeren Reihenrest am Ende davor weg.
   „+ Frei“ (v1.245, Jean: Ansicht sprang nach oben): `#btnPlanFrei` öffnet die neue Zeile
   (`freiOffen`) und rollt sie in die Bildmitte (sofort, rAF, 80 ms wie `lageHalten`).
+  „Nächste Reihe“ als neue Reihe (v1.246, Jean 2 a, auch für einen Teil der Reihe): hinter den
+  markierten Zeilen `freiNeu(1, true)`, leere Reihenwechsel am Anfang von `danach` entfallen –
+  alle folgenden Reihen rücken als Ganzes eine Reihe weiter.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.245, 25.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.246, 25.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
