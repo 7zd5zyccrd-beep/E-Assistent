@@ -384,8 +384,12 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   die gezogene Zeile selbst). Läuft in `gedacht`, für `neuR`, in `ordnenUebernehmen` und
   `ordnenFreiUebernehmen`. Ziehen begrenzt auf die Liste (`dMin`/`dMax`) – vorher wuchs die
   Seite unter dem Finger, und am Rand rollte es ins Leere.
+  Letzte Reihe in die neue (v1.249, Jean: nur Reihe 2 → Reihe 3 ging nicht): `neuR` zählt
+  geleerte Reihen mit; `leereReihenHalten(…, zielR)` hält die geleerte Reihe auch dann frei,
+  wenn nur die gezogene Zeile in sie rückte, solange sie an den Anfang einer späteren Reihe
+  (`w.anfang`, `w.r`) gezogen wurde.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.248, 25.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.249, 25.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
@@ -397,7 +401,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   mit Tastatur im Bild (v1.213) – am Gerät ansehen.
 - **Eine Liste (v1.229):** Markieren, Antippen, Ziehen, „Nächste Reihe“ am Gerät ausprobieren;
   ganze Reihe frei über „Nächste Reihe“ (v1.244); „+ Frei“ ohne Sprung nach oben (v1.245 –
-  im Test sprang es nie, am iPhone prüfen); Gruppe ziehen und „Reihe n (neu)“ (v1.247), geleerte Reihen bleiben frei (v1.248).
+  im Test sprang es nie, am iPhone prüfen); Gruppe ziehen und „Reihe n (neu)“ (v1.247), geleerte Reihen bleiben frei (v1.248, letzte Reihe v1.249).
 - **Ordnen im praktischen Einsatz (v1.230–v1.243, Jean testet demnächst auf der Baustelle):**
   Ziehen an den Reihenanfang und hinter „bis Reihenende“, Stufen im freien Block (je TE ein
   Streifen, `FREI_STUFE` 30 px), Zwischenstufe (mittleres Drittel), Nummer eintippen, Halten am
