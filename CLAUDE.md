@@ -368,8 +368,17 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   „Nächste Reihe“ als neue Reihe (v1.246, Jean 2 a, auch für einen Teil der Reihe): hinter den
   markierten Zeilen `freiNeu(1, true)`, leere Reihenwechsel am Anfang von `danach` entfallen –
   alle folgenden Reihen rücken als Ganzes eine Reihe weiter.
+  Gruppe ziehen (v1.247, Jean 1–3 ja): Griff einer markierten Zeile bei ≥ 2 markierten →
+  `bundZiehen`: Platzhalter-Kreis `cid:BUND` (Gesamt-TE, `bund:[Zeilen]`) ersetzt die markierten
+  in `PROJ.items`; die angefasste DOM-Zeile wird selbst zur Karte (neu zeichnen verlor auf iOS
+  den Finger – pointercancel), die anderen markierten Zeilen werden aus dem DOM genommen.
+  `bundAktiv` sperrt `saveProj`; nach dem Ablegen löst `bundAufloesen` (in `saveProj` bzw.
+  `renderBoard`) die Karte in Reihenfolge auf, `amEnde` gilt für alle, Markierung weg.
+  Neue Reihe: `ordnenZiehen` setzt unter die letzte Zeile `.row-head.neu` „Reihe n (neu)“;
+  darunter losgelassen (`!nach`) gilt `anfang` mit `r = neuR`. „Nächste Reihe“ bleibt vorerst.
+  Test: Ziel nicht in die Randzone (70 px) legen, sonst rollt die Liste mit.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.246, 25.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.247, 25.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
@@ -381,7 +390,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   mit Tastatur im Bild (v1.213) – am Gerät ansehen.
 - **Eine Liste (v1.229):** Markieren, Antippen, Ziehen, „Nächste Reihe“ am Gerät ausprobieren;
   ganze Reihe frei über „Nächste Reihe“ (v1.244); „+ Frei“ ohne Sprung nach oben (v1.245 –
-  im Test sprang es nie, am iPhone prüfen).
+  im Test sprang es nie, am iPhone prüfen); Gruppe ziehen und „Reihe n (neu)“ (v1.247).
 - **Ordnen im praktischen Einsatz (v1.230–v1.243, Jean testet demnächst auf der Baustelle):**
   Ziehen an den Reihenanfang und hinter „bis Reihenende“, Stufen im freien Block (je TE ein
   Streifen, `FREI_STUFE` 30 px), Zwischenstufe (mittleres Drittel), Nummer eintippen, Halten am
