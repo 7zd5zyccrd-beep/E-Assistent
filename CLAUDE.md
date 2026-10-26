@@ -403,8 +403,12 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   aktuellen Lage. `persistCircuit` → `coversHandSetzen`: Eingabe = berechnet → Merkmal weg, sonst
   die gemeinten Kreise. `coversHint` zeigt „Automatisch: …“, solange das Feld davon abweicht.
   Verteilerbeschreibung (v1.253): freie TE gar nicht mehr.
+  Lesemodus der Ablage (v1.255, Jean: Bild eingefroren): `docsVorwahl` und `nummernAnwenden`
+  tun bei `archOffen && archLesen` nichts – sie änderten den Stand, `saveProj` setzte zurück und
+  rief `go` erneut auf, endlos. Neue Rechnungen, die beim Zeichnen etwas am Projekt ändern, im
+  Lesemodus ebenso aussetzen (Test: `go` zählen nach `archAnsehen`).
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.254, 25.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.255, 26.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
