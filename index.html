@@ -10,6 +10,14 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.257 28.10.2026 Bewegung, Paket 1 des Designteams (Jean: ja): Knoepfe, Kacheln und
+                    Zeilen werden beim Beruehren kurz dunkler; nach "Weiter" im Messen steht
+                    oben "Kreis ... gespeichert" wie im Erfassen; nach "+ Frei", "+ Geraet" und
+                    Zusammenlegen leuchtet die neue Zeile auf; der Leuchtrahmen hat die Farbe
+                    des Zustands (rot um einen roten Kreis, nicht gruen); "Ausgeben" ist bei
+                    offenen Punkten nicht mehr stumm, sondern springt zur ersten roten Karte
+                    und laesst sie aufleuchten; Rueckfragen gleiten auf dem iPhone von unten
+                    herein. Bei "Bewegung reduzieren" steht der Rahmen nur kurz still.
   v1.256 28.10.2026 Adressvorschlaege beim Tippen (Jean, 1-4 ja): ab drei Zeichen bis zu
                     vier Kacheln unter dem Adressfeld - zuerst eigene Adressen aus Projekten
                     und Ablage ("frueher", auch ohne Netz), dann Strassen aus OpenStreetMap
@@ -1941,6 +1949,9 @@
    ============================================================ */
 :root{
   --logo:url('data:image/png;base64,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');   /* BDS-Schriftzug aus dem Logo */
+  /* v1.257 (Designteam): Bewegung kurz und einheitlich – Tipp, Weggehen, Blatt */
+  --t-tipp:120ms; --t-weg:200ms; --t-blatt:240ms;
+  --k-an:cubic-bezier(.2,.8,.2,1); --k-std:cubic-bezier(.4,0,.2,1);
   --brand:#A0D241;            /* Logofarbe – Grundlage des Farbkonzepts */
   --brand-dark:#6F9A22;       /* abgedunkelt, für Text und Ränder auf Hell */
   --brand-ink:#4F7314;        /* v1.178: Verweise auf Hell, sonst zu blass */
@@ -2641,9 +2652,22 @@ input.schalter:checked::after{transform:translateX(20px)}
 .list-item.frei{cursor:default}
 /* v1.221: Vorschlag „Deckt … ab“ direkt unter dem FI in der Liste */
 /* v1.223: der eben bearbeitete Kreis leuchtet beim Zurück kurz auf */
-.list-item.zuletzt{animation:zuletztAuf 1.8s ease-out}
-@keyframes zuletztAuf{0%,35%{box-shadow:0 0 0 3px var(--brand)}100%{box-shadow:0 0 0 0 transparent}}
-@media (prefers-reduced-motion:reduce){ .list-item.zuletzt{animation:none;box-shadow:0 0 0 3px var(--brand)} }
+.zuletzt{animation:zuletztAuf 1.8s ease-out}
+@keyframes zuletztAuf{0%,35%{box-shadow:0 0 0 3px var(--ring, var(--brand))}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){ .zuletzt{animation:none;box-shadow:0 0 0 3px var(--ring, var(--brand))} }
+/* v1.257 (Designteam): der Rahmen in der Farbe des Zustands – ein grüner Ring um
+   einen roten Kreis sah nach „alles gut“ aus */
+.z-bad,.state-red,.warn:not(.gelb):not(.ok){--ring:var(--fault)}
+.z-ask,.state-yellow,.warn.gelb{--ring:var(--signal-ink)}
+.z-none,.z-liefer{--ring:var(--neutral)}
+.z-open,.z-plain{--ring:var(--ink-soft)}
+/* v1.257: Rückmeldung beim Berühren – vorher zeigte sich ein Tipp oft erst beim
+   Loslassen. Beim Halten am Griff (Ordnen) bleibt die Zeile hell. */
+.btn,.list-item,.sug,.chk,.seg button,.linkbtn{transition:filter var(--t-tipp) var(--k-std)}
+.btn:not(:disabled):active,.list-item:not(.ord-zeile):active,.ord-zeile:active:not(:has(.ord-griff:active)),
+.sug:active,.chk:active,.seg button:not(:disabled):active,.linkbtn:active{filter:brightness(.88);transition:none}
+.btn.primary:not(:disabled):active,.chk.on:active{filter:brightness(1.35)}
+.btn.gesperrt{background:var(--neutral-bg);color:var(--ink-soft);border-color:var(--line)}
 .kreis-ok{font-size:14px;color:var(--ink-soft);margin:0 0 10px;display:flex;gap:6px;align-items:baseline}
 .kreis-ok b{color:var(--ink);font-weight:600}
 .fi-uebernehmen{width:100%;min-height:44px;margin:-4px 0 10px;font-size:15px;border-style:dashed}
@@ -2953,6 +2977,14 @@ input.ungueltig{border-color:var(--fault)!important;color:var(--fault)}   /* v1.
 }
 
 #modalBody div{margin-bottom:8px;font-size:15px}
+/* v1.257 (Designteam): Rückfragen gleiten herein (iPhone: von unten), Schließen
+   ist sofort – @starting-style greift nur beim Erscheinen, nicht bei neuem Inhalt */
+@media (prefers-reduced-motion:no-preference){
+  #modal{transition:background-color var(--t-blatt) var(--k-std)}
+  #modal .modal-box{transition:transform var(--t-blatt) var(--k-an), opacity var(--t-blatt) var(--k-an)}
+  @starting-style{ #modal{background-color:rgba(8,11,13,0)} #modal .modal-box{opacity:0;transform:translateY(12px)} }
+  @media (max-width:700px){ @starting-style{ #modal .modal-box{opacity:1;transform:translateY(100%)} } }
+}
 
 /* ---------- Druckblätter: Aussehen für Vorschau und Ausdruck ---------- */
 .paper{font-family:var(--f-body);color:#000;font-size:11pt}
@@ -3850,9 +3882,10 @@ function nameGross(s){
 
     <!-- ========== STROMKREIS ========== -->
     <section class="view" id="view-circuit">
+      <!-- v1.223; seit v1.257 vor den Spalten, sonst war es im Messen mit dem Gerät versteckt -->
+      <div class="kreis-ok" id="kreisOk" hidden></div>
       <div class="panes">
         <div class="pane" id="paneGeraet">     <!-- zweispaltig links: Geraet -->
-          <div class="kreis-ok" id="kreisOk" hidden></div>   <!-- v1.223 -->
           <div class="warn gelb" id="samZwHinweis" hidden style="margin-bottom:12px"></div>   <!-- v1.206 -->
           <div class="sam-streifen" id="cStreifen" hidden></div>   <!-- v1.208 -->
           <!-- v1.163: Platz, Breite und Geräteart in der Reihenfolge, in der man den
@@ -4424,7 +4457,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.256';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.257';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 28.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -7339,7 +7372,7 @@ function ordnenFiEinfuegen(){
     let k = 0;
     PROJ.items = PROJ.items.map(it => (it.kind === 'circuit' || it.kind === 'frei') ? neu[k++] : it);
   } else PROJ.items.splice(ziel ? PROJ.items.indexOf(ziel) : PROJ.items.length, 0, fi);
-  ordnenWahl.clear(); saveProj(); renderBoard();
+  ordnenWahl.clear(); saveProj(); renderBoard(); zeileLeuchten(fi.cid, true);
   toast(mit.length ? `FI eingefügt – deckt ${mit.length === 1 ? 'die markierte Leitung' : `die ${mit.length} markierten Leitungen`} ab`
     : 'FI eingefügt – am ≡ an seinen Platz ziehen');
 }
@@ -7358,7 +7391,7 @@ $('#btnPlanGeraet').onclick = () => {
     g.breaker = breakerOf(g);
     const erste = planZeilen().find(c => ordnenWahl.has(c.cid)) || planZeilen()[0];
     PROJ.items.splice(erste ? PROJ.items.indexOf(erste) : PROJ.items.length, 0, g);
-    ordnenWahl.clear(); saveProj(); renderBoard();
+    ordnenWahl.clear(); saveProj(); renderBoard(); zeileLeuchten(g.cid, true);
     toast(`${e.name} eingefügt – am ≡ an seinen Platz ziehen`);
   }})), {t:'Abbrechen', cls:'ghost', fn:null}]);
 };
@@ -7376,6 +7409,7 @@ $('#btnPlanFrei').onclick = () => {
   const zeigen = () => { const el = $(`#boardBody [data-ord="${f.cid}"]`);
     if(el) bildNach(Math.max(0, imBild(el) - (bild().clientHeight - el.offsetHeight) / 2)); };
   zeigen(); requestAnimationFrame(zeigen); setTimeout(zeigen, 80);
+  zeileLeuchten(f.cid);
   toast('Freie TE eingefügt – Breite einstellen, am ≡ an ihren Platz ziehen');
 };
 /* Bezeichnungen und Orte zusammenführen, Doppeltes nur einmal. "Steckdose"
@@ -7420,6 +7454,7 @@ $('#btnPlanZus').onclick = () => {
     const c = sel[0], teile = c.teile.map(t => Object.assign({}, t, {cid:t.cid || neueKennung('K'), no:''}));
     PROJ.items.splice(PROJ.items.indexOf(c), 1, ...teile);
     ordnenWahl.clear(); saveProj(); renderBoard(); toast(`In ${teile.length} Leitungen getrennt`);
+    setTimeout(() => teile.forEach(t => zeileLeuchten(t.cid)), 100);   // v1.257: nach lageHalten
     return;
   }
   if(planZeilen().some(c => istFrei(c) && ordnenWahl.has(c.cid))){ toast('Freie TE lassen sich nicht zusammenlegen'); return; }
@@ -7447,6 +7482,7 @@ $('#btnPlanZus').onclick = () => {
   sel.slice(1).forEach(c => PROJ.items.splice(PROJ.items.indexOf(c), 1));
   ordnenWahl.clear();                              // v1.194 (Jean): danach nichts mehr markiert
   saveProj(); renderBoard(); toast(`${sel.length} Leitungen zusammengelegt`);
+  setTimeout(() => zeileLeuchten(neu.cid), 100);   // v1.257: nach lageHalten
 };
 $('#btnPlanWeg').onclick = () => {
   const sel = planZeilen().filter(c => ordnenWahl.has(c.cid));          // v1.218: auch freie Zeilen
@@ -9216,8 +9252,24 @@ function kreisHervorheben(cid){
   let unten = m.bottom;
   $$('.view.active .actionbar').forEach(a => { const q = a.getBoundingClientRect(); if(q.height && q.top < unten) unten = q.top; });
   if(r.top < m.top + 8 || r.bottom > unten - 8) bildNach(imBild(el) - Math.round((unten - m.top) / 3));
+  aufleuchten(el);
+}
+/* v1.257 (Designteam): eine Zeile oder Karte leuchtet kurz in ihrer Zustandsfarbe */
+function aufleuchten(el){
+  if(!el) return;
   el.classList.remove('zuletzt'); void el.offsetWidth; el.classList.add('zuletzt');
   setTimeout(() => el.classList.remove('zuletzt'), 1800);
+}
+/* v1.257: neue Zeile im Ordnen – ins Bild holen, falls sie draußen liegt, dann leuchten */
+function zeileLeuchten(cid, rollen){
+  const el = $(`#boardBody [data-ord="${cid}"]`); if(!el) return;
+  if(rollen){
+    const r = el.getBoundingClientRect(), m = bild().getBoundingClientRect();
+    let unten = m.bottom;
+    $$('.view.active .actionbar').forEach(a => { const q = a.getBoundingClientRect(); if(q.height && q.top < unten) unten = q.top; });
+    if(r.top < m.top + 8 || r.bottom > unten - 8) bildNach(Math.max(0, imBild(el) - Math.round((unten - m.top) / 3)));
+  }
+  aufleuchten(el);
 }
 function backToBoard(){ stack = archOffen ? ['home', 'archive'] : ['home']; go('board', false); }   // v1.181: aus der Ablage zurück dorthin
 
@@ -10252,7 +10304,11 @@ function renderFinish(){
   const za = $('#finZeitAendern'); if(za) za.hidden = lesen;
   const ex = $('#btnExportDocs');
   ex.textContent = archOffen ? 'Erneut ausgeben' : 'Ausgeben und ablegen';
-  ex.disabled = !!ausgabeSperre();
+  /* v1.257 (Designteam): gesperrt sieht grau aus, bleibt aber antippbar und
+     zeigt, was fehlt – ein gesperrter Knopf blieb stumm */
+  ex.disabled = false;
+  ex.classList.toggle('gesperrt', !!ausgabeSperre());
+  ex.setAttribute('aria-disabled', ausgabeSperre() ? 'true' : 'false');
 }
 
 /* --- Unterschrift im Vollbild (v1.161) ---
@@ -14277,7 +14333,13 @@ async function ablegen(wahl, nochmal, zwischen){
 /* Im Abschluss ist die Auswahl schon in der Ansicht getroffen – der Export
    nimmt sie unverändert und legt die Projektdaten immer mit dazu. */
 $('#btnExportDocs').onclick = () => {
-  if(!PROJ || ausgabeSperre()) return;
+  if(!PROJ) return;
+  if(ausgabeSperre()){                               // v1.257: zur ersten roten Karte
+    const k = $('#plausiOut .warn:not(.gelb):not(.ok)');
+    if(k){ bildNach(Math.max(0, imBild(k) - 12)); aufleuchten(k); }
+    toast('Noch nicht bereit – siehe rote Karte');
+    return;
+  }
   saveProj();
   const d = PROJ.docs || {};
   /* v1.161: vorher sagt ein Blatt, was hinausgeht und was danach passiert –
@@ -16223,6 +16285,8 @@ function lagerLiefern(o, mengen, schliessen){
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(art =>
   document.addEventListener(art, e => { if(e.cancelable) e.preventDefault(); },   // v1.129: auch in der Blattvorschau
                             {passive: false}));
+/* v1.257: Safari zeigt :active nur, wenn jemand auf Berührungen hört */
+document.addEventListener('touchstart', () => {}, {passive: true});
 lagerLaden();
 ablageLaden().catch(() => { archBereit = true; if(archLoeser) archLoeser(ARCH); });
 fotosUmziehen().catch(() => {});      // Altfotos aus dem localStorage in den Bildspeicher

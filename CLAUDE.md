@@ -419,8 +419,25 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Gesendet werden nur der getippte Text und dieser grobe Ort (Jean einverstanden).
   Test: Photon per `page.route` nachstellen (aus der Sitzung nicht erreichbar).
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.256, 28.10.2026)
+## Bewegung (Designteam 28.10.2026, Jean: Paket 1, dann 2 ohne rückende Zeilen, diese einzeln; kein Vibrieren)
 
+- **Paket 1 (v1.257):** Zeitmaße `--t-tipp`/`--t-weg`/`--t-blatt`, Kurven `--k-an`/`--k-std`.
+  `:active` dunkelt (`filter:brightness`) Knöpfe, Kacheln, Zeilen; im Ordnen nicht beim Halten
+  am Griff (`:has(.ord-griff:active)`); leerer `touchstart`-Hörer, sonst zeigt iOS kein `:active`.
+  `#kreisOk` steht vor `.panes` (im Messen ist `#paneGeraet` versteckt). `aufleuchten(el)` /
+  `zeileLeuchten(cid, rollen)`: `.zuletzt` allgemein, Ringfarbe `--ring` nach Zustand; nach
+  „+ Gerät“/FI, „+ Frei“, Zusammenlegen/Trennen (100 ms, nach `lageHalten`). `#btnExportDocs`
+  nie `disabled`, sondern `.gesperrt` + `aria-disabled`; Tipp springt zur ersten roten Karte
+  (`#plausiOut .warn:not(.gelb):not(.ok)`). `#modal` gleitet per `@starting-style` herein,
+  Schließen sofort. Nicht anfassen: Bewegung auf `.view`/`main`/`.app`, sanftes Scrollen, Ziehen.
+- **Als Nächstes Paket 2:** Ansichtswechsel überblenden, Gleiter in der Bereichsleiste, Prüfpunkt
+  leuchtet, „Weiter → N“ hebt die Nummer, Fehlermeldungen rot und nicht über der Fußleiste,
+  „Wird vorbereitet …“ beim Ausgeben. Danach rückende Zeilen (FLIP, Entwurf `sanftNeu`) einzeln.
+  Paket 3 ohne Vibrieren (Jean: weglassen). Grenzwert-Blatt doppelt: Jean nie gesehen.
+
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.257, 28.10.2026)
+
+- **Bewegung (v1.257):** Antippen, Aufleuchten, Blatt von unten, „Ausgeben“ mit Sprung am Gerät ansehen.
 - **Adressvorschläge (v1.256):** echte Treffer von Photon und die Standortfrage von iOS am Gerät ansehen.
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
