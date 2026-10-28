@@ -455,14 +455,14 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   100%)}` (v1.265) nötig ist, blieb ungeklärt – drin gelassen. Offen: Knopf „Weiter → N“ unter dem
   letzten Feld bei offener Tastatur (Vorschlag, Fragen 2/3 an Jean).
 - **Tastatur (v1.268):** `feldFreiholen` rollt nur, wenn das Feld wirklich unter der Kante liegt (vorher schon
-  bei < 12 Punkten Abstand – Zucken beim Einblenden). Messhilfe `TPROT`/`#btnTastProt` (Einstellungen › Konto)
-  wieder drin für den zu hohen Sprung zum Schutzleiterwiderstand (im Test landet er richtig) – danach entfernen.
+  bei < 12 Punkten Abstand – Zucken beim Einblenden). Messhilfe (v1.268)
+  für den Sprung zum Schutzleiterwiderstand, mit v1.270 wieder entfernt.
 - **Fokus ruhig (v1.269, Protokoll):** iOS rollte `<main>` beim Fokus trotz `preventScroll` (Sprung zu R_PE:
   main 0 → 292 vor `feldFreiholen`). `fokusRuhig(el)` (in `messWeiter` und im `touchend`-Wechsel) setzt die
-  Lage sofort zurück und ruft `feldFreiholen`. Messhilfe bleibt bis zur Bestätigung.
+  Lage sofort zurück und ruft `feldFreiholen`. Von Jean bestätigt (28.10.2026).
 - Paket 3 ohne Vibrieren (Jean: weglassen). Grenzwert-Blatt doppelt: Jean nie gesehen.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.269, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.270, 28.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
@@ -496,7 +496,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Verteilerbeschreibung auf einem Blatt (v1.190), Zusammenlegen ohne Markierung
   (v1.194), Ziehen gleitend (v1.195, „sehr schön“), Griff mit Halten und ruhige Liste beim
   Ziehen, Zusammenlegen und Antippen freier TE (v1.236–v1.241, 21.10.2026), Verschieben in Reihen samt
-  Gruppe ziehen, neuen und geleerten Reihen (v1.244–v1.252, 25.10.2026: „funktioniert jetzt“), langes Blatt „Leitung hinzufügen“ – Inhalt federt, Knöpfe stehen (v1.262, 28.10.2026), Bewegungen (v1.257–v1.260) und Adressvorschläge (v1.256), ruhiger Feldwechsel mit Tastatur (v1.266), 28.10.2026.
+  Gruppe ziehen, neuen und geleerten Reihen (v1.244–v1.252, 25.10.2026: „funktioniert jetzt“), langes Blatt „Leitung hinzufügen“ – Inhalt federt, Knöpfe stehen (v1.262, 28.10.2026), Bewegungen (v1.257–v1.260) und Adressvorschläge (v1.256), ruhiger Feldwechsel und Sprung zum Schutzleiterwiderstand mit Tastatur (v1.266–v1.269), 28.10.2026.
 
 ## SAM (Beta)
 
