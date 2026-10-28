@@ -450,9 +450,13 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **Sprung ins nächste Messfeld (v1.263, Jean, Aufnahme):** `messWeiter` fokussiert mit
   `preventScroll` – iOS rollte sonst die ganze Seite und ließ sie zurückgleiten. Offen: Knopf
   „Weiter → N“ unter dem letzten Feld bei offener Tastatur (Vorschlag, Fragen 2/3 an Jean).
+- **Messhilfe Tastatur (v1.264, vorläufig – wieder entfernen):** `TPROT`/`tprot` protokolliert focusin/out,
+  touchstart, vv resize/scroll, window scroll, `scrollTo` der App und 700 ms je Bild nach dem Fokus;
+  `#btnTastProt` unter Einstellungen › Konto kopiert es. Anlass: Inhalt gleitet bei jedem Feldwechsel
+  (auch beim Antippen) von unten hoch, Kopfleiste mit – also Fenster-/Sichtbereich, nicht `<main>`.
 - Paket 3 ohne Vibrieren (Jean: weglassen). Grenzwert-Blatt doppelt: Jean nie gesehen.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.263, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.264, 28.10.2026)
 
 - **Messfeld-Sprung ohne Hochgleiten (v1.263)** am iPhone prüfen.
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-

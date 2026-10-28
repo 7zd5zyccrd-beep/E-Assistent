@@ -10,6 +10,10 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.264 28.10.2026 Messhilfe Tastatur (vorlaeufig, Jean: Inhalt gleitet bei jedem Feldwechsel
+                    von unten hoch): die App merkt sich still, was iOS beim Fokus meldet
+                    (Tastaturhoehe, Verschiebung der Seite, eigenes Rollen). Einstellungen ›
+                    Konto, ganz unten: "Tastatur-Protokoll kopieren". Wird wieder entfernt.
   v1.263 28.10.2026 Messen (Jean, Aufnahme: beim Sprung ins naechste Messfeld kam der Inhalt
                     von unten hoch, obwohl alles an seinem Platz bleiben konnte): der Sprung
                     nach einem vollstaendigen Wert (und nach "999") laesst das Bild stehen.
@@ -4289,6 +4293,7 @@ function nameGross(s){
           <button class="btn ghost" id="btnReload">App neu laden</button>
         </div>
         <p class="muted small" id="buildTagSet"></p>
+        <button class="linkbtn small" id="btnTastProt" type="button">Tastatur-Protokoll kopieren</button>   <!-- v1.264, vorläufig -->
       </div>
 
       <div class="set-seite" data-seite="daten" hidden>
@@ -4503,7 +4508,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.263';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.264';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 28.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -5203,6 +5208,38 @@ if(window.visualViewport) window.visualViewport.addEventListener('resize', () =>
    Geht die Tastatur auf, wird <main> kürzer, statt dass iOS die ganze Seite
    samt Kopfleiste hochschiebt; das Feld mit dem Cursor bleibt im Bild. Damit
    entfällt das Mitführen der Kopfzeile (kopfMitfuehren, bis v1.127). */
+/* v1.264 – Messhilfe, vorläufig (Jean: bei jedem Feldwechsel gleitet der Inhalt von
+   unten hoch, hier nicht nachstellbar). Hält still fest, was iOS meldet und was die
+   App selbst rollt; nach jedem Fokus 700 ms lang je Bild die Lage der Kopfleiste.
+   Kopieren unter Einstellungen, ganz unten. Nach der Klärung wieder entfernen. */
+const TPROT = [], TPROT_T0 = performance.now();
+function tprot(was){
+  const vv = window.visualViewport, f = document.activeElement;
+  const kopf = document.querySelector('header'), m = document.querySelector('main');
+  TPROT.push([Math.round(performance.now() - TPROT_T0), was,
+    'vvH=' + (vv ? Math.round(vv.height) : '-'), 'vvTop=' + (vv ? Math.round(vv.offsetTop) : '-'),
+    'innerH=' + window.innerHeight, 'scrollY=' + Math.round(window.scrollY),
+    'kopf=' + (kopf ? Math.round(kopf.getBoundingClientRect().top) : '-'),
+    'main=' + (m ? Math.round(m.scrollTop) : '-'),
+    'appH=' + (document.documentElement.style.getPropertyValue('--app-h') || '-'),
+    'fokus=' + (f && f.id ? f.id : (f ? f.tagName : '-'))].join(' '));
+  if(TPROT.length > 600) TPROT.splice(0, TPROT.length - 600);
+}
+(function(){
+  const s2 = window.scrollTo.bind(window);
+  window.scrollTo = (...a) => { tprot('App: scrollTo(' + a.join(',') + ')'); return s2(...a); };
+  let bis = 0;
+  const folgen = () => { tprot('Bild'); if(performance.now() < bis) requestAnimationFrame(folgen); };
+  document.addEventListener('focusin', e => { tprot('focusin ' + (e.target.id || e.target.tagName));
+    const lief = performance.now() < bis; bis = performance.now() + 700; if(!lief) requestAnimationFrame(folgen); }, true);
+  document.addEventListener('focusout', e => tprot('focusout ' + (e.target.id || e.target.tagName)), true);
+  document.addEventListener('touchstart', e => tprot('touchstart ' + ((e.target.closest && e.target.closest('[id]') || {}).id || '')), {capture:true, passive:true});
+  window.addEventListener('scroll', () => tprot('window scroll'), {passive:true});
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', () => tprot('vv resize'));
+    window.visualViewport.addEventListener('scroll', () => tprot('vv scroll'));
+  }
+})();
 (function hoeheBinden(){
   const vv = window.visualViewport;
   const setzen = () => {
@@ -16186,6 +16223,11 @@ function lagerBestFertig(msg){ lagerBestEntwurf = null; toast(msg); zurueckStape
    Das Feld ist schreibgeschützt, damit keine Tastatur aufgeht; das Abwählen vor
    dem Entfernen holt die Fußleiste zurück, die beim Fokus weggeschoben wurde.
    Klappt der alte Weg nicht, wird die neue Schnittstelle versucht. */
+$('#btnTastProt').onclick = () => {                 // v1.264, vorläufig
+  const text = BUILD + ' · ' + navigator.userAgent + '\n' + TPROT.join('\n');
+  if(lagerKopieren(text)) toast(`Protokoll kopiert (${TPROT.length} Zeilen) – bitte in den Chat einfügen`);
+  else toast('Kopieren ging nicht', 'fehler');
+};
 function lagerKopieren(text){
   let ok = false;
   const ta = document.createElement('textarea');
