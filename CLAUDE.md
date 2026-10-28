@@ -76,7 +76,7 @@ GitHub Pages aus `main` ausgeliefert. Nutzer ist Jean, Elektriker, kein Entwickl
   `BLATT_MAX`, waagrecht rollt `#sheets`, senkrecht `<main>`; Knopf
   „Einpassen“. Der Bildbetrachter der Fotos hat seinen eigenen Zoom.
 - **Nicht markierbar (v1.276, Jean):** `body{user-select:none;-webkit-touch-callout:none}`, Eingabefelder wieder
-  `text`; `blattDatei` hebt es für die Blätter auf.
+  `text`; `blattDatei` hebt es für die Blätter auf. Von Jean bestätigt (28.10.2026).
 - **Kein Scroll-Anker** (`*{overflow-anchor:none}`): iOS 27 ließ in der
   Nachweise-App die Seite beim Tippen ans Ende springen.
 - **Ausgegebene Blätter** (`blattDatei`) übernehmen alle Stilregeln der App.
