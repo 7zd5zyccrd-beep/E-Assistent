@@ -10,6 +10,10 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.282 28.10.2026 iPad quer (Designteam, Jean: so umsetzen): im Erfassen stehen Absicherung,
+                    Pole, "Deckt Kreise ab" und Kabelart in der rechten Spalte ueber den
+                    Messwerten - ein Kreis passt ohne Rollen auf den Schirm. iPhone und Messen
+                    bleiben, wie sie sind.
   v1.281 28.10.2026 Designteam, Rest (Jean: so umsetzen): Pruefpunkt-Abschnitte ohne offenen
                     Punkt und ohne Mangel sind zu einer Zeile eingeklappt (Antippen klappt auf).
                     Abschluss in der Reihenfolge der Arbeit: Dokumente, Auftraggeber (als Zeile
@@ -4094,6 +4098,8 @@ function nameGross(s){
             <div class="chk-grid" id="roomOpts"></div>
           </div>
 
+          <!-- v1.282: Block wandert auf dem iPad quer im Erfassen in die rechte Spalte (technikVerteilen) -->
+          <div id="technikBlock">
           <div class="field" id="fldAbs"><span>Absicherung</span><div class="chk-grid kacheln" id="absKacheln"></div></div>
           <div class="row" id="rowDevice">
             <label class="field narrow" id="fldChar"><span>Charakteristik</span><select id="cChar"></select></label>
@@ -4111,9 +4117,11 @@ function nameGross(s){
           </div>
           <div class="warn gelb" id="ovZeile" hidden></div>
           <div class="field" id="fldCable"><span>Kabelart</span><div class="chk-grid kacheln" id="kabelKacheln"></div><select id="cCable" hidden></select></div>
+          </div>
         </div>
 
         <div class="pane">                     <!-- zweispaltig rechts: Messwerte -->
+          <div id="paneTechnik"></div>          <!-- v1.282 -->
           <div class="card" id="messKopf" hidden style="margin-bottom:14px"></div>
           <div id="samKabel" hidden style="margin-bottom:14px">
             <div class="eyebrow">Kabelart</div>
@@ -4638,7 +4646,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.281';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.282';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 28.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -8179,6 +8187,7 @@ function openCircuit(idx){
   samZwZeigen();                                     // v1.206
   syncCircuitUi(); go('circuit');
   kreisTitel();                                      // v1.223
+  technikVerteilen();                                // v1.282
   /* v1.223: was eben gespeichert wurde, steht klein oben – verdeckt nichts und
      verschwindet beim ersten Tippen */
   $('#kreisOk').hidden = !kreisOkText;
@@ -9295,6 +9304,17 @@ function messteilZeigen(){
   $('#trafoHinweis').hidden = !trafo;
   messKlappe();
 }
+/* v1.282 (Designteam): stehen die Spalten nebeneinander (iPad quer), gehören im Erfassen
+   Absicherung, Pole, Abdeckung und Kabelart nach rechts – dort stand seit v1.226 nur noch
+   die eingeklappte Messwert-Zeile, links musste gerollt werden */
+function technikVerteilen(){
+  const blk = $('#technikBlock'), panes = $('#view-circuit .panes');
+  if(!blk || !panes || current !== 'circuit') return;
+  const zwei = getComputedStyle(panes).display === 'grid' && !messModus();
+  const ziel = zwei ? $('#paneTechnik') : $('#paneGeraet');
+  if(blk.parentElement !== ziel) ziel.append(blk);
+}
+window.addEventListener('resize', () => technikVerteilen());
 function syncCircuitUi(){
   const dev = segVal('#segDevice'), st = segVal('#segStatus');
   const sp  = !!draft.special;              // Sonstiges Gerät gewählt
