@@ -408,8 +408,20 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   rief `go` erneut auf, endlos. Neue Rechnungen, die beim Zeichnen etwas am Projekt ändern, im
   Lesemodus ebenso aussetzen (Test: `go` zählen nach `archAnsehen`).
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.255, 26.10.2026)
+## Adressvorschläge (v1.256, Jean 1–4 ja)
 
+- `#npAddress` (Neues Projekt und Projektdaten) zeigt unter dem Feld Kacheln `#adrSug`
+  (`renderAdrSug`): zuerst eigene Adressen aus Projekten und Ablage (`adrEigene`, „früher“),
+  dann Treffer von Photon (`ADR_DIENST`, ab 3 Zeichen, 300 ms Pause, `adrCache`), höchstens 4.
+  Antippen setzt „Straße Nr\nPLZ Ort“ und schließt die Tastatur. Ort für die Gewichtung:
+  `adrOrtHolen` – Standort auf 2 Nachkommastellen (~1 km); ohne Freigabe oder ohne Antwort
+  nach 6 s der Ort aus der zweiten Zeile des jüngsten eigenen Projekts (Photon, `limit=1`).
+  Gesendet werden nur der getippte Text und dieser grobe Ort (Jean einverstanden).
+  Test: Photon per `page.route` nachstellen (aus der Sitzung nicht erreichbar).
+
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.256, 28.10.2026)
+
+- **Adressvorschläge (v1.256):** echte Treffer von Photon und die Standortfrage von iOS am Gerät ansehen.
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
   prüfung (Druckvorlage, Schnittlinie, Probebogen und Quellen in `vorlagen/pruefaufkleber/`). Am Ausdruck prüfen: Ü (v1.209), Größe.

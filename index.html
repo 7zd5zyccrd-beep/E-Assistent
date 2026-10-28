@@ -10,6 +10,12 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.256 28.10.2026 Adressvorschlaege beim Tippen (Jean, 1-4 ja): ab drei Zeichen bis zu
+                    vier Kacheln unter dem Adressfeld - zuerst eigene Adressen aus Projekten
+                    und Ablage ("frueher", auch ohne Netz), dann Strassen aus OpenStreetMap
+                    (Dienst Photon). Der Ort kommt grob vom Geraet, sonst aus dem letzten
+                    Projekt, und sortiert nur vor. Ein Tipp traegt Strasse/Hausnummer und
+                    PLZ/Ort ein. Beim neuen Projekt und in den Projektdaten.
   v1.255 26.10.2026 Ablage (Jean: Projekt geoeffnet, Bild eingefroren, kein Knopf reagierte):
                     bei Neuinstallationen aus aelteren Versionen rechnete das Ansehen die
                     Dokumentauswahl und Nummern neu, der Lesemodus setzte zurueck und
@@ -2521,6 +2527,13 @@ input.schalter:checked::after{transform:translateX(20px)}
 .le-zeile button.weg{color:var(--fault)}
 .le-vor{font-size:11px;font-weight:600;color:var(--signal-ink);border:1px solid var(--signal);border-radius:4px;padding:1px 5px;white-space:nowrap}
 .feld-mit-knopf{position:relative}
+/* v1.256: Adressvorschläge – zwei Zeilen je Kachel, eigene Adressen mit „früher“ */
+.adr-sug{margin-top:8px;flex-direction:column;flex-wrap:nowrap}
+.adr-sug .sug.adr{width:100%}
+.adr-sug .sug.adr{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:2px;position:relative;padding:8px 12px}
+.adr-sug .sug.adr b{font-weight:600}
+.adr-sug .sug.adr span{font-size:13px;opacity:.75}
+.adr-sug .sug.adr i{position:absolute;right:10px;top:8px;font-style:normal;font-size:11px;opacity:.6}
 .feldknopf{position:absolute;right:0;top:-14px;display:flex;align-items:center;gap:4px;padding:14px 2px 14px 8px;border:0;
   background:none;color:var(--brand-ink, var(--brand-dark));font-size:14px;font-weight:600}   /* v1.183: dunkler, 44 px hoch */
 #btnCreate.zweizeilig small{font-size:13px}
@@ -3680,7 +3693,8 @@ function nameGross(s){
         <button class="feldknopf" id="btnGps" type="button"><svg viewBox="0 0 24 24" width="16" height="16" fill="none"
           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path
           d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>Standort</button>
-        <textarea id="npAddress" placeholder="Straße Hausnummer&#10;PLZ Ort"></textarea>
+        <textarea id="npAddress" placeholder="Straße Hausnummer&#10;PLZ Ort" autocomplete="off"></textarea>
+        <div class="chk-grid adr-sug" id="adrSug" hidden></div>
       </div>
       <p class="muted small" id="gpsOut" style="margin:-6px 0 0"></p>
 
@@ -4410,8 +4424,8 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.255';                    // siehe Änderungsliste im Dateikopf
-const BUILD        = VERSION + ' · 26.10.2026';
+const VERSION      = 'v1.256';                    // siehe Änderungsliste im Dateikopf
+const BUILD        = VERSION + ' · 28.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
 const DAUER_WARN   = 100;                        // zu lang: unplausibel im Protokoll
@@ -5015,7 +5029,7 @@ function tastaturKante(){
   if(tastaturOffen()) return vv.height + (vv.offsetTop || 0);
   return ruheH - Math.max(300, Math.round(ruheH * 0.45));   // Schätzung: Ziffern- bis Texttastatur
 }
-const BEGLEITER = {mIso:'#isoSug', fIso:'#fIsoSug', cCovers:'#coversSug'};
+const BEGLEITER = {mIso:'#isoSug', fIso:'#fIsoSug', cCovers:'#coversSug', npAddress:'#adrSug'};   // v1.256: Adressvorschläge
 function feldFreiholen(){
   const el = document.activeElement;
   if(!(el instanceof HTMLElement) || !el.matches('input, select, textarea')) return;
@@ -5814,6 +5828,119 @@ $('#btnGps').onclick = async () => {
     }catch(e){ out.textContent = `Adresssuche nicht erreichbar. Koordinaten: ${la.toFixed(5)}, ${lo.toFixed(5)}`; }
   }, err => { out.textContent = 'Standort nicht verfügbar: ' + err.message; }, {enableHighAccuracy:true, timeout:12000});
 };
+/* --- Adresse: Vorschläge beim Tippen (v1.256, Jean 1–4 ja) ---
+   Ab drei Zeichen bis zu vier Kacheln: zuerst eigene Adressen (offene Projekte, dann
+   die gemeinsame Ablage – gehen auch ohne Netz), dann Straßen vom Dienst Photon
+   (OpenStreetMap, für das Vorschlagen beim Tippen gebaut; Nominatim verbietet das).
+   Hinaus gehen nur das Getippte und ein grober Ort (zwei Nachkommastellen, etwa
+   1 km) – nie Wohnung oder Kunde. Der Ort kommt einmal grob vom Gerät, sonst aus
+   dem zuletzt angelegten Projekt; er sortiert nur vor, andere Orte bleiben
+   auffindbar (Jean: wird ein Projekt später angelegt, steht man woanders). */
+const ADR_DIENST = 'https://photon.komoot.io/api/';
+let adrOrt = null, adrOrtLaeuft = false, adrTimer = null, adrBlurTimer = null, adrNr = 0, adrNetz = [];
+const adrCache = new Map();
+const adrNorm = t => String(t || '').toLowerCase().replace(/ß/g, 'ss').replace(/str\.?(?=\s|$)/g, 'strasse').replace(/straße/g, 'strasse').replace(/[^a-z0-9äöü]+/g, ' ').trim();
+function adrEigene(){
+  /* offene Projekte (neueste zuerst), dann die Ablage (schon neueste zuerst) */
+  const proj = (PROJECTS || []).filter(p => p && p.address).slice().sort((a, b) => (b.angelegt || 0) - (a.angelegt || 0)).map(p => p.address);
+  const arch = (ARCH || []).map(e => e && (e.adresse || (e.stand && e.stand.address))).filter(Boolean);
+  const gesehen = new Set(), out = [];
+  [...proj, ...arch].forEach(a => {
+    const t = String(a).trim(), k = adrNorm(t.split('\n')[0]) + '|' + adrNorm(t.split('\n')[1]);
+    if(!t || gesehen.has(k)) return;
+    gesehen.add(k); out.push(t);
+  });
+  return out;
+}
+/* grober Ort: einmal vom Gerät (ungenau, darf alt sein), sonst aus dem letzten Projekt */
+function adrOrtHolen(){
+  if(adrOrt || adrOrtLaeuft) return;
+  adrOrtLaeuft = true;
+  const ausProjekt = async () => {
+    const zeile = (adrEigene()[0] || '').split('\n')[1];
+    if(!zeile){ adrOrtLaeuft = false; return; }
+    try{
+      const r = await fetch(`${ADR_DIENST}?q=${encodeURIComponent(zeile)}&limit=1&lang=de`);
+      const f = ((await r.json()).features || [])[0];
+      if(f) adrOrt = {lat:+f.geometry.coordinates[1].toFixed(2), lon:+f.geometry.coordinates[0].toFixed(2)};
+    }catch(e){}
+    adrOrtLaeuft = false;
+  };
+  if(!navigator.geolocation){ ausProjekt(); return; }
+  /* die Frage nach der Freigabe kann unbeantwortet stehen bleiben – dann zählt die
+     Zeitgrenze nicht; nach 6 s gilt der Ort aus dem letzten Projekt */
+  let fertig = false;
+  const sonst = () => { if(fertig) return; fertig = true; ausProjekt(); };
+  const t = setTimeout(sonst, 6000);
+  navigator.geolocation.getCurrentPosition(
+    pos => { if(fertig) return; fertig = true; clearTimeout(t);
+      adrOrt = {lat:+pos.coords.latitude.toFixed(2), lon:+pos.coords.longitude.toFixed(2)}; adrOrtLaeuft = false; },
+    () => { clearTimeout(t); sonst(); },
+    {enableHighAccuracy:false, maximumAge:30 * 60000, timeout:6000});
+}
+/* ein Treffer des Dienstes als zwei Zeilen; ohne Hausnummer im Treffer gilt die getippte */
+function adrAusTreffer(p, hnGetippt){
+  const strasse = p.street || (p.type === 'street' || p.osm_key === 'highway' ? p.name : '');
+  if(!strasse) return null;
+  const hn = p.housenumber || hnGetippt || '';
+  const ort = p.city || p.town || p.village || p.locality || p.district || '';
+  const z2 = [p.postcode, ort].filter(Boolean).join(' ');
+  return [[strasse, hn].filter(Boolean).join(' '), z2].filter(Boolean).join('\n');
+}
+async function adrNetzSuchen(q, nr){
+  const hn = (q.match(/\s(\d+\s?[a-zA-Z]?)\s*$/) || [])[1] || '';
+  const url = `${ADR_DIENST}?q=${encodeURIComponent(q)}&limit=8&lang=de` + (adrOrt ? `&lat=${adrOrt.lat}&lon=${adrOrt.lon}` : '');
+  let feats = adrCache.get(url);
+  if(!feats){
+    try{
+      const r = await fetch(url);
+      feats = (await r.json()).features || [];
+      adrCache.set(url, feats);
+    }catch(e){ feats = []; }
+  }
+  if(nr !== adrNr) return;                          // inzwischen weitergetippt
+  adrNetz = feats.map(f => adrAusTreffer(f.properties || {}, hn)).filter(Boolean);
+  renderAdrSug();
+}
+function renderAdrSug(){
+  const inp = $('#npAddress'), box = $('#adrSug');
+  const q = inp.value.replace(/\n/g, ' ').trim(), qn = adrNorm(q);
+  const aktiv = document.activeElement === inp && qn.length >= 3;
+  let liste = [];
+  if(aktiv){
+    const eigene = adrEigene().filter(a => { const n = adrNorm(a.replace(/\n/g, ' ')); return n.startsWith(qn) || n.includes(' ' + qn); });
+    const gesehen = new Set();
+    liste = [...eigene.map(a => ({a, eigen:true})), ...adrNetz.map(a => ({a}))]
+      .filter(x => { const k = adrNorm(x.a.replace(/\n/g, ' ')); if(gesehen.has(k) || k === qn) return false; gesehen.add(k); return true; })
+      .slice(0, 4);
+  }
+  box.hidden = !liste.length;
+  box.innerHTML = liste.map((x, i) => { const [z1, z2] = x.a.split('\n');
+    return `<button class="sug adr" type="button" data-i="${i}"><b>${esc(z1)}</b>${z2 ? `<span>${esc(z2)}</span>` : ''}${x.eigen ? '<i>früher</i>' : ''}</button>`; }).join('');
+  $$('#adrSug button').forEach(b => {
+    b.onclick = () => {
+      clearTimeout(adrBlurTimer);
+      inp.value = liste[+b.dataset.i].a;
+      adrNetz = [];
+      box.hidden = true;
+      inp.blur();                                   // Adresse steht – Tastatur zu
+    };
+  });
+}
+$('#npAddress').addEventListener('input', () => {
+  adrOrtHolen();
+  renderAdrSug();                                   // eigene sofort
+  clearTimeout(adrTimer);
+  const q = $('#npAddress').value.replace(/\n/g, ' ').trim(), nr = ++adrNr;
+  if(adrNorm(q).length < 3){ adrNetz = []; renderAdrSug(); return; }
+  adrTimer = setTimeout(() => adrNetzSuchen(q, nr), 300);
+});
+$('#npAddress').addEventListener('focus', () => { clearTimeout(adrBlurTimer); adrOrtHolen(); renderAdrSug(); });
+$('#npAddress').addEventListener('blur', () => {
+  /* wie bei der Wohnung verzögert – sonst wäre die Kachel beim Tipp schon weg */
+  clearTimeout(adrBlurTimer);
+  adrBlurTimer = setTimeout(renderAdrSug, 400);
+});
 /* --- Wohnung: Vorschläge ergeben sich aus dem Feldinhalt ---
    Getippt werden nur Ziffern, die Wörter kommen über die Kacheln.
    Das leere Feld bietet beim Antippen „Erdgeschoss“ an, ein oder zwei Ziffern
