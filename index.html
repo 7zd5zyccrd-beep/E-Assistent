@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.271 28.10.2026 Messen (Jean: Tastatur ging zwischen zwei Kreisen zu und gleich wieder auf):
+                    solange getippt wird, steht unter dem letzten Messfeld "Weiter -> N". Ein
+                    Tipp speichert, oeffnet den naechsten Kreis und setzt den Cursor ins erste
+                    leere Feld - die Tastatur bleibt offen. Nach dem letzten Wert geht sie im
+                    Messen deshalb nicht mehr von selbst zu. Die Fussleiste bleibt, wie sie ist.
   v1.270 28.10.2026 Messhilfe Tastatur wieder entfernt (Jean: mit v1.269 bleibt alles ruhig).
   v1.269 28.10.2026 Sprung zum Schutzleiterwiderstand (Jean, Protokoll): iOS rollte die Liste
                     beim Sprung von sich aus 292 Punkte weit, obwohl es das nicht sollte. Die
@@ -4051,6 +4056,8 @@ function nameGross(s){
                 <label class="field"><span>Schutzleiterwiderstand</span><span class="unit"><input id="mRpe" inputmode="decimal"><em>Ω</em></span></label>
               </div>
             </div>
+            <!-- v1.271: bei offener Tastatur weiter zum nächsten Kreis, ohne sie zu schließen -->
+            <button class="btn primary" id="btnWeiterTast" type="button" hidden style="margin-top:2px">Weiter</button>
           </div>
           </div>
         </div>
@@ -4532,7 +4539,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.270';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.271';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 28.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -5184,6 +5191,10 @@ function feldFreiholen(){
   let unten = el.getBoundingClientRect().bottom;
   const b = BEGLEITER[el.id] && $(BEGLEITER[el.id]);
   if(b && b.getClientRects().length) unten = Math.max(unten, b.getBoundingClientRect().bottom);
+  /* v1.271: am letzten Messfeld gehört „Weiter →“ darunter mit ins Bild */
+  const wt = $('#btnWeiterTast');
+  if(!wt.hidden && el.closest('#measBlock')){ const f = messfelder($('#measBlock'));
+    if(f[f.length - 1] === el) unten = Math.max(unten, wt.getBoundingClientRect().bottom); }
   /* v1.268 (Jean: beim Einblenden ruckte das Feld): nur rollen, wenn die Tastatur das
      Feld wirklich verdeckt – dann mit 12 Punkten Luft. Vorher rollte schon ein Feld,
      das nur näher als 12 Punkte an der Tastatur lag. */
@@ -8080,9 +8091,45 @@ function naechstesLeeres(el){
    fokussieren – iOS rollte sonst die ganze Seite und ließ sie zurückgleiten. Ins Bild
    holt das Feld bei Bedarf feldFreiholen. preventScroll lässt die Tastatur seit
    v1.191 offen (dort beim FI erprobt; v1.22 war es anders). */
+/* v1.271 (Jean: zwischen zwei Kreisen ging die Tastatur zu und gleich wieder auf):
+   „Weiter →“ unter dem letzten Messfeld, solange im Messen getippt wird. Der Knopf
+   nimmt den Fokus nicht (mousedown/touchend ohne Vorgabe), speichert wie der Knopf der
+   Fußleiste und setzt den Cursor im nächsten Kreis ins erste leere Feld – im selben
+   Tipp, damit iOS die Tastatur offen lässt. */
+function weiterTastZeigen(){
+  const b = $('#btnWeiterTast'), a = document.activeElement;
+  const an = current === 'circuit' && messModus() && !(archOffen && archLesen)
+    && a instanceof HTMLInputElement && !!a.closest('#measBlock');
+  b.hidden = !an;
+  if(an) b.textContent = $('#btnSaveCircuit').textContent;
+}
+document.addEventListener('focusin', weiterTastZeigen);
+document.addEventListener('focusout', () => setTimeout(weiterTastZeigen, 0));
+function weiterTastLos(){
+  $('#btnSaveCircuit').click();
+  if(current !== 'circuit' || !$('#modal').hidden){         // letzter Kreis oder Rückfrage
+    if(current !== 'circuit' && document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    return;
+  }
+  const f = messfelder($('#measBlock')).find(messLeer);
+  if(f && document.activeElement !== f) fokusRuhig(f);
+  weiterTastZeigen();
+}
+$('#btnWeiterTast').addEventListener('mousedown', e => e.preventDefault());
+$('#btnWeiterTast').addEventListener('touchend', e => { if(e.cancelable) e.preventDefault(); weiterTastLos(); });
+$('#btnWeiterTast').addEventListener('click', weiterTastLos);
 function messWeiter(el){
   const n = naechstesLeeres(el);
-  if(n) fokusRuhig(n); else el.blur();
+  if(n){ fokusRuhig(n); return; }
+  /* v1.271: im Messen bleibt die Tastatur nach dem letzten Wert offen – „Weiter →“
+     steht darunter und kommt ins Bild; sonst ging sie zu und im nächsten Kreis wieder auf */
+  const wt = $('#btnWeiterTast');
+  if(!wt.hidden && el.closest('#measBlock')){
+    const r = wt.getBoundingClientRect(), kante = tastaturKante();
+    if(r.bottom > kante) bildNach(bildY() + r.bottom + 12 - kante);
+    return;
+  }
+  el.blur();
 }
 function messfeldLogik(isoSel, zsSel, sugSel){
   const iso = $(isoSel), zs = $(zsSel), sug = $(sugSel);

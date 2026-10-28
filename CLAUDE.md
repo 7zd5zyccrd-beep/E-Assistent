@@ -452,8 +452,13 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Fokus schob iOS das Fenster um 177 (scrollY), `scrollTo(0,0)` holte es zurück. Abhilfe: `touchend`
   auf ein anderes Feld bei offener Tastatur → `preventDefault`, `focus({preventScroll:true})`, Cursor
   ans Ende (v1.266); `messWeiter` ebenso mit `preventScroll` (v1.263). Ob `html,body{height:var(--app-h,
-  100%)}` (v1.265) nötig ist, blieb ungeklärt – drin gelassen. Offen: Knopf „Weiter → N“ unter dem
-  letzten Feld bei offener Tastatur (Vorschlag, Fragen 2/3 an Jean).
+  100%)}` (v1.265) nötig ist, blieb ungeklärt – drin gelassen.
+- **„Weiter →“ bei offener Tastatur (v1.271, Jean wie empfohlen: immer):** `#btnWeiterTast` am Ende von
+  `#measBlock`, sichtbar solange im Messen ein Messfeld den Fokus hat (`weiterTastZeigen` bei focusin/out),
+  Text wie `#btnSaveCircuit`. Nimmt den Fokus nicht (mousedown/touchend `preventDefault`); `weiterTastLos`
+  klickt `#btnSaveCircuit` und setzt im nächsten Kreis per `fokusRuhig` das erste leere Feld. `messWeiter`
+  lässt im Messen nach dem letzten Wert die Tastatur offen und holt den Knopf ins Bild (vorher `blur`);
+  `feldFreiholen` nimmt ihn am letzten Messfeld mit.
 - **Tastatur (v1.268):** `feldFreiholen` rollt nur, wenn das Feld wirklich unter der Kante liegt (vorher schon
   bei < 12 Punkten Abstand – Zucken beim Einblenden). Messhilfe (v1.268)
   für den Sprung zum Schutzleiterwiderstand, mit v1.270 wieder entfernt.
@@ -462,8 +467,9 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Lage sofort zurück und ruft `feldFreiholen`. Von Jean bestätigt (28.10.2026).
 - Paket 3 ohne Vibrieren (Jean: weglassen). Grenzwert-Blatt doppelt: Jean nie gesehen.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.270, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.271, 28.10.2026)
 
+- **„Weiter →“ bei offener Tastatur (v1.271):** bleibt die Tastatur beim Kreiswechsel offen?
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
   prüfung (Druckvorlage, Schnittlinie, Probebogen und Quellen in `vorlagen/pruefaufkleber/`). Am Ausdruck prüfen: Ü (v1.209), Größe.
