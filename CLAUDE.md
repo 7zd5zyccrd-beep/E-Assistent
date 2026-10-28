@@ -442,10 +442,13 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Zeilen von `SANFT_SEL`, höchstens 30, Schlüssel `data-ord`/`data-r`); `lageHalten(fn, abzug,
   sanft)` – sanft bei Zusammenlegen/Trennen, Entfernen, Rückgängig, „Nächste Reihe“, freie Zeile
   öffnen/ändern; nie nach dem Ziehen (gleitet schon). „+ Frei“/„+ Gerät“ rollen, dort nur Leuchten.
+- **Blatt federt nicht (v1.261, Jean: Überziehen nahm die Knöpfe mit):** `.modal-box{overscroll-behavior:none}`
+  – die klebende Knopfzeile des langen Blatts federte in Safari mit dem Inhalt nach oben.
 - Paket 3 ohne Vibrieren (Jean: weglassen). Grenzwert-Blatt doppelt: Jean nie gesehen.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.260, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.261, 28.10.2026)
 
+- **Langes Blatt ohne Nachfedern (v1.261)** am iPhone prüfen.
 - **Bewegung (v1.257–v1.260):** rückende Zeilen, Antippen, Aufleuchten, Blatt von unten, „Ausgeben“ mit Sprung, Überblenden, Gleiter, rote Fehlermeldungen am Gerät ansehen.
 - **Adressvorschläge (v1.256):** echte Treffer von Photon und die Standortfrage von iOS am Gerät ansehen.
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
