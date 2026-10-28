@@ -75,6 +75,8 @@ GitHub Pages aus `main` ausgeliefert. Nutzer ist Jean, Elektriker, kein Entwickl
   selbst (`sheetZoomBinden`, v1.129): beim Öffnen eingepasst, zwei Finger bis
   `BLATT_MAX`, waagrecht rollt `#sheets`, senkrecht `<main>`; Knopf
   „Einpassen“. Der Bildbetrachter der Fotos hat seinen eigenen Zoom.
+- **Nicht markierbar (v1.276, Jean):** `body{user-select:none;-webkit-touch-callout:none}`, Eingabefelder wieder
+  `text`; `blattDatei` hebt es für die Blätter auf.
 - **Kein Scroll-Anker** (`*{overflow-anchor:none}`): iOS 27 ließ in der
   Nachweise-App die Seite beim Tippen ans Ende springen.
 - **Ausgegebene Blätter** (`blattDatei`) übernehmen alle Stilregeln der App.
@@ -483,7 +485,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   `bds-app*`). Bei Rückmeldungen nach einem Push daran denken. Firebase-Daten, Photon, SAM-Modelle
   gehen nicht durch den Speicher. Test: Server muss `.js` als `text/javascript` liefern.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.275, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.276, 28.10.2026)
 
 - **Startbild und Speicher auf dem Gerät (v1.273–v1.275):** Start ohne leeren Bildschirm, ohne Netz, neue Version beim übernächsten Öffnen.
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
