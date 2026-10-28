@@ -500,8 +500,12 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **v1.280:** Ablage: `.arch-zeile` (Zeile wie `projekt-karte`, `data-asee`), `.arch-monat` je Monat, Bewertung nur
   bei Mangel (rot/gelb); Tipp öffnet (`archAnsehen`), alter Eintrag ohne Stand → `erneutSichern`; „Erneut ausgeben“
   nur noch im Eintrag (Abschluss); `#archHint` steht hinter `#archiveBody`.
+- **v1.281:** Prüfpunkte: Abschnitt ohne roten Punkt und ohne Mangel → `.chk-zu`-Zeile (`data-chkauf`, `chkAuf`
+  merkt Aufgeklapptes für die Sitzung). Abschluss: Dokumente → Auftraggeber (`.ag-zeile`, ganze Zeile `#btnAg`)
+  → Fotos → Unterschrift → Ausgeben; „Material bearbeiten“. `.chk.on` nimmt `--sel` (im Dunkeln grau wie
+  die übrigen), `--neutral-bg` grünlich. iPad: alle einspaltigen Ansichten `max-width:720px`.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.280, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.281, 28.10.2026)
 
 - **Startbild und Speicher auf dem Gerät (v1.273–v1.275):** Start ohne leeren Bildschirm, ohne Netz, neue Version beim übernächsten Öffnen.
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-

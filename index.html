@@ -10,6 +10,14 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.281 28.10.2026 Designteam, Rest (Jean: so umsetzen): Pruefpunkt-Abschnitte ohne offenen
+                    Punkt und ohne Mangel sind zu einer Zeile eingeklappt (Antippen klappt auf).
+                    Abschluss in der Reihenfolge der Arbeit: Dokumente, Auftraggeber (als Zeile
+                    zum Antippen), Fotos, zuletzt die Unterschrift direkt ueber "Ausgeben";
+                    der Knopf heisst "Material bearbeiten". Im Dunkeln hat "gewaehlt" ueberall
+                    dieselbe Farbe, das gesperrte Grau passt zu den Gruentoenen. Auf dem iPad
+                    sind alle einspaltigen Ansichten gleich breit, Pruefpunkt-Karten oben
+                    ausgerichtet.
   v1.280 28.10.2026 Ablage kompakt (Designteam, Jean: so umsetzen): je Eintrag eine Zeile wie
                     auf der Startseite (Art, Adresse, Wohnung, Datum, Kreise, Bewertung bei
                     Mangel rot), Zwischenueberschriften nach Monat; Antippen oeffnet den
@@ -2069,7 +2077,7 @@
   --ok-bg:#EDF4DE;
   --field-border:#8D9585;
   --neutral:#6F7C8A;          /* v1.162: "ohne Messung" und "bestellt" – entschieden, nichts zu tun */
-  --neutral-bg:#E9EDF1;
+  --neutral-bg:#E9ECE3;   /* v1.281: grünlich statt bläulich */
   --signal-ink:#8A6200;       /* Bernstein als Schrift- und Zeichenfarbe auf Hell */
 
   --f-label:"BarlowC", "Barlow Condensed", "Avenir Next Condensed", "Arial Narrow", sans-serif;   /* v1.176: eingebettet, Ersatz schmal */
@@ -2445,7 +2453,7 @@ button.foto-fehlt:disabled{opacity:.6;cursor:default}
      nichts fest. */
 .chk-grid.kacheln{gap:10px}
 .chk-grid.kacheln .sug{min-height:48px}
-.chk.on{background:var(--strong);border-color:var(--strong);color:var(--on-strong)}
+.chk.on{background:var(--sel, var(--strong));border-color:var(--sel, var(--strong));color:var(--on-sel, var(--on-strong))}   /* v1.281: im Dunkeln wie die übrigen gewählten */
 .chk.on input[type="checkbox"]{accent-color:var(--on-strong)}
 .chk{border-radius:999px}
 #nameSug .sug:not(.back),#lzZweck .sug:not(.back){border-color:var(--line);background:var(--enclosure-2)}
@@ -2524,7 +2532,7 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
 .arch-bew.b-keine{color:var(--ink-soft);font-weight:500}
 .art-chip.neu{background:transparent;color:var(--brand-ink, var(--brand-dark));box-shadow:inset 0 0 0 1.5px currentColor}   /* v1.183: Grün heißt sonst i.O. */
 #view-checks .eyebrow{grid-column:1 / -1}   /* v1.178: auf dem iPad über beide Spalten */
-@media (min-width:900px){ #view-home,#view-finish{max-width:720px;margin-left:auto;margin-right:auto;width:100%}
+@media (min-width:900px){ #view-home,#view-finish,#view-archive,#view-settings,#view-new,#view-checks,#view-lager,#view-lagerart,#view-lagerbest,#view-lagerein{max-width:720px;margin-left:auto;margin-right:auto;width:100%}
   /* v1.184: die Leiste im Abschluss so breit wie der Inhalt darüber */
   .app:not(.split) #view-finish .actionbar .inner{max-width:720px} }   /* v1.178, Abschluss v1.183 */
 #view-home.leiser [data-neu]{background:transparent}
@@ -2781,6 +2789,12 @@ input.schalter:checked::after{transform:translateX(20px)}
 .kreis-ok b{color:var(--ink);font-weight:600}
 /* v1.279: nächster Punkt auf der Projektkarte */
 .projekt-karte .s.naechst{font-weight:600}
+/* v1.281: Auftraggeber als Zeile, eingeklappte Prüfpunkt-Abschnitte */
+.list-item.ag-zeile{border-left-color:var(--line)}
+.ag-pfeil{margin-left:auto;font-size:24px;line-height:1;color:var(--ink-soft);padding-left:8px}
+.list-item.chk-zu .t{font-weight:600}
+.fin-knoepfe .btn{font-size:15px;padding:0 8px;white-space:nowrap}
+#checkList{align-items:start}
 .arch-monat{margin-top:14px}
 .projekt-karte .s.naechst::before{content:'● ';font-size:.8em}
 .projekt-karte .s.naechst.rot{color:var(--fault)} .projekt-karte .s.naechst.gelb{color:var(--signal-ink)} .projekt-karte .s.naechst.gruen{color:var(--brand-ink)}
@@ -3334,7 +3348,7 @@ input.ungueltig{border-color:var(--fault)!important;color:var(--fault)}   /* v1.
     --info-bg:#1E2A36;
     --ok-bg:#252E14;
     --neutral:#93A1AE;
-    --neutral-bg:#23292F;
+    --neutral-bg:#262B22;   /* v1.281 */
     --signal-ink:#E3B23C;
   }
   .list-item.state-red{background:var(--warn-bg)}
@@ -4227,10 +4241,8 @@ function nameGross(s){
     <section class="view" id="view-finish">
       <div id="plausiOut"></div>
       <p class="muted small" id="finZeit" hidden></p>
-      <!-- v1.172: Unterschrift gleich nach den Hinweisen (QK G56) -->
-      <div class="eyebrow">Unterschrift Prüfer</div>
-      <div id="sigVorschau"></div>
-      <button class="btn" id="btnSigOeffnen" type="button">Unterschreiben</button>
+      <!-- v1.281 (Designteam): Reihenfolge der Arbeit – Dokumente, Auftraggeber, Fotos,
+           zuletzt die Unterschrift direkt über „Ausgeben“ (v1.172 stand sie oben) -->
       <div class="eyebrow">Dokumente</div>
       <div class="chk-grid" id="docOpts"></div>
       <!-- v1.185 (Jean): Material und Vorschau halb breit nebeneinander -->
@@ -4240,11 +4252,14 @@ function nameGross(s){
       </div>
       <!-- Der Verteiler wird oft erst nach Messung und Prüfung im fertigen
            Zustand dokumentiert – die Fotos entstehen dann hier. -->
+      <div class="eyebrow">Auftraggeber</div>
+      <div id="agZeile"></div>
       <div class="eyebrow">Fotos</div>   <!-- v1.183 -->
       <div id="finishPhotos"></div>
       <button class="btn ghost" id="btnPhotoFinish" style="margin-top:10px">Foto aufnehmen</button>
-      <div class="eyebrow">Auftraggeber</div>
-      <p class="muted small" id="agZeile" style="margin-top:0"></p>
+      <div class="eyebrow">Unterschrift Prüfer</div>
+      <div id="sigVorschau"></div>
+      <button class="btn" id="btnSigOeffnen" type="button">Unterschreiben</button>
       <div class="actionbar"><div class="inner">
         <button class="btn primary" id="btnExportDocs">Ausgeben und ablegen</button>
       </div></div>
@@ -4623,7 +4638,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.280';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.281';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 28.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -10419,7 +10434,7 @@ function renderDocGroup(optsSel, actSel, liste, nurAktionen){
   $(actSel).innerHTML = liste.filter(d => d.view)          // unabhängig vom Kästchen
     /* v1.186: im Abschluss halb breit neben "Vorschau" – dort nur "Material",
        sonst brach die Beschriftung auf dem iPhone um */
-    .map(d => `<button class="btn ghost" data-go="${d.view}" aria-label="${esc(d.btn)}">${esc(actSel === '#docActions' && d.view === 'material' ? 'Material' : d.btn)}</button>`).join('');
+    .map(d => `<button class="btn ghost" data-go="${d.view}" aria-label="${esc(d.btn)}">${esc(actSel === '#docActions' && d.view === 'material' ? 'Material bearbeiten' : d.btn)}</button>`).join('');
 }
 /* Bei der Wiederholungsprüfung stehen alle drei Dokumente beisammen im
    Abschluss. Nur die Neuinstallation zeigt Verteilerbeschreibung und
@@ -10683,8 +10698,10 @@ function renderAuftraggeber(){
   if(!PROJ) return;
   const eigen = (PROJ.auftraggeber || '').trim();
   const zeile = (eigen || CFG.auftraggeber || '').split('\n')[0] || 'nicht hinterlegt';
-  $('#agZeile').innerHTML = `${esc(zeile)}${eigen ? ' (abweichend)' : ''} · `   // v1.183: Überschrift steht darüber
-    + `<button class="linkbtn" id="btnAg">ändern</button>`;
+  /* v1.281 (Designteam): eine Zeile zum Antippen statt eines kleinen Textlinks */
+  $('#agZeile').innerHTML = `<button class="list-item ag-zeile" id="btnAg" type="button"><span class="body">`
+    + `<span class="t">${esc(zeile)}</span>${eigen ? '<span class="s">abweichend für diesen Auftrag</span>' : ''}</span>`
+    + `<span class="ag-pfeil" aria-hidden="true">›</span></button>`;
   $('#btnAg').onclick = auftraggeberAendern;
 }
 function auftraggeberAendern(){
@@ -13734,6 +13751,17 @@ function renderChecks(){
     const items = g.items.filter(it => !it.when || it.when(PROJ));
     if(!items.length) return;
     h += `<div class="eyebrow">${esc(g.sec)}</div>`;
+    /* v1.281 (Designteam): ein Abschnitt ohne offenen Punkt und ohne Mangel schrumpft
+       zu einer Zeile, Antippen klappt ihn auf – die Liste war gut vier Bildschirme lang */
+    const offenHier = items.some(it => chkStatus(it) === 'red' || chkZustand(it).includes('z-mangel'));
+    if(!offenHier && !chkAuf.has(g.sec)){
+      const vs = items.filter(it => chkZustand(it) === 'z-ask').length;
+      h += `<button class="list-item chk-zu z-ok" type="button" data-chkauf="${esc(g.sec)}">${ZST}<span class="body">`
+        + `<span class="t">${items.length} ${items.length === 1 ? 'Punkt' : 'Punkte'}</span>`
+        + `<span class="s">${vs ? `${vs} ${vs === 1 ? 'Vorschlag' : 'Vorschläge'}, noch zu bestätigen` : 'alle gesetzt'}</span>`
+        + `</span><span class="ag-pfeil" aria-hidden="true">›</span></button>`;
+      return;
+    }
     /* v1.170: ein Tipp für alle Erprobungen, danach jede einzeln änderbar */
     if(g.erproben && items.some(it => it.bewusst && chkStatus(it) === 'red' && it.sug && it.sug(PROJ) != null))
       h += `<button class="btn ghost" data-erprobt="1" style="margin:0 0 10px">Erprobt wie vorgeschlagen</button>`;   // v1.183: setzt auch n.z.
@@ -13795,7 +13823,10 @@ function chkZumOffenen(){
   el.classList.remove('hinweisen'); void el.offsetWidth; el.classList.add('hinweisen');
 }
 /* Tippen auf eine Auswahl */
+const chkAuf = new Set();                          // v1.281: aufgeklappte Abschnitte
 $('#view-checks').addEventListener('click', e => {
+  const auf = e.target.closest('[data-chkauf]');
+  if(auf){ chkAuf.add(auf.dataset.chkauf); lageHalten(() => renderChecks(), 0, true); return; }
   if(e.target.closest('[data-chkzu]')){ chkZumOffenen(); return; }
   if(e.target.closest('[data-erprobt]')){             // v1.170
     const ok = PROJ.checksOk = PROJ.checksOk || {};
