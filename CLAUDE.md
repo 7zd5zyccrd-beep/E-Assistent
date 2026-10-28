@@ -436,10 +436,12 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Fehlermeldungen umgestellt – neue ebenso; `toast(msg, 'halten')` (bis zur nächsten, höchstens
   30 s) für „Wird vorbereitet …“ am Anfang von `ablegen`. Der Hinweis lag schon über der Leiste,
   nur über dem Inhalt darüber – so gelassen.
+- **Hinweis antippen (v1.259, Jean):** `#toast.show` nimmt Tipps an und verschwindet; bei
+  `toastAktion` löst nur `.toast-knopf` die Aktion aus.
 - **Noch offen:** rückende Zeilen (FLIP, Entwurf `sanftNeu`) einzeln.
   Paket 3 ohne Vibrieren (Jean: weglassen). Grenzwert-Blatt doppelt: Jean nie gesehen.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.258, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.259, 28.10.2026)
 
 - **Bewegung (v1.257–v1.258):** Antippen, Aufleuchten, Blatt von unten, „Ausgeben“ mit Sprung, Überblenden, Gleiter, rote Fehlermeldungen am Gerät ansehen.
 - **Adressvorschläge (v1.256):** echte Treffer von Photon und die Standortfrage von iOS am Gerät ansehen.
