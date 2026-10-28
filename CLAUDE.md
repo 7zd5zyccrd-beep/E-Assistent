@@ -473,7 +473,8 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 
 - Ursache: 1 MB in einer Datei, kein Speicher auf dem Gerät, Google-Schriften blockieren das erste Bild.
   Jean: Schriften so lassen (Schritt 1 verworfen), Startbild ja, App auf dem Gerät speichern ja, still.
-- **Startbild (v1.273):** `#startBild` direkt nach `<body>` (Schriftzug `--logo`, laufender Strich `.sb-strich`),
+- **Startbild (v1.273, seit v1.275 Variante B nach Artifact „BDS Startbild“):** `#startBild` direkt nach `<body>`
+  (Schriftzug `--logo`, Lichtstreif `.sb-glanz` per Maske aus dem Logo),
   `startBildWeg()` am Ende des Hauptskripts (rAF), bei Ladefehler und spätestens nach 12 s.
 - **Speicher auf dem Gerät (v1.274, Jean: still):** `sw.js` (Service Worker, Speicher `bds-app-1`):
   eigene `.html`/Navigation (Schlüssel ohne `?…`), Google-Schriften und `www.gstatic.com/firebasejs/`
@@ -482,9 +483,9 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   `bds-app*`). Bei Rückmeldungen nach einem Push daran denken. Firebase-Daten, Photon, SAM-Modelle
   gehen nicht durch den Speicher. Test: Server muss `.js` als `text/javascript` liefern.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.274, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.275, 28.10.2026)
 
-- **Startbild und Speicher auf dem Gerät (v1.273/v1.274):** Start ohne leeren Bildschirm, ohne Netz, neue Version beim übernächsten Öffnen.
+- **Startbild und Speicher auf dem Gerät (v1.273–v1.275):** Start ohne leeren Bildschirm, ohne Netz, neue Version beim übernächsten Öffnen.
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
   prüfung (Druckvorlage, Schnittlinie, Probebogen und Quellen in `vorlagen/pruefaufkleber/`). Am Ausdruck prüfen: Ü (v1.209), Größe.
