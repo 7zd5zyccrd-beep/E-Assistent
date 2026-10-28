@@ -457,9 +457,12 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **Tastatur (v1.268):** `feldFreiholen` rollt nur, wenn das Feld wirklich unter der Kante liegt (vorher schon
   bei < 12 Punkten Abstand – Zucken beim Einblenden). Messhilfe `TPROT`/`#btnTastProt` (Einstellungen › Konto)
   wieder drin für den zu hohen Sprung zum Schutzleiterwiderstand (im Test landet er richtig) – danach entfernen.
+- **Fokus ruhig (v1.269, Protokoll):** iOS rollte `<main>` beim Fokus trotz `preventScroll` (Sprung zu R_PE:
+  main 0 → 292 vor `feldFreiholen`). `fokusRuhig(el)` (in `messWeiter` und im `touchend`-Wechsel) setzt die
+  Lage sofort zurück und ruft `feldFreiholen`. Messhilfe bleibt bis zur Bestätigung.
 - Paket 3 ohne Vibrieren (Jean: weglassen). Grenzwert-Blatt doppelt: Jean nie gesehen.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.268, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.269, 28.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
