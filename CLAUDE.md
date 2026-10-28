@@ -497,8 +497,11 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **v1.279:** Prüfpunkte: nicht bestätigter Vorschlag `button.vorschlag` (Umriss `--signal-ink`, nicht gefüllt);
   `bereicheZeigen`: Messen zählt Offene (sonst ✓), Abschluss-✓ bei `!ausgabeSperre()`; `projektNaechst(p, st)`
   (setzt kurz `PROJ = p`): Grenzwert → Bereit → Zuleitung fehlt → Prüfpunkte offen, Zeile `.s.naechst` in der Karte.
+- **v1.280:** Ablage: `.arch-zeile` (Zeile wie `projekt-karte`, `data-asee`), `.arch-monat` je Monat, Bewertung nur
+  bei Mangel (rot/gelb); Tipp öffnet (`archAnsehen`), alter Eintrag ohne Stand → `erneutSichern`; „Erneut ausgeben“
+  nur noch im Eintrag (Abschluss); `#archHint` steht hinter `#archiveBody`.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.279, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.280, 28.10.2026)
 
 - **Startbild und Speicher auf dem Gerät (v1.273–v1.275):** Start ohne leeren Bildschirm, ohne Netz, neue Version beim übernächsten Öffnen.
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-

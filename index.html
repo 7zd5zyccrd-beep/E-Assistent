@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.280 28.10.2026 Ablage kompakt (Designteam, Jean: so umsetzen): je Eintrag eine Zeile wie
+                    auf der Startseite (Art, Adresse, Wohnung, Datum, Kreise, Bewertung bei
+                    Mangel rot), Zwischenueberschriften nach Monat; Antippen oeffnet den
+                    Eintrag, "Erneut ausgeben" steht dort unten. Der Hinweis auf die Hoechstzahl
+                    steht am Ende der Liste.
   v1.279 28.10.2026 Ueberblick (Designteam, Jean: so umsetzen): In den Pruefpunkten ist ein
                     Vorschlag nur umrandet, voll gefuellt erst die eigene Wahl - man sieht, was
                     noch angesehen werden muss. Die Bereichsleiste zaehlt bei Messen und
@@ -2776,6 +2781,7 @@ input.schalter:checked::after{transform:translateX(20px)}
 .kreis-ok b{color:var(--ink);font-weight:600}
 /* v1.279: nächster Punkt auf der Projektkarte */
 .projekt-karte .s.naechst{font-weight:600}
+.arch-monat{margin-top:14px}
 .projekt-karte .s.naechst::before{content:'● ';font-size:.8em}
 .projekt-karte .s.naechst.rot{color:var(--fault)} .projekt-karte .s.naechst.gelb{color:var(--signal-ink)} .projekt-karte .s.naechst.gruen{color:var(--brand-ink)}
 /* v1.278 (Designteam): „999“ braucht man in jedem Kreis – so groß wie die Kacheln */
@@ -4617,7 +4623,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.279';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.280';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 28.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -14909,6 +14915,7 @@ function renderArchive(){
   const passt = e => (!archNurMeine || eigenesArch(e))
     && (!q || `${archAdresse(e)} ${archWohnung(e)} ${flatLabel(archWohnung(e))}`.toLowerCase().includes(q));
   const sichtbar = ARCH.filter(passt).length;
+  let letzterMonat = '';
   $('#archiveBody').innerHTML = !ARCH.length ? `<div class="rail-empty">Noch nichts abgelegt.</div>` : !sichtbar ? `<div class="rail-empty">Nichts gefunden.</div>` : ARCH.map((e, i) => {
     if(!passt(e)) return '';
     const whg = archWohnung(e), fotos = archFotos(e);
@@ -14917,29 +14924,32 @@ function renderArchive(){
     const prf = (archStand(e) || {}).tester || e.pruefer;           // v1.177: der Prüfer aus dem Protokoll
     const wer = prf ? `Prüfer: ${esc(prf)} · ` : !e.owner ? '' :
       (eigenesArch(e) ? 'Von dir' : `Von ${esc(nameGross(e.ablegerName || e.ownerName) || 'jemand anderem')}`) + ' · ';
-    return `
-    <div class="card">
-      <div>${art ? `<span class="art-chip${art === 'neu' ? ' neu' : ''}">${art === 'neu' ? 'NEU' : 'WDH'}</span>` : ''}<strong>${esc((archAdresse(e) || '').split('\n')[0] || 'Ohne Adresse')}${whg ? ' · ' + esc(flatLabel(whg)) : ''}</strong></div>
-      <div class="muted small">${wer}${dstr(archDatum(e))} · ${archKreise(e)} Kreise${
-        fotos ? ' · ' + fotos + ' Foto' + (fotos === 1 ? '' : 's') : ''}</div>
-      ${bew && BEWERTUNG_KURZ[bew] ? `<div class="arch-bew b-${bew}">${bew === 'mit' ? '<b>!</b> ' : ''}${BEWERTUNG_KURZ[bew]}</div>` : ''}
-      ${(!archStand(e) && !e.hoch) ? '<div class="muted small" style="margin-top:4px">Alter Eintrag – nur als Datei zu sichern</div>' : ''}
-      ${(nb => nb ? `<div class="small" style="${(archStand(e) || {}).nachOffen ? 'color:var(--signal-ink);font-weight:600' : 'color:var(--ink-soft)'}">nachgebessert ${dstr(nb.am)}${nb.von ? ' von ' + esc(nameGross(nb.von)) : ''}${(archStand(e) || {}).nachOffen ? ', noch nicht ausgegeben' : ''}</div>` : '')(((archStand(e) || {}).nachbesserungen || []).slice(-1)[0])}
-      <div class="btn-row" style="margin-top:10px">
-        <button class="btn ghost" data-asee="${i}">Ansehen</button>
-        <button class="btn" data-arch="${i}" style="padding:0 8px;white-space:nowrap">Erneut ausgeben</button>
-      </div>
-    </div>`;
+    /* v1.280 (Designteam): eine Zeile je Eintrag wie auf der Startseite, nach Monat gegliedert;
+       Antippen öffnet, „Erneut ausgeben“ steht im Eintrag unten */
+    const d = new Date(archDatum(e)), monat = d.toLocaleDateString('de-DE', {month:'long', year:'numeric'});
+    const kopf = monat !== letzterMonat ? `<div class="eyebrow arch-monat">${esc(monat)}</div>` : '';
+    letzterMonat = monat;
+    const nb = ((archStand(e) || {}).nachbesserungen || []).slice(-1)[0], nOffen = (archStand(e) || {}).nachOffen;
+    const unter = [wer.replace(/ · $/, ''), dstr(archDatum(e)), archKreise(e) + (archKreise(e) === 1 ? ' Kreis' : ' Kreise'),
+      fotos ? fotos + ' Foto' + (fotos === 1 ? '' : 's') : ''].filter(Boolean).join(' · ');
+    return kopf + `<button class="list-item projekt-karte arch-zeile" data-asee="${i}">
+      <span class="body">
+        <span class="t">${art ? `<span class="art-chip${art === 'neu' ? ' neu' : ''}">${art === 'neu' ? 'NEU' : 'WDH'}</span>` : ''}${esc((archAdresse(e) || '').split('\n')[0] || 'Ohne Adresse')}${whg ? ' · ' + esc(flatLabel(whg)) : ''}</span>
+        <span class="s">${unter}</span>
+        ${(bew === 'mit' || bew === 'ohne') ? `<span class="s naechst ${bew === 'mit' ? 'rot' : 'gelb'}">${BEWERTUNG_KURZ[bew]}</span>` : ''}
+        ${nb ? `<span class="s"${nOffen ? ' style="color:var(--signal-ink);font-weight:600"' : ''}>nachgebessert ${dstr(nb.am)}${nb.von ? ' von ' + esc(nameGross(nb.von)) : ''}${nOffen ? ', noch nicht ausgegeben' : ''}</span>` : ''}
+        ${(!archStand(e) && !e.hoch) ? '<span class="s">Alter Eintrag – Antippen sichert ihn als Datei</span>' : ''}
+      </span></button>`;
   }).join('');
   /* v1.177 (QK G50): derselbe Weg wie im Abschluss – mit Bestätigungsblatt und
      dem damaligen Umfang. Alte Einträge ohne Stand gehen weiter als Datei. */
-  $$('[data-arch]').forEach(b => b.onclick = async () => {
-    const e = ARCH[+b.dataset.arch];
-    if(!archStand(e) && !e.hoch){ erneutSichern(e, b); return; }
-    await archAnsehen(e, b);
-    if(current === 'finish' && archOffen === e.id) $('#btnExportDocs').click();
+  $$('[data-asee]').forEach(b => b.onclick = () => {
+    const e = ARCH[+b.dataset.asee];
+    if(!archStand(e) && !e.hoch){ erneutSichern(e, b); return; }   // alter Eintrag nur als Datei
+    archAnsehen(e, b);
   });
-  $$('[data-asee]').forEach(b => b.onclick = () => archAnsehen(ARCH[+b.dataset.asee], b));
+  /* v1.280: der Hinweis auf die Höchstzahl steht am Ende der Liste */
+  if($('#archHint').previousElementSibling !== $('#archiveBody')) $('#archiveBody').after($('#archHint'));
 }
 /* v1.173: Löschen aus der Ablage steht im Eintrag unter "…", nicht mehr unter
    jeder Karte (dort lag es direkt über "Ansehen" der nächsten). */
