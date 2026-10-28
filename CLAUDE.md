@@ -490,8 +490,12 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **v1.277:** `paintCableList` – passt die Aderzahl nicht, bleibt der Querschnitt (sonst nächstgrößerer),
   vorher `list[0]` (3x2,5 → 5x1,5). `saveCircuitThen`: stand `#grenzLive` schon da, kein `showWarnModal`,
   sondern speichern + `toastAktion` „Kreis N gespeichert – rot markiert“ / „Korrigieren“. Zuleitung unverändert.
+- **v1.278:** `#isoSug/#fIsoSug .sug` 48 px; `#btnSaveCircuit` im letzten Kreis „Weiter → Zuleitung“ bzw.
+  „Alles gemessen · Prüfpunkte →“, `weiterZumKreis` springt dorthin; `#feedKopf` nur ohne offene Kacheln;
+  `grundKacheln(sel)` für `#cReason`/`#fReason` (Liste unsichtbar Quelle); FI ohne Name in der Liste
+  `breaker` + „deckt … ab“; `planLeisteZeigen` setzt einen offenen Hinweis neu (`toastSetzen`).
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.277, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.278, 28.10.2026)
 
 - **Startbild und Speicher auf dem Gerät (v1.273–v1.275):** Start ohne leeren Bildschirm, ohne Netz, neue Version beim übernächsten Öffnen.
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
