@@ -447,25 +447,17 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **Langes Blatt (v1.262, Jean 1 ja / 2 nur „Leitung hinzufügen“):** `.modal-box.lang` als Spalte ohne
   eigenes Rollen; nur `#modalBody` rollt und federt (`overscroll-behavior-y:contain`), Knopfzeile
   nicht mehr sticky. `feldFreiholen` rollt dort `#modalBody`.
-- **Sprung ins nächste Messfeld (v1.263, Jean, Aufnahme):** `messWeiter` fokussiert mit
-  `preventScroll` – iOS rollte sonst die ganze Seite und ließ sie zurückgleiten. Offen: Knopf
-  „Weiter → N“ unter dem letzten Feld bei offener Tastatur (Vorschlag, Fragen 2/3 an Jean).
-- **Messhilfe Tastatur (v1.264, vorläufig – wieder entfernen):** `TPROT`/`tprot` protokolliert focusin/out,
-  touchstart, vv resize/scroll, window scroll, `scrollTo` der App und 700 ms je Bild nach dem Fokus;
-  `#btnTastProt` unter Einstellungen › Konto kopiert es. Anlass: Inhalt gleitet bei jedem Feldwechsel
-  (auch beim Antippen) von unten hoch, Kopfleiste mit – also Fenster-/Sichtbereich, nicht `<main>`.
-- **Seite so hoch wie sichtbar (v1.265, Protokoll):** bei jedem Feldwechsel mit offener Tastatur schob iOS
-  das Fenster um 177 (scrollY, innerHeight kurz 667), `scrollTo(0,0)` holte es zurück → Hochgleiten.
-  `html,body{height:var(--app-h,100%)}` – mit Tastatur ist die Seite nur so hoch wie `visualViewport`,
-  iOS hat keinen Weg zum Schieben. `blattDatei` hebt es mit `height:auto` auf. Messhilfe bleibt bis zur Bestätigung.
-- **Tipp übernehmen (v1.266, Jean: v1.265 unverändert):** `touchend` auf ein anderes Feld bei offener
-  Tastatur → `preventDefault`, `focus({preventScroll:true})`, Cursor ans Ende. Messhilfe notiert `docH`.
-  Wirkt es nicht, sind v1.265/v1.266 wieder herauszunehmen.
+- **Feldwechsel bei offener Tastatur (v1.263–v1.267, Jean: Inhalt glitt bei jedem Wechsel von unten
+  hoch; mit v1.266 ruhig, 28.10.2026):** Messhilfe (v1.264, wieder entfernt) zeigte: ~80 ms nach dem
+  Fokus schob iOS das Fenster um 177 (scrollY), `scrollTo(0,0)` holte es zurück. Abhilfe: `touchend`
+  auf ein anderes Feld bei offener Tastatur → `preventDefault`, `focus({preventScroll:true})`, Cursor
+  ans Ende (v1.266); `messWeiter` ebenso mit `preventScroll` (v1.263). Ob `html,body{height:var(--app-h,
+  100%)}` (v1.265) nötig ist, blieb ungeklärt – drin gelassen. Offen: Knopf „Weiter → N“ unter dem
+  letzten Feld bei offener Tastatur (Vorschlag, Fragen 2/3 an Jean).
 - Paket 3 ohne Vibrieren (Jean: weglassen). Grenzwert-Blatt doppelt: Jean nie gesehen.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.266, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.267, 28.10.2026)
 
-- **Feldwechsel ohne Hochgleiten (v1.263–v1.266)** am iPhone prüfen; danach Messhilfe (v1.264) entfernen.
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
   prüfung (Druckvorlage, Schnittlinie, Probebogen und Quellen in `vorlagen/pruefaufkleber/`). Am Ausdruck prüfen: Ü (v1.209), Größe.
@@ -498,7 +490,7 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Verteilerbeschreibung auf einem Blatt (v1.190), Zusammenlegen ohne Markierung
   (v1.194), Ziehen gleitend (v1.195, „sehr schön“), Griff mit Halten und ruhige Liste beim
   Ziehen, Zusammenlegen und Antippen freier TE (v1.236–v1.241, 21.10.2026), Verschieben in Reihen samt
-  Gruppe ziehen, neuen und geleerten Reihen (v1.244–v1.252, 25.10.2026: „funktioniert jetzt“), langes Blatt „Leitung hinzufügen“ – Inhalt federt, Knöpfe stehen (v1.262, 28.10.2026), Bewegungen (v1.257–v1.260) und Adressvorschläge (v1.256), 28.10.2026.
+  Gruppe ziehen, neuen und geleerten Reihen (v1.244–v1.252, 25.10.2026: „funktioniert jetzt“), langes Blatt „Leitung hinzufügen“ – Inhalt federt, Knöpfe stehen (v1.262, 28.10.2026), Bewegungen (v1.257–v1.260) und Adressvorschläge (v1.256), ruhiger Feldwechsel mit Tastatur (v1.266), 28.10.2026.
 
 ## SAM (Beta)
 
