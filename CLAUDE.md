@@ -454,9 +454,12 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   ans Ende (v1.266); `messWeiter` ebenso mit `preventScroll` (v1.263). Ob `html,body{height:var(--app-h,
   100%)}` (v1.265) nötig ist, blieb ungeklärt – drin gelassen. Offen: Knopf „Weiter → N“ unter dem
   letzten Feld bei offener Tastatur (Vorschlag, Fragen 2/3 an Jean).
+- **Tastatur (v1.268):** `feldFreiholen` rollt nur, wenn das Feld wirklich unter der Kante liegt (vorher schon
+  bei < 12 Punkten Abstand – Zucken beim Einblenden). Messhilfe `TPROT`/`#btnTastProt` (Einstellungen › Konto)
+  wieder drin für den zu hohen Sprung zum Schutzleiterwiderstand (im Test landet er richtig) – danach entfernen.
 - Paket 3 ohne Vibrieren (Jean: weglassen). Grenzwert-Blatt doppelt: Jean nie gesehen.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.267, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.268, 28.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-

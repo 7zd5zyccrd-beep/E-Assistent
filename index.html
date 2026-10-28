@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.268 28.10.2026 Tastatur (Jean, Aufnahme): beim Einblenden rollte die App das Feld um ein
+                    paar Punkte, obwohl es nicht verdeckt war - jetzt nur noch, wenn die
+                    Tastatur es wirklich verdeckt. Fuer den zu hohen Sprung zum
+                    Schutzleiterwiderstand ist die Messhilfe noch einmal kurz drin
+                    (Einstellungen > Konto, "Tastatur-Protokoll kopieren").
   v1.267 28.10.2026 Messhilfe Tastatur wieder entfernt (Jean: mit v1.266 bleibt das Bild ruhig).
   v1.266 28.10.2026 Feldwechsel bei offener Tastatur, zweiter Versuch (Jean: v1.265 unveraendert):
                     tippt man bei offener Tastatur in ein anderes Feld, setzt die App den
@@ -4308,6 +4313,7 @@ function nameGross(s){
           <button class="btn ghost" id="btnReload">App neu laden</button>
         </div>
         <p class="muted small" id="buildTagSet"></p>
+        <button class="linkbtn small" id="btnTastProt" type="button">Tastatur-Protokoll kopieren</button>   <!-- v1.268, vorläufig -->
       </div>
 
       <div class="set-seite" data-seite="daten" hidden>
@@ -4522,7 +4528,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.267';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.268';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 28.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -5137,6 +5143,21 @@ function tastaturKante(){
   return ruheH - Math.max(300, Math.round(ruheH * 0.45));   // Schätzung: Ziffern- bis Texttastatur
 }
 const BEGLEITER = {mIso:'#isoSug', fIso:'#fIsoSug', cCovers:'#coversSug', npAddress:'#adrSug'};   // v1.256: Adressvorschläge
+/* v1.268 – Messhilfe, vorläufig (Jean: Sprung zum Schutzleiterwiderstand rollt zu hoch).
+   Nach der Klärung wieder entfernen, samt #btnTastProt. */
+const TPROT = [], TPROT_T0 = performance.now();
+function tprot(was){
+  const vv = window.visualViewport;
+  TPROT.push(Math.round(performance.now() - TPROT_T0) + ' ' + was + ' vvH=' + (vv ? Math.round(vv.height) : '-')
+    + ' vvTop=' + (vv ? Math.round(vv.offsetTop) : '-') + ' scrollY=' + Math.round(window.scrollY) + ' main=' + bild().scrollTop
+    + ' fokus=' + ((document.activeElement || {}).id || '-'));
+  if(TPROT.length > 400) TPROT.splice(0, TPROT.length - 400);
+}
+document.addEventListener('focusin', e => tprot('focusin ' + (e.target.id || e.target.tagName)), true);
+document.addEventListener('focusout', e => tprot('focusout ' + (e.target.id || e.target.tagName)), true);
+if(window.visualViewport) window.visualViewport.addEventListener('resize', () => tprot('vv resize'));
+window.addEventListener('scroll', () => tprot('window scroll'), {passive:true});
+setTimeout(() => bild().addEventListener('scroll', () => tprot('main scroll'), {passive:true}));
 function feldFreiholen(){
   const el = document.activeElement;
   if(!(el instanceof HTMLElement) || !el.matches('input, select, textarea')) return;
@@ -5165,7 +5186,11 @@ function feldFreiholen(){
   let unten = el.getBoundingClientRect().bottom;
   const b = BEGLEITER[el.id] && $(BEGLEITER[el.id]);
   if(b && b.getClientRects().length) unten = Math.max(unten, b.getBoundingClientRect().bottom);
-  const fehlt = unten + 12 - kante;
+  /* v1.268 (Jean: beim Einblenden ruckte das Feld): nur rollen, wenn die Tastatur das
+     Feld wirklich verdeckt – dann mit 12 Punkten Luft. Vorher rollte schon ein Feld,
+     das nur näher als 12 Punkte an der Tastatur lag. */
+  const fehlt = unten > kante ? unten + 12 - kante : 0;
+  tprot(`feldFreiholen ${el.id} unten=${Math.round(unten)} kante=${Math.round(kante)} offen=${tastaturOffen()} ruheH=${Math.round(ruheH)} fehlt=${Math.round(fehlt)} vor=${bildY()}`);
   if(fehlt > 0) bildNach(bildY() + fehlt);
   const oben = el.getBoundingClientRect().top - bild().getBoundingClientRect().top;
   if(oben < 8) bildNach(bildY() + oben - 24);       // nicht über den oberen Rand hinaus
@@ -16218,6 +16243,10 @@ function lagerBestFertig(msg){ lagerBestEntwurf = null; toast(msg); zurueckStape
    Das Feld ist schreibgeschützt, damit keine Tastatur aufgeht; das Abwählen vor
    dem Entfernen holt die Fußleiste zurück, die beim Fokus weggeschoben wurde.
    Klappt der alte Weg nicht, wird die neue Schnittstelle versucht. */
+$('#btnTastProt').onclick = () => {                 // v1.268, vorläufig
+  if(lagerKopieren(BUILD + '\n' + TPROT.join('\n'))) toast(`Protokoll kopiert (${TPROT.length} Zeilen) – bitte in den Chat einfügen`);
+  else toast('Kopieren ging nicht', 'fehler');
+};
 function lagerKopieren(text){
   let ok = false;
   const ta = document.createElement('textarea');
