@@ -458,11 +458,14 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   das Fenster um 177 (scrollY, innerHeight kurz 667), `scrollTo(0,0)` holte es zurück → Hochgleiten.
   `html,body{height:var(--app-h,100%)}` – mit Tastatur ist die Seite nur so hoch wie `visualViewport`,
   iOS hat keinen Weg zum Schieben. `blattDatei` hebt es mit `height:auto` auf. Messhilfe bleibt bis zur Bestätigung.
+- **Tipp übernehmen (v1.266, Jean: v1.265 unverändert):** `touchend` auf ein anderes Feld bei offener
+  Tastatur → `preventDefault`, `focus({preventScroll:true})`, Cursor ans Ende. Messhilfe notiert `docH`.
+  Wirkt es nicht, sind v1.265/v1.266 wieder herauszunehmen.
 - Paket 3 ohne Vibrieren (Jean: weglassen). Grenzwert-Blatt doppelt: Jean nie gesehen.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.265, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.266, 28.10.2026)
 
-- **Feldwechsel ohne Hochgleiten (v1.263/v1.265)** am iPhone prüfen; danach Messhilfe (v1.264) entfernen.
+- **Feldwechsel ohne Hochgleiten (v1.263–v1.266)** am iPhone prüfen; danach Messhilfe (v1.264) entfernen.
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
   prüfung (Druckvorlage, Schnittlinie, Probebogen und Quellen in `vorlagen/pruefaufkleber/`). Am Ausdruck prüfen: Ü (v1.209), Größe.
