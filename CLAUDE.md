@@ -507,8 +507,10 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **v1.282:** iPad quer, Erfassen: `#technikBlock` (Absicherung, Pole, Kabel) wandert per `technikVerteilen`
   (in `openCircuit` und bei `resize`) in `#paneTechnik` oben in der rechten Spalte, sobald `.panes` ein Raster ist;
   im Messen und einspaltig zurück in `#paneGeraet`.
+- **v1.283 (Jean: erste Reihe frei, nach Neuladen wieder Reihe 1):** `migrateProject` warf alle Zeilen außer
+  Kreisen weg – auch die freien TE (bei jedem Start und Abgleich). Jetzt bleiben `kind:'frei'`.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.282, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.283, 28.10.2026)
 
 - **Designteam Runde 2 (v1.277–v1.282):** alles am Gerät ansehen (vorher „App neu laden“).
 - **Startbild und Speicher auf dem Gerät (v1.273–v1.275):** Start ohne leeren Bildschirm, ohne Netz, neue Version beim übernächsten Öffnen.
