@@ -469,7 +469,14 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Lage sofort zurück und ruft `feldFreiholen`. Von Jean bestätigt (28.10.2026).
 - Paket 3 ohne Vibrieren (Jean: weglassen). Grenzwert-Blatt doppelt: Jean nie gesehen.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.272, 28.10.2026)
+## Start (v1.273–, Jean: nach dem Schließen manchmal lange leerer Bildschirm)
+
+- Ursache: 1 MB in einer Datei, kein Speicher auf dem Gerät, Google-Schriften blockieren das erste Bild.
+  Jean: Schriften so lassen (Schritt 1 verworfen), Startbild ja, App auf dem Gerät speichern ja, still.
+- **Startbild (v1.273):** `#startBild` direkt nach `<body>` (Schriftzug `--logo`, laufender Strich `.sb-strich`),
+  `startBildWeg()` am Ende des Hauptskripts (rAF), bei Ladefehler und spätestens nach 12 s.
+
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.273, 28.10.2026)
 
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
