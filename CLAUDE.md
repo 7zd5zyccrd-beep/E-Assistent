@@ -494,8 +494,11 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   „Alles gemessen · Prüfpunkte →“, `weiterZumKreis` springt dorthin; `#feedKopf` nur ohne offene Kacheln;
   `grundKacheln(sel)` für `#cReason`/`#fReason` (Liste unsichtbar Quelle); FI ohne Name in der Liste
   `breaker` + „deckt … ab“; `planLeisteZeigen` setzt einen offenen Hinweis neu (`toastSetzen`).
+- **v1.279:** Prüfpunkte: nicht bestätigter Vorschlag `button.vorschlag` (Umriss `--signal-ink`, nicht gefüllt);
+  `bereicheZeigen`: Messen zählt Offene (sonst ✓), Abschluss-✓ bei `!ausgabeSperre()`; `projektNaechst(p, st)`
+  (setzt kurz `PROJ = p`): Grenzwert → Bereit → Zuleitung fehlt → Prüfpunkte offen, Zeile `.s.naechst` in der Karte.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.278, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.279, 28.10.2026)
 
 - **Startbild und Speicher auf dem Gerät (v1.273–v1.275):** Start ohne leeren Bildschirm, ohne Netz, neue Version beim übernächsten Öffnen.
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-

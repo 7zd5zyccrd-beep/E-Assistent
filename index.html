@@ -10,6 +10,13 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.279 28.10.2026 Ueberblick (Designteam, Jean: so umsetzen): In den Pruefpunkten ist ein
+                    Vorschlag nur umrandet, voll gefuellt erst die eigene Wahl - man sieht, was
+                    noch angesehen werden muss. Die Bereichsleiste zaehlt bei Messen und
+                    Pruefpunkten, was offen ist (sonst Haken), der Abschluss zeigt einen Haken,
+                    sobald ausgegeben werden kann. Die Projektkarten auf der Startseite nennen
+                    den naechsten Punkt: Grenzwert ueberschritten, Zuleitung fehlt,
+                    Pruefpunkte offen oder Bereit zur Ausgabe.
   v1.278 28.10.2026 Messen und Erfassen (Designteam, Jean: so umsetzen, Grenzwerte vorab nein):
                     Knopf "999" so gross wie die Kacheln; im letzten Kreis nennt "Weiter" sein
                     Ziel ("Weiter -> Zuleitung" bzw. "Alles gemessen - Pruefpunkte") und springt
@@ -2691,6 +2698,8 @@ input.schalter:checked::after{transform:translateX(20px)}
 }
 .seg button:first-child{border-left:0}
 .seg button[aria-pressed="true"]{background:var(--sel, var(--strong));color:var(--on-sel, var(--on-strong))}
+/* v1.279 (Designteam): Vorschlag als Umriss, gefüllt erst die eigene Wahl */
+.seg button.vorschlag[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 2.5px var(--signal-ink)}
 /* v1.168: ein gewähltes n.i.O. ist ein Mangel – rot mit "!" */
 .seg button[data-v="nio"][aria-pressed="true"]{background:var(--fault-fill);color:#fff}
 .seg button[data-v="nio"][aria-pressed="true"]::before{content:"! ";font-weight:700}
@@ -2765,6 +2774,10 @@ input.schalter:checked::after{transform:translateX(20px)}
 .btn.gesperrt{background:var(--neutral-bg);color:var(--ink-soft);border-color:var(--line)}
 .kreis-ok{font-size:14px;color:var(--ink-soft);margin:0 0 10px;display:flex;gap:6px;align-items:baseline}
 .kreis-ok b{color:var(--ink);font-weight:600}
+/* v1.279: nächster Punkt auf der Projektkarte */
+.projekt-karte .s.naechst{font-weight:600}
+.projekt-karte .s.naechst::before{content:'● ';font-size:.8em}
+.projekt-karte .s.naechst.rot{color:var(--fault)} .projekt-karte .s.naechst.gelb{color:var(--signal-ink)} .projekt-karte .s.naechst.gruen{color:var(--brand-ink)}
 /* v1.278 (Designteam): „999“ braucht man in jedem Kreis – so groß wie die Kacheln */
 #isoSug .sug,#fIsoSug .sug{min-height:48px;min-width:104px;justify-content:center;font-size:17px;font-weight:600}
 /* v1.278: „Keine Messung“ – Bemerkung als Kacheln, die Auswahlliste bleibt die Quelle */
@@ -4604,7 +4617,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.278';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.279';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 28.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -5543,11 +5556,15 @@ function bereicheZeigen(name){
   const zm = $('#bereiche [data-b="messen"] em');
   zm.hidden = !st.gesamt;
   zm.className = st.fertig === st.gesamt ? 'ok' : '';
-  zm.textContent = st.fertig === st.gesamt ? '✓' : `${st.fertig}/${st.gesamt}`;
+  zm.textContent = st.fertig === st.gesamt ? '✓' : String(st.gesamt - st.fertig);   // v1.279: zählt, was offen ist
   const zp = $('#bereiche [data-b="pruefpunkte"] em'), off = chkOffen();
   zp.hidden = !off && !PROJ.checksDone;
   zp.className = off ? 'rot' : 'ok';
   zp.textContent = off ? String(off) : '✓';
+  /* v1.279 (Designteam): Haken am Abschluss, sobald ausgegeben werden kann */
+  const za = $('#bereiche [data-b="abschluss"] em');
+  let frei = false; try { frei = !(archOffen && archLesen) && !ausgabeSperre(); } catch(e){}
+  za.hidden = !frei; za.className = 'ok'; za.textContent = '✓';
 }
 function bereichWechseln(b){
   if(!PROJ) return;
@@ -5823,6 +5840,22 @@ const tagKurz = ts => {                         // "heute", "gestern", sonst das
   const t = Math.round((h - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
   return t === 0 ? 'heute' : t === 1 ? 'gestern' : dstr(ts);
 };
+/* v1.279 (Designteam): die Karte nennt den nächsten Punkt – gerechnet wie im Projekt,
+   dafür steht das Projekt kurz als PROJ */
+function projektNaechst(p, st){
+  const alt = PROJ;
+  try {
+    PROJ = p;
+    const grenz = (p.items || []).filter(c => c.kind === 'circuit' && c.status === 'measured' && !ohneMessung(c) && checkCircuit(c).length).length;
+    if(grenz) return {k:'rot', t: grenz === 1 ? 'Grenzwert überschritten' : `${grenz} Grenzwerte überschritten`};
+    const sp = ausgabeSperre();
+    if(!sp) return {k:'gruen', t:'Bereit zur Ausgabe'};
+    const f = p.feed || blankFeed();
+    if(st.fertig >= st.gesamt - 1 && (f.cable == null || missingValues(f))) return {k:'rot', t:'Zuleitung fehlt'};
+    if(st.fertig === st.gesamt && (sp === 'pruefpunkte' || sp === 'bewertung')) return {k:'gelb', t:'Prüfpunkte offen'};
+    return null;
+  } catch(e){ return null; } finally { PROJ = alt; }
+}
 function projektKarte(p){
   const st = projektStand(p);
   const wer = !p.owner ? '' : eigenes(p) ? '' : (esc(nameGross(p.ownerName) || 'Kollege') + ' · ');
@@ -5835,6 +5868,7 @@ function projektKarte(p){
       <span class="s">${wer}${tagKurz(p.updatedAt || p.startedAt)} ${tstr(p.updatedAt || p.startedAt)} · ${st.bereich} · ${
         st.fertig} von ${st.gesamt} erledigt</span>
       <span class="fortschritt"><i style="width:${anteil}%"></i></span>
+      ${(n => n ? `<span class="s naechst ${n.k}">${esc(n.t)}</span>` : '')(projektNaechst(p, st))}
       ${f ? `<span class="s kollege">${esc(nameGross(f.name) || 'Ein Kollege')} sitzt gerade daran</span>` : ''}
     </span></button>`;
 }
@@ -13720,7 +13754,8 @@ function renderChecks(){
         opts.map(([val, txt]) => {
           const an = Array.isArray(v) ? v.includes(val) : v === val;
           const aus = it.k === 'bewertung' && val === 'keine' && gesperrt;
-          return `<button data-v="${val}" aria-pressed="${an}"${aus ? ' disabled' : ''}>${esc(txt)}</button>`;
+          /* v1.279 (Designteam): ein nicht bestätigter Vorschlag ist nur umrandet */
+          return `<button data-v="${val}" aria-pressed="${an}"${an && zz === 'z-ask' ? ' class="vorschlag"' : ''}${aus ? ' disabled' : ''}>${esc(txt)}</button>`;
         }).join('') + `</div>` + (it.k === 'bewertung' && gesperrt
           ? `<div class="muted small" style="margin-top:6px">„Keine Mängel“ geht nicht: ${esc(gesperrt)}.</div>` : '')
         + `</div>`;
