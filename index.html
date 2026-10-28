@@ -10,6 +10,10 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.260 28.10.2026 Zeilen ruecken sanft (Designteam, Jean: weiter): nach Zusammenlegen,
+                    Trennen, Entfernen, Rueckgaengig, "Naechste Reihe" und beim Oeffnen oder
+                    Aendern einer freien Zeile gleiten die Zeilen der Liste an ihren neuen
+                    Platz, neue blenden ein. Das Ziehen bleibt, wie es ist.
   v1.259 28.10.2026 Hinweise unten verschwinden beim Antippen (Jean: schnell weg, falls sie
                     stoeren) - auch die roten und die mit "Rueckgaengig" (ausser auf dem Knopf).
   v1.258 28.10.2026 Bewegung, Paket 2 des Designteams: Ansichten blenden kurz ueber statt
@@ -4480,7 +4484,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.259';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.260';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 28.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -6745,11 +6749,42 @@ $('#btnPlanLeitung').onclick = () => $('#btnLeitung').click();      // v1.229
 /* v1.236 (Jean: nach Zusammenlegen/Trennen sprang die Liste nach oben – auf dem
    iPhone, nicht im Test): der angetippte Knopf verschwindet danach aus der Leiste;
    Fokus lösen und die Rolllage über den nächsten Bildaufbau hinweg festhalten */
-function lageHalten(fn, abzug){
+/* v1.260 (Designteam): Zeilen gleiten nach einem Neuaufbau der Liste an ihren
+   neuen Platz statt zu springen. Gemessen wird auf dem Bildschirm vor und nach dem
+   Bau (bei gehaltener Rolllage), der Unterschied läuft per transform zurück; neue
+   Zeilen blenden ein. Nur sichtbare Zeilen, nie beim Ziehen. */
+const BEWEGUNG_AUS = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SANFT_SEL = '#boardBody .list-item, #boardBody .row-head';
+const sanftSchluessel = el => el.dataset.ord || (el.dataset.r != null ? 'r' + el.dataset.r : el.dataset.idx != null ? 'i' + el.dataset.idx : null);
+function sanftMessen(){
+  if(BEWEGUNG_AUS()) return null;
+  const mr = bild().getBoundingClientRect(), vorher = new Map();
+  $$(SANFT_SEL).forEach(el => { const k = sanftSchluessel(el), r = el.getBoundingClientRect();
+    if(k && r.bottom > mr.top - 40 && r.top < mr.bottom + 40) vorher.set(k, r.top); });
+  return vorher;
+}
+function sanftSpielen(vorher){
+  if(!vorher) return;
+  const mr = bild().getBoundingClientRect();
+  let n = 0;
+  $$(SANFT_SEL).forEach(el => {
+    if(n >= 30 || !el.animate) return;
+    const k = sanftSchluessel(el), r = el.getBoundingClientRect();
+    if(!k || r.bottom < mr.top || r.top > mr.bottom) return;
+    const alt = vorher.get(k);
+    if(alt == null){ el.animate([{opacity:0}, {opacity:1}], {duration:200, easing:'ease-out'}); n++; return; }
+    const d = alt - r.top;
+    if(Math.abs(d) < 1) return;
+    el.animate([{transform:`translateY(${d}px)`}, {transform:'none'}], {duration:220, easing:'cubic-bezier(.2,.8,.2,1)'}); n++;
+  });
+}
+function lageHalten(fn, abzug, sanft){
   const y = bildY() - (abzug || 0);                  // v1.240: beim Ziehen mitgerollter Ausgleich
   if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  const vorher = sanft ? sanftMessen() : null;       // v1.260
   fn();
   bildNach(y);
+  sanftSpielen(vorher);
   requestAnimationFrame(() => bildNach(y));
   setTimeout(() => bildNach(y), 80);
 }
@@ -6911,13 +6946,13 @@ function ordnenZeigen(){
         /* v1.250: „−“ auch bei „bis Reihenende“ – dann feste Breite eins kleiner */
         else if(f.rest && fb.dataset.frei === '-'){ f.rest = false; f.te = String(Math.max(1, b - 1)); }
         else f.te = String(Math.min(ROW_SIZE, Math.max(1, b + (fb.dataset.frei === '+' ? 1 : -1))));
-        lageHalten(() => { saveProj(); renderBoard(); });   // v1.241
+        lageHalten(() => { saveProj(); renderBoard(); }, 0, true);   // v1.241, v1.260 sanft
         return;
       }
       const id = z.dataset.ord;
       /* v1.229 (Jean): nur das Kästchen markiert, der Rest der Zeile öffnet */
       if(!e.target.closest('.ord-wahl')){
-        if(z.classList.contains('ord-frei')){ lageHalten(() => { freiOffen = freiOffen === id ? null : id; renderBoard(); }); return; }   // v1.236, v1.241
+        if(z.classList.contains('ord-frei')){ lageHalten(() => { freiOffen = freiOffen === id ? null : id; renderBoard(); }, 0, true); return; }   // v1.236, v1.241
         const i = PROJ.items.findIndex(it => it.kind === 'circuit' && it.cid === id);
         if(i >= 0) vorVerlassen(() => { const k = kreisNachKennung(id); if(k >= 0) openCircuit(k); });
         return;
@@ -7522,12 +7557,12 @@ $('#btnPlanWeg').onclick = () => {
   const vorher = PROJ.items.slice();
   PROJ.items = PROJ.items.filter(c => !sel.includes(c));
   ordnenWahl.clear(); saveProj(); renderBoard();
-  toastAktion(`${sel.length} ${sel.length === 1 ? 'Zeile' : 'Zeilen'} entfernt`, 'Rückgängig', () => { PROJ.items = vorher; saveProj(); renderBoard(); });
+  toastAktion(`${sel.length} ${sel.length === 1 ? 'Zeile' : 'Zeilen'} entfernt`, 'Rückgängig', () => lageHalten(() => { PROJ.items = vorher; saveProj(); renderBoard(); }, 0, true));
 };
 
 ['#btnPlanZus', '#btnPlanWeg', '#btnPlanReihe'].forEach(s => {   // v1.236
   const alt = $(s).onclick;
-  $(s).onclick = e => lageHalten(() => alt(e));
+  $(s).onclick = e => lageHalten(() => alt(e), 0, true);   // v1.260 sanft
 });
 /* --- Fertig: von oben nach unten nummerieren, FI decken die Kreise darunter ab --- */
 function bereicheText(nr){
