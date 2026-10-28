@@ -447,10 +447,14 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **Langes Blatt (v1.262, Jean 1 ja / 2 nur „Leitung hinzufügen“):** `.modal-box.lang` als Spalte ohne
   eigenes Rollen; nur `#modalBody` rollt und federt (`overscroll-behavior-y:contain`), Knopfzeile
   nicht mehr sticky. `feldFreiholen` rollt dort `#modalBody`.
+- **Sprung ins nächste Messfeld (v1.263, Jean, Aufnahme):** `messWeiter` fokussiert mit
+  `preventScroll` – iOS rollte sonst die ganze Seite und ließ sie zurückgleiten. Offen: Knopf
+  „Weiter → N“ unter dem letzten Feld bei offener Tastatur (Vorschlag, Fragen 2/3 an Jean).
 - Paket 3 ohne Vibrieren (Jean: weglassen). Grenzwert-Blatt doppelt: Jean nie gesehen.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.262, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.263, 28.10.2026)
 
+- **Messfeld-Sprung ohne Hochgleiten (v1.263)** am iPhone prüfen.
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
   prüfung (Druckvorlage, Schnittlinie, Probebogen und Quellen in `vorlagen/pruefaufkleber/`). Am Ausdruck prüfen: Ü (v1.209), Größe.
