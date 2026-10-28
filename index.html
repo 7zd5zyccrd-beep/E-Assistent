@@ -10,6 +10,12 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.258 28.10.2026 Bewegung, Paket 2 des Designteams: Ansichten blenden kurz ueber statt
+                    hart umzuspringen; der gruene Strich der Bereichsleiste gleitet zum neuen
+                    Bereich; ein gesetzter Pruefpunkt leuchtet auf; nach "Weiter -> N" leuchtet
+                    die neue Kreisnummer oben kurz auf; Fehlermeldungen sind rot mit "!" und
+                    stehen laenger; beim Ausgeben steht "Wird vorbereitet ...", solange die
+                    Dateien (vor allem Fotos) gesammelt werden.
   v1.257 28.10.2026 Bewegung, Paket 1 des Designteams (Jean: ja): Knoepfe, Kacheln und
                     Zeilen werden beim Beruehren kurz dunkler; nach "Weiter" im Messen steht
                     oben "Kreis ... gespeichert" wie im Erfassen; nach "+ Frei", "+ Geraet" und
@@ -2098,6 +2104,10 @@ main{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overfl
   padding:var(--pad);padding-bottom:env(safe-area-inset-bottom)}
 .view{display:none}
 .view.active{display:flex;flex-direction:column;flex:1 0 auto}
+/* v1.258 (Designteam): neue Ansicht blendet kurz über – nur Deckkraft, nie
+   transform (sonst klebt die Fußleiste an der Ansicht statt an der App) */
+@media (prefers-reduced-motion:no-preference){ .view.active{animation:ansichtEin var(--t-weg) var(--k-std)} }
+@keyframes ansichtEin{from{opacity:.3}to{opacity:1}}
 /* Ansichten ohne Fußleiste brauchen unten etwas eigene Luft */
 #view-home,#view-finish,#view-archive,#view-checks{padding-bottom:28px}
 
@@ -2438,7 +2448,10 @@ button{font-family:var(--f-body);cursor:pointer;color:var(--ink);
 .bereiche button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
   min-height:46px;padding:4px 0 5px;border:0;border-bottom:3px solid transparent;background:none;color:#96A088;
   font-family:var(--f-label);font-weight:600;font-size:12.5px;letter-spacing:.07em;text-transform:uppercase}
-.bereiche button.an{color:#fff;border-bottom-color:var(--brand)}
+.bereiche button.an{color:#fff}
+/* v1.258 (Designteam): der Strich gleitet zum gewählten Bereich */
+.bereiche .b-gleiter{position:absolute;left:0;bottom:0;width:25%;height:3px;background:var(--brand);
+  transform:translateX(calc(var(--b-i, 0) * 100%));transition:transform var(--t-weg) var(--k-an);pointer-events:none}
 .bereiche em{position:absolute;top:2px;left:calc(50% + 10px);min-width:17px;height:16px;padding:0 4px;border-radius:8px;
   font:600 11px/16px var(--f-data);font-style:normal;letter-spacing:0;text-align:center;background:#5C6355;color:#fff}
 .bereiche em.rot{background:var(--fault-fill)}
@@ -2670,6 +2683,10 @@ input.schalter:checked::after{transform:translateX(20px)}
 .btn.gesperrt{background:var(--neutral-bg);color:var(--ink-soft);border-color:var(--line)}
 .kreis-ok{font-size:14px;color:var(--ink-soft);margin:0 0 10px;display:flex;gap:6px;align-items:baseline}
 .kreis-ok b{color:var(--ink);font-weight:600}
+/* v1.258 (Designteam): nach „Weiter → N“ leuchtet die neue Nummer im Kopf auf */
+#title .tnr{border-radius:5px;padding:0 3px;margin:0 -3px}
+#title .tnr.neu{animation:nrNeu 1.2s var(--k-std)}
+@keyframes nrNeu{0%,30%{background:var(--brand);color:#1A1F16}100%{background:transparent}}
 .fi-uebernehmen{width:100%;min-height:44px;margin:-4px 0 10px;font-size:15px;border-style:dashed}
 .ord-frei-ctl{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap}
 .ord-frei-ctl button{min-height:44px;min-width:44px;padding:0 10px;border:1.5px solid var(--field-border);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:15px}
@@ -2884,7 +2901,10 @@ input.schalter:checked::after{transform:translateX(20px)}
   opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:90vw;text-align:center;
 }
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-#toast.aktiv{pointer-events:auto;white-space:nowrap}                  /* v1.174: "Rückgängig" */
+#toast.aktiv{pointer-events:auto;white-space:nowrap}
+/* v1.258 (Designteam): was nicht geklappt hat, sieht anders aus als „Gespeichert“ */
+#toast.fehler{background:var(--fault-fill);color:#fff}
+#toast.fehler::before{content:'! ';font-weight:700}                  /* v1.174: "Rückgängig" */
 #toast .toast-knopf{background:none;border:0;color:inherit;font:inherit;font-weight:700;text-decoration:underline;padding:12px 6px;margin:-12px 0}
 input.ungueltig{border-color:var(--fault)!important;color:var(--fault)}   /* v1.181 */
 .le-schloss{flex:0 0 auto;display:inline-flex;align-self:center;opacity:.6;margin-right:4px}
@@ -3697,6 +3717,7 @@ function nameGross(s){
     <button type="button" data-b="messen"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M7.5 12.5a4.5 4.5 0 0 1 9 0M12 12.5l2.6-3M8.5 16.8h7"/></svg><span>Messen</span><em hidden></em></button>
     <button type="button" data-b="pruefpunkte"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.5h6v3H9z"/><path d="M9 5H6.5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H15M9 13.5l2 2 4-4"/></svg><span>Prüfpunkte</span><em hidden></em></button>
     <button type="button" data-b="abschluss"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 21V3.5"/><path d="M5.5 4h12l-2.3 3.6 2.3 3.6h-12"/></svg><span>Abschluss</span><em hidden></em></button>
+    <i class="b-gleiter" aria-hidden="true"></i>   <!-- v1.258 -->
   </nav>
 
   <!-- v1.173: abgelegte Prüfung – Datum, Lesemodus, Nachbessern -->
@@ -4457,7 +4478,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.257';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.258';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 28.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -4917,7 +4938,7 @@ const openProjects = mode => PROJECTS.filter(p => (p.mode || 'wdh') === mode)
                                      .sort((a, b) => (eigenes(b) - eigenes(a)) ||
                                        ((b.updatedAt || b.startedAt) - (a.updatedAt || a.startedAt)));
 const saveArch = () => Bilder.datenLegen('archive', ARCH)
-  .catch(() => toast('Ablage konnte nicht gespeichert werden'));
+  .catch(() => toast('Ablage konnte nicht gespeichert werden', 'fehler'));
 
 /* Die Fußleiste ist je nach Ansicht unterschiedlich hoch – von einer Zeile bis
    zu drei Knöpfen. Der Hinweis setzt sich deshalb über die höchste gerade
@@ -4938,15 +4959,18 @@ function toastSetzen(){
 function toastAktion(msg, knopf, fn){
   const t = $('#toast');
   t.innerHTML = `${esc(msg)} · <button type="button" class="toast-knopf">${esc(knopf)}</button>`;
+  t.classList.remove('fehler');
   toastSetzen(); t.classList.add('show', 'aktiv');
   t.querySelector('button').onclick = () => { t.classList.remove('show', 'aktiv'); fn(); };
   clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show', 'aktiv'), 8000);   // v1.183: mit Handschuhen länger
 }
-function toast(msg){
+function toast(msg, art){
   const t = $('#toast'); t.textContent = msg; t.classList.remove('aktiv');
+  t.classList.toggle('fehler', art === 'fehler');      // v1.258: rot, steht länger
   toastSetzen();
   t.classList.add('show');
-  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 2200);
+  clearTimeout(t._h);
+  t._h = setTimeout(()=>t.classList.remove('show'), art === 'fehler' ? 3500 : art === 'halten' ? 30000 : 2200);   // halten: bis die nächste Meldung kommt
 }
 const num = v => { const n = parseFloat(String(v ?? '').replace(',','.')); return isFinite(n) ? n : null; };
 const fmt = v => v == null || v === '' ? '–' : String(v).replace('.',',');
@@ -5354,7 +5378,7 @@ function bereicheZeigen(name){
   const b = PROJ && BEREICH_VIEWS.includes(name) ? bereichVon(name) : null;
   nav.hidden = !b;
   if(!b) return;
-  $$('#bereiche button').forEach(k => k.classList.toggle('an', k.dataset.b === b));
+  $$('#bereiche button').forEach((k, i) => { k.classList.toggle('an', k.dataset.b === b); if(k.dataset.b === b) nav.style.setProperty('--b-i', i); });
   const st = projektStand(PROJ);
   const zm = $('#bereiche [data-b="messen"] em');
   zm.hidden = !st.gesamt;
@@ -6697,7 +6721,7 @@ function leitungBlatt(zuletzt, vorher){
   pendingAck = () => {
     $('#modalBack').onclick = zurueckOrig; leitungZurueckOrig = null;
     const name = $('#lzName').value.trim();
-    if(!name){ toast('Bitte einen Zweck wählen'); leitungBlatt(zuletzt, {raeume:[...raeume]}); return; }
+    if(!name){ toast('Bitte einen Zweck wählen', 'fehler'); leitungBlatt(zuletzt, {raeume:[...raeume]}); return; }
     const q = quelle(), liste = raumListe();
     const orte = liste.length ? ROOMS_BALKON.filter(o => raeume.has(o)) : [...raeume];
     const c = leitungBauen(q && q.label === name ? q : null, name, orte, kabel);
@@ -7457,8 +7481,8 @@ $('#btnPlanZus').onclick = () => {
     setTimeout(() => teile.forEach(t => zeileLeuchten(t.cid)), 100);   // v1.257: nach lageHalten
     return;
   }
-  if(planZeilen().some(c => istFrei(c) && ordnenWahl.has(c.cid))){ toast('Freie TE lassen sich nicht zusammenlegen'); return; }
-  if(sel.some(c => istFiZeile(c) || isSpecial(c))){ toast('FI und sonstige Geräte lassen sich nicht zusammenlegen'); return; }
+  if(planZeilen().some(c => istFrei(c) && ordnenWahl.has(c.cid))){ toast('Freie TE lassen sich nicht zusammenlegen', 'fehler'); return; }
+  if(sel.some(c => istFiZeile(c) || isSpecial(c))){ toast('FI und sonstige Geräte lassen sich nicht zusammenlegen', 'fehler'); return; }
   if(sel.length < 2) return;
   /* v1.212 (Jean): die Leitung mit dem kleinsten Querschnitt trägt Kabel und
      Absicherung – der Leitungsschutz muss das schwächste Kabel schützen
@@ -7561,7 +7585,7 @@ function planVersetzen(c, N, bisher){
     const i = plan.findIndex(p => p.c === c);
     const danach = plan.slice(i + 1).filter(p => istFrei(p.c) && p.no <= r * ROW_SIZE);
     const platz = danach.reduce((s, p) => s + Math.max(0, Math.min(p.bis, r * ROW_SIZE) - p.no + 1), 0);
-    if(k > platz){ toast(`Kein Platz in Reihe ${r} – Nummer bleibt`); nummernAnwenden(); return; }
+    if(k > platz){ toast(`Kein Platz in Reihe ${r} – Nummer bleibt`, 'fehler'); nummernAnwenden(); return; }
     let noch = k - danach.filter(p => p.c.rest).reduce((s, p) => s + p.te, 0);
     danach.filter(p => !p.c.rest).forEach(p => {     // feste freie TE abgeben, wenn der Rest nicht reicht
       if(noch <= 0) return;
@@ -7855,8 +7879,8 @@ let kreisOkText = null;                            // v1.223
 function kreisTitel(){
   if(current !== 'circuit' || !draft) return;
   const nr = String($('#cNo').value || '').trim();
-  const t = (editIdx == null ? 'Neuer Stromkreis' : 'Stromkreis') + (nr ? ' ' + nr : '');
-  $('#title').innerHTML = `${esc(t)}<small>${esc(projektOrt())}</small>`;
+  const t = editIdx == null ? 'Neuer Stromkreis' : 'Stromkreis';
+  $('#title').innerHTML = `${esc(t)}${nr ? ` <span class="tnr">${esc(nr)}</span>` : ''}<small>${esc(projektOrt())}</small>`;
 }
 $('#view-circuit').addEventListener('pointerdown', e => { if(!e.target.closest('#kreisOk')) $('#kreisOk').hidden = true; });
 $('#view-circuit').addEventListener('input', () => { $('#kreisOk').hidden = true; });
@@ -9470,7 +9494,7 @@ function zeitAendern(vorgabe, onDone){
     const beg = feldStempel($('#zBegD').value, $('#zBegT').value, PROJ.startedAt);
     const end = feldStempel($('#zEndD').value, $('#zEndT').value, vorgabe);
     if(end < beg){
-      toast('Ende liegt vor dem Beginn');
+      toast('Ende liegt vor dem Beginn', 'fehler');
       zeitAendern(vorgabe, onDone);
       return;
     }
@@ -9557,6 +9581,7 @@ $('#btnSaveCircuit').onclick = () => {
     if(messModus()) weiterZumKreis(c);
     else if(ez && PROJ.items.includes(ez)) openCircuit(PROJ.items.indexOf(ez));
     else openCircuit(null);
+    const nr = $('#title .tnr'); if(current === 'circuit' && nr) nr.classList.add('neu');   // v1.258
   }, true);
 };
 $('#btnDelCircuit').onclick  = () => {
@@ -10434,7 +10459,7 @@ function sigHatTinte(){
   return false;
 }
 $('#btnSigSave').onclick = () => {
-  if(sigGezeichnet && !sigHatTinte()){ toast('Das Feld ist leer – bitte unterschreiben'); return; }
+  if(sigGezeichnet && !sigHatTinte()){ toast('Das Feld ist leer – bitte unterschreiben', 'fehler'); return; }
   if(sigGezeichnet){
     PROJ.signature = {mode:'now', at: Date.now(), data: $('#sigpad').toDataURL('image/png')};
     saveProj(); toast('Unterschrift übernommen');
@@ -11042,7 +11067,7 @@ function fotoFehltZeigen(kachel, f){
         marke.disabled = true;
         fotoHolen(pid, f.fid)
           .then(b => { if(b) renderPhotos(); else marke.disabled = false; })
-          .catch(() => { marke.disabled = false; toast('Ohne Verbindung geht das nicht'); });
+          .catch(() => { marke.disabled = false; toast('Ohne Verbindung geht das nicht', 'fehler'); });
       };
       kachel.insertBefore(marke, kachel.firstChild);
       return;
@@ -11061,7 +11086,7 @@ function fotoFehltZeigen(kachel, f){
         p.textContent = 'lädt …'; p.disabled = true;
         fotoHolen(pid, f.fid)
           .then(b => { if(b) renderPhotos(); else { p.textContent = 'nicht gefunden'; } })
-          .catch(() => { p.textContent = 'Foto laden'; p.disabled = false; toast('Ohne Verbindung geht das nicht'); });
+          .catch(() => { p.textContent = 'Foto laden'; p.disabled = false; toast('Ohne Verbindung geht das nicht', 'fehler'); });
       };
     }
     kachel.insertBefore(p, kachel.firstChild);
@@ -11070,7 +11095,7 @@ function fotoFehltZeigen(kachel, f){
 
 const fotoAufnehmen = () => {
   if(!PROJ) return;
-  if((PROJ.photos || []).length >= FOTO_MAX){ toast(`Mehr als ${FOTO_MAX} Fotos sind nicht vorgesehen`); return; }
+  if((PROJ.photos || []).length >= FOTO_MAX){ toast(`Mehr als ${FOTO_MAX} Fotos sind nicht vorgesehen`, 'fehler'); return; }
   $('#photoFile').click();
 };
 $('#btnPhoto').onclick       = fotoAufnehmen;
@@ -11136,7 +11161,7 @@ function samFoto(art, mediathek){
   if(!PROJ) return;
   const alt = PROJ.sam && PROJ.sam[art];
   const belegt = (PROJ.photos || []).length - (alt ? 1 : 0);
-  if(belegt >= FOTO_MAX){ toast(`Mehr als ${FOTO_MAX} Fotos sind nicht vorgesehen`); return; }
+  if(belegt >= FOTO_MAX){ toast(`Mehr als ${FOTO_MAX} Fotos sind nicht vorgesehen`, 'fehler'); return; }
   if(!mediathek && CFG.eigeneKamera !== false && navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
     samKamOeffnen(art); return;                   // v1.143: Kamera der App
   }
@@ -11219,7 +11244,7 @@ $('#skAusloesen').onclick = async () => {
       if(!best || m.schaerfe > best.m.schaerfe) best = {c, m};
     }
     SK.blob = await new Promise(res => best.c.toBlob(res, 'image/jpeg', 0.95));
-  } catch(e){ toast('Aufnahme fehlgeschlagen'); }
+  } catch(e){ toast('Aufnahme fehlgeschlagen', 'fehler'); }
   k.classList.remove('arbeitet'); SK.laeuft = false;
   if(!SK.blob) return;
   const b = $('#skBild'); if(b.src) { try { URL.revokeObjectURL(b.src); } catch(e){} }
@@ -11273,7 +11298,7 @@ $('#samNeuLesen').onclick = async () => {
   const fid = PROJ && PROJ.sam && PROJ.sam.beschreibung;
   if(!fid) return;
   const P = PROJ, blob = await samFotoBlob(fid);
-  if(!blob){ toast('Das Foto liegt nicht auf diesem Gerät'); return; }
+  if(!blob){ toast('Das Foto liegt nicht auf diesem Gerät', 'fehler'); return; }
   SAM_LESER.frei = false;
   samLesen(P, fid, blob, P.samTid || null, true);
   /* v1.111: das Verteilerfoto gleich mit, danach wird neu verknüpft */
@@ -11627,7 +11652,7 @@ async function kpStarten(){
 async function kpLichtSetzen(an){
   if(!KP.spur) return;
   try { await KP.spur.applyConstraints({advanced:[{torch: an}]}); KP.licht = an; }
-  catch(e){ toast('Licht ließ sich nicht schalten'); }
+  catch(e){ toast('Licht ließ sich nicht schalten', 'fehler'); }
   $('#kpLicht').textContent = KP.licht ? 'Licht aus' : 'Licht an';
 }
 function kpStoppen(){
@@ -11664,7 +11689,7 @@ $('#kpVideo').addEventListener('click', async e => {
   if(c.pointsOfInterest) was.pointsOfInterest = [punkt];
   if(c.focusMode && c.focusMode.includes('single-shot')) was.focusMode = 'single-shot';
   if(!Object.keys(was).length){ toast('Scharfstellen per Antippen bietet das iPhone hier nicht an'); return; }
-  try { await t.applyConstraints({advanced:[was]}); toast('Scharfgestellt'); } catch(err){ toast('Scharfstellen ging nicht'); }
+  try { await t.applyConstraints({advanced:[was]}); toast('Scharfgestellt'); } catch(err){ toast('Scharfstellen ging nicht', 'fehler'); }
 });
 /* Ein Bild aus dem Videostrom in voller Größe */
 function kpBild(v){
@@ -11707,7 +11732,7 @@ async function kpErgebnis(art, c, blob, extra, dauer){
     <button class="btn ghost" type="button" data-a="ger">Geräte lesen</button></div></div>`;
   box.querySelector('[data-a="teilen"]').onclick = async () => {
     const f = new File([blob], `kamera-probe-${Date.now()}.jpg`, {type:'image/jpeg'});
-    try { await navigator.share({files:[f]}); } catch(e){ if(e && e.name !== 'AbortError') toast('Teilen ging nicht'); }
+    try { await navigator.share({files:[f]}); } catch(e){ if(e && e.name !== 'AbortError') toast('Teilen ging nicht', 'fehler'); }
   };
   box.querySelector('[data-a="sam"]').onclick = () => probeStarten({beschreibung:{blob}});
   box.querySelector('[data-a="ger"]').onclick = () => probeStarten({verteiler:{blob}});   // v1.141
@@ -11718,7 +11743,7 @@ async function kpLos(knopf, fn){
   KP.laeuft = true;
   const alt = knopf.textContent; knopf.textContent = 'Ruhig halten …'; knopf.disabled = true;
   const t0 = performance.now();
-  try { await fn(t0); } catch(e){ toast('Fehler: ' + (e && e.message || e)); }
+  try { await fn(t0); } catch(e){ toast('Fehler: ' + (e && e.message || e), 'fehler'); }
   knopf.textContent = alt; knopf.disabled = false; KP.laeuft = false;
 }
 $('#kpEins').onclick = () => kpLos($('#kpEins'), async t0 => {
@@ -12899,13 +12924,13 @@ $('#importFile').onchange = e => {
   e.target.value = '';                       // dieselbe Datei soll erneut wählbar sein
   if(!f) return;
   const r = new FileReader();
-  r.onerror = () => toast('Datei konnte nicht gelesen werden');
+  r.onerror = () => toast('Datei konnte nicht gelesen werden', 'fehler');
   r.onload  = () => {
     let paket;
-    try{ paket = JSON.parse(r.result); }catch(_){ toast('Keine lesbare Datei'); return; }
+    try{ paket = JSON.parse(r.result); }catch(_){ toast('Keine lesbare Datei', 'fehler'); return; }
     const P = paket && paket.projekt;
     if(!paket || paket.format !== HANDOVER_FORMAT || !P || !P.id || !Array.isArray(P.items)){
-      toast('Das ist keine Weitergabe-Datei'); return;
+      toast('Das ist keine Weitergabe-Datei', 'fehler'); return;
     }
     const alt = PROJECTS.find(x => x.id === P.id);
     const uebernehmen = () => {
@@ -13514,6 +13539,8 @@ $('#view-checks').addEventListener('click', e => {
     else { PROJ.checks[k] = val; delete ok[k]; }              // eigene Entscheidung
   }
   saveProj(); renderChecks();
+  const z = $(`#checkList [data-chk="${k}"]`);      // v1.258: die gesetzte Zeile leuchtet
+  if(z && (PROJ.checks[k] != null || (PROJ.checksOk || {})[k])) aufleuchten(z.closest('.chk-item'));
 });
 
 /* --- Druckblätter --- */
@@ -14106,7 +14133,7 @@ window.addEventListener('resize', () => { if(current === 'sheets') applySheetZoo
 
 $('#btnSheets').onclick = () => {
   const d = (PROJ && PROJ.docs) || {};
-  if(!d.protokoll && !d.beschriftung && !d.material){ toast('Kein Dokument ausgewählt'); return; }
+  if(!d.protokoll && !d.beschriftung && !d.material){ toast('Kein Dokument ausgewählt', 'fehler'); return; }
   go('sheets');
 };
 
@@ -14232,6 +14259,7 @@ const alsDatei = (inhalt, name, typ) => new File([new Blob([inhalt], {type: typ}
 
 async function ablegen(wahl, nochmal, zwischen){
   const p = PROJ, dateien = [];
+  toast('Wird vorbereitet …', 'halten');           // v1.258: Fotos lesen dauert, bis das Teilen-Menü kommt
   /* Materialbestand: gebucht wird beim ersten Export und beim Export nach einer
      Nachbesserung über "Ansehen" (dann ist archOffen gesetzt), nie beim bloßen
      "Erneut sichern" und nie beim Zwischenexport aus dem Verteiler – dort geht
@@ -14290,7 +14318,7 @@ async function ablegen(wahl, nochmal, zwischen){
       dateien.push(new File([blob], name, {type: blob.type || 'image/jpeg'}));
     }
   }
-  if(!dateien.length){ lagerZurueck(); vermerkZurueck(); toast('Nichts ausgewählt'); return; }
+  if(!dateien.length){ lagerZurueck(); vermerkZurueck(); toast('Nichts ausgewählt', 'fehler'); return; }
 
   /* iOS meldet beim Teilen an einen Kurzbefehl auch dann einen Abbruch, wenn der
      Kurzbefehl in Wirklichkeit durchläuft. Auf diese Rückmeldung ist deshalb kein
@@ -14311,7 +14339,7 @@ async function ablegen(wahl, nochmal, zwischen){
     }
   }catch(e){
     lagerZurueck(); vermerkZurueck();
-    toast('Übergabe nicht möglich'); return;
+    toast('Übergabe nicht möglich', 'fehler'); return;
   }
   if(lagerPlan){
     try { lagerProjektBuchen(p, lagerPlan.buchungen); } catch(e){}
@@ -14337,7 +14365,7 @@ $('#btnExportDocs').onclick = () => {
   if(ausgabeSperre()){                               // v1.257: zur ersten roten Karte
     const k = $('#plausiOut .warn:not(.gelb):not(.ok)');
     if(k){ bildNach(Math.max(0, imBild(k) - 12)); aufleuchten(k); }
-    toast('Noch nicht bereit – siehe rote Karte');
+    toast('Noch nicht bereit – siehe rote Karte', 'fehler');
     return;
   }
   saveProj();
@@ -14644,7 +14672,7 @@ async function archAnsehen(e, knopf){
       if(knopf){ knopf.textContent = 'holt …'; knopf.disabled = true; }
       st = await ablageVollHolen(e.id);
     }
-    if(!st){ toast(e.hoch ? 'Der Stand ließ sich nicht holen' : 'Alter Eintrag ohne Projektstand'); return; }
+    if(!st){ toast(e.hoch ? 'Der Stand ließ sich nicht holen' : 'Alter Eintrag ohne Projektstand', 'fehler'); return; }
     migrateProject(st);
     archOffen = e.id;
     archLesen = true;                  // v1.173: erst "Nachbessern" gibt frei
@@ -14652,7 +14680,7 @@ async function archAnsehen(e, knopf){
     sigMode = 'later';
     stack = ['home', 'archive'];       // Zurück führt in die Ablage, von dort weiter nach Hause
     go('finish', false);               // v1.173: im Abschluss – dort liegen Vorschau und Ausgabe
-  } catch(x){ toast('Öffnen nicht möglich'); }
+  } catch(x){ toast('Öffnen nicht möglich', 'fehler'); }
   finally { if(knopf){ knopf.textContent = text; knopf.disabled = false; } }
 }
 
@@ -14667,7 +14695,7 @@ async function erneutSichern(e, knopf){
       st = await ablageVollHolen(e.id);
     }
     if(!st){
-      if(e.hoch) toast('Der Stand ließ sich nicht holen');
+      if(e.hoch) toast('Der Stand ließ sich nicht holen', 'fehler');
       else {                                  // Alteintrag ohne vollständigen Stand
         const blob = new Blob([JSON.stringify(e, null, 2)], {type:'application/json'});
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
@@ -14683,7 +14711,7 @@ async function erneutSichern(e, knopf){
        immer mit – dafür ist die Sicherung da. */
     await ablegen({projekt:true, protokoll:true, beschriftung:!!d.beschriftung,
                    material:!!d.material, fotos:!!d.fotos}, true);
-  } catch(x){ toast('Ausgeben nicht möglich'); }
+  } catch(x){ toast('Ausgeben nicht möglich', 'fehler'); }
   finally {
     PROJ = merk;
     if(knopf){ knopf.textContent = text; knopf.disabled = false; }
@@ -14797,7 +14825,7 @@ $('#view-settings').addEventListener('change', e => {
     const k = kalibListe(); const d = CFG.devices[+e.target.dataset.kalib];
     const v = kalibNorm(e.target.value);
     if(!v && e.target.value.trim()){                 // v1.181: nicht still löschen
-      e.target.classList.add('ungueltig'); toast('Bitte als MM/JJJJ, z. B. 03/2027'); return;
+      e.target.classList.add('ungueltig'); toast('Bitte als MM/JJJJ, z. B. 03/2027', 'fehler'); return;
     }
     e.target.classList.remove('ungueltig');
     if(v) k[d] = v; else delete k[d];
@@ -15595,7 +15623,7 @@ function lagerGeaendert(fremd){
   else if(current === 'lagerart') lagerArtAuffrischen();
   else if(current === 'lagerein' && fremd && lagerEinId && !LAGER.bestellungen[lagerEinId]){
     lagerEinId = null;
-    toast('Diese Bestellung ist inzwischen erledigt');
+    toast('Diese Bestellung ist inzwischen erledigt', 'fehler');
     zurueckStapel();
   }
 }
@@ -15786,7 +15814,7 @@ function renderLagerArt(){
   const neu = !lagerArtId;
   const a = neu ? {name:'', einheit:'Stk.', melde:'', soll:'', vpe:'', artnr:'', stamm:false}
                 : LAGER.artikel[lagerArtId];
-  if(!a){ toast('Diesen Artikel gibt es nicht mehr'); zurueckStapel(); return; }
+  if(!a){ toast('Diesen Artikel gibt es nicht mehr', 'fehler'); zurueckStapel(); return; }
   $('#title').textContent = neu ? 'Neuer Artikel' : 'Artikel';
   const zahlFeld = (id, label, wert, ph) => `<label class="field"><span>${label}</span>
     <input id="${id}" class="data" inputmode="numeric" enterkeyhint="done" value="${esc(wert)}" placeholder="${ph}"></label>`;
@@ -15971,9 +15999,9 @@ function lagerPanelZeigen(){
   $('#lgAbbr').onclick = () => { lagerPanelArt = null; lagerPanelZeigen(); };
   $('#lgBuchen').onclick = () => {
     const t = $('#lgMenge').value.trim();
-    if(!/^\d+$/.test(t)){ toast('Bitte eine ganze Zahl eintragen'); return; }
+    if(!/^\d+$/.test(t)){ toast('Bitte eine ganze Zahl eintragen', 'fehler'); return; }
     const n = parseInt(t, 10);
-    if(!zaehlen && n < 1){ toast('Menge fehlt'); return; }
+    if(!zaehlen && n < 1){ toast('Menge fehlt', 'fehler'); return; }
     const art = lagerPanelArt;
     const notiz = $('#lgNotiz').value.trim();
     lagerBuchung({a: lagerArtId, art, menge: art === 'entnahme' ? -n : n, notiz: notiz || undefined});
@@ -15996,9 +16024,9 @@ function lagerArtFormLesen(){
        der Artikel einen Hinweis. */
     stamm = (!alt || lagerNorm(alt.name) !== lagerNorm(name)) ? lagerImStamm(name) : !!alt.stamm;
   }
-  if(!name){ toast('Name fehlt'); return null; }
+  if(!name){ toast('Name fehlt', 'fehler'); return null; }
   if(Object.values(LAGER.artikel).some(x => x.id !== lagerArtId && lagerNorm(x.name) === lagerNorm(name))){
-    toast('Diesen Artikel gibt es schon'); return null;
+    toast('Diesen Artikel gibt es schon', 'fehler'); return null;
   }
   const zahl = (sel, vorgabe) => {
     const t = $(sel).value.trim();
@@ -16007,10 +16035,10 @@ function lagerArtFormLesen(){
   };
   const melde = zahl('#lgMelde', 0), soll = zahl('#lgSoll', 0), vpe = zahl('#lgVpe', 1);
   const start = neu ? zahl('#lgStart', 0) : 0;
-  if([melde, soll, vpe, start].some(isNaN)){ toast('Bitte nur ganze Zahlen eintragen'); return null; }
+  if([melde, soll, vpe, start].some(isNaN)){ toast('Bitte nur ganze Zahlen eintragen', 'fehler'); return null; }
   /* Echt größer: bei Soll gleich "Melden ab" stünde der Artikel nach jeder
      Lieferung sofort wieder auf Rot. */
-  if(melde > 0 && soll <= melde){ toast('Der Sollbestand muss über „Melden ab“ liegen'); return null; }
+  if(melde > 0 && soll <= melde){ toast('Der Sollbestand muss über „Melden ab“ liegen', 'fehler'); return null; }
   return {werte: {name, stamm, einheit: $('#lgEinheit').value.trim() || 'Stk.',
                   melde, soll, vpe: Math.max(1, vpe), artnr: $('#lgArtnr').value.trim()}, start};
 }
@@ -16186,7 +16214,7 @@ function lagerEinZeilen(o){
 }
 function renderLagerEin(){
   const o = lagerEinId && LAGER.bestellungen[lagerEinId];
-  if(!o){ toast('Diese Bestellung ist nicht mehr offen'); zurueckStapel(); return; }
+  if(!o){ toast('Diese Bestellung ist nicht mehr offen', 'fehler'); zurueckStapel(); return; }
   const offen = lagerEinZeilen(o);
   const unter = x => {
     const s = ['bestellt ' + x.z.menge];
@@ -16243,13 +16271,13 @@ function renderLagerEin(){
   if(b('lgEinTeil')) b('lgEinTeil').onclick = () => { lagerEinTeil = true; renderLagerEin(); };
   if(b('lgEinTeilBuchen')) b('lgEinTeilBuchen').onclick = () => {
     const m = gewaehlt();
-    if(!m){ toast('Bitte ganze Zahlen eintragen'); return; }
-    if(!Object.keys(m).length){ toast('Nichts ausgewählt'); return; }
+    if(!m){ toast('Bitte ganze Zahlen eintragen', 'fehler'); return; }
+    if(!Object.keys(m).length){ toast('Nichts ausgewählt', 'fehler'); return; }
     lagerLiefern(o, m, false);
   };
   if(b('lgEinTeilZu')) b('lgEinTeilZu').onclick = () => {
     const m = gewaehlt();
-    if(!m){ toast('Bitte ganze Zahlen eintragen'); return; }
+    if(!m){ toast('Bitte ganze Zahlen eintragen', 'fehler'); return; }
     const fehlt = offen.some(x => (m[x.i] || 0) < x.rest);
     if(!fehlt) return lagerLiefern(o, m, true);
     showDialog({title:'Bestellung abschließen?', ok:'Abschließen',

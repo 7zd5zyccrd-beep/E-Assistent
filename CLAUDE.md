@@ -430,14 +430,18 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   nie `disabled`, sondern `.gesperrt` + `aria-disabled`; Tipp springt zur ersten roten Karte
   (`#plausiOut .warn:not(.gelb):not(.ok)`). `#modal` gleitet per `@starting-style` herein,
   Schließen sofort. Nicht anfassen: Bewegung auf `.view`/`main`/`.app`, sanftes Scrollen, Ziehen.
-- **Als Nächstes Paket 2:** Ansichtswechsel überblenden, Gleiter in der Bereichsleiste, Prüfpunkt
-  leuchtet, „Weiter → N“ hebt die Nummer, Fehlermeldungen rot und nicht über der Fußleiste,
-  „Wird vorbereitet …“ beim Ausgeben. Danach rückende Zeilen (FLIP, Entwurf `sanftNeu`) einzeln.
+- **Paket 2 (v1.258):** `.view.active` blendet per Deckkraft ein (`ansichtEin`); `.b-gleiter` in
+  `#bereiche` mit `--b-i` (aus `bereicheZeigen`); gesetzter Prüfpunkt `aufleuchten`; Kreisnummer im
+  Kopf als `#title .tnr`, nach „Weiter“ `.neu`; `toast(msg, 'fehler')` rot mit „!“ (3,5 s), alle
+  Fehlermeldungen umgestellt – neue ebenso; `toast(msg, 'halten')` (bis zur nächsten, höchstens
+  30 s) für „Wird vorbereitet …“ am Anfang von `ablegen`. Der Hinweis lag schon über der Leiste,
+  nur über dem Inhalt darüber – so gelassen.
+- **Noch offen:** rückende Zeilen (FLIP, Entwurf `sanftNeu`) einzeln.
   Paket 3 ohne Vibrieren (Jean: weglassen). Grenzwert-Blatt doppelt: Jean nie gesehen.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.257, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.258, 28.10.2026)
 
-- **Bewegung (v1.257):** Antippen, Aufleuchten, Blatt von unten, „Ausgeben“ mit Sprung am Gerät ansehen.
+- **Bewegung (v1.257–v1.258):** Antippen, Aufleuchten, Blatt von unten, „Ausgeben“ mit Sprung, Überblenden, Gleiter, rote Fehlermeldungen am Gerät ansehen.
 - **Adressvorschläge (v1.256):** echte Treffer von Photon und die Standortfrage von iOS am Gerät ansehen.
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
   beschreibung; Aufkleber Ø 40 mm rund (Variante C) mit Beschriftung für die Wiederholungs-
