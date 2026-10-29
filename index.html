@@ -10,6 +10,12 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.290 29.10.2026 Erfassen, Planliste einheitlich (Designteam Paket B): der FI heisst "FI 40 A /
+                    30 mA" mit Polen und abgedeckten Kreisen darunter statt "Ohne Bezeichnung"; eine
+                    gezogene Gruppe heisst "n Kreise" und liegt wie ein Stapel; aufgeklappte freie
+                    Bloecke tragen beim Ziehen weiter das Wort "frei"; ueber der Fussleiste "n markiert
+                    - Markierung aufheben"; der Hinweis oben steht nur noch hinter "?"; im Blatt "Geraet
+                    einfuegen" ist "Abbrechen" abgesetzt.
   v1.289 29.10.2026 Erfassen, Planliste ruhiger (Designteam Paket A): Nummern in einer festen
                     Spalte, alle Bezeichnungen beginnen an einer Kante; der dicke Streifen links nur
                     noch beim FI, gedaempft; freie Zeilen flach und einzeilig; "Passt nicht mehr in
@@ -2948,6 +2954,19 @@ input.schalter:checked::after{transform:translateX(20px)}
 /* während des Ziehens tritt alles unter der Liste zurück – Fotos schienen durch die Karte */
 #boardBody ~ :not(.actionbar){transition:opacity .15s}
 #boardBody:has(.ord-zeile.zieht) ~ :not(.actionbar){opacity:.3}
+/* v1.290 (Designteam Paket B) */
+.frei-skala::after{content:"frei";position:absolute;right:52px;top:6px;font-size:13px;color:var(--ink-soft)}   /* das Wort bleibt beim Ziehen */
+.ord-zeile .bund-liste{display:block;font-size:13px;color:var(--ink-soft);margin-top:2px}
+.list-item.ord-zeile.bund.zieht{box-shadow:0 10px 24px rgba(0,0,0,.28),5px 5px 0 -1px var(--surface),5px 5px 0 0 var(--line)}
+.list-item.ord-zeile.bund.bund3.zieht{box-shadow:0 10px 24px rgba(0,0,0,.28),5px 5px 0 -1px var(--surface),5px 5px 0 0 var(--line),10px 10px 0 -1px var(--surface),10px 10px 0 0 var(--line)}
+.plan-wahl{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 10px;margin-bottom:8px;background:var(--enclosure);border:1px solid var(--line);border-radius:var(--r);font-size:14px;font-weight:600;color:var(--ink-soft)}
+.plan-wahl button{background:none;border:0;min-height:40px;padding:0 4px;color:var(--ink);font:inherit;text-decoration:underline}
+.plan-hilfe{display:flex;justify-content:flex-end;margin:-38px 0 2px}
+.plan-hilfe button{width:44px;height:44px;border:0;background:none;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.plan-hilfe button::before{content:"?";display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;
+  border:1.5px solid var(--field-border);color:var(--ink-soft);font-weight:700;font-size:14px}
+.plan-hilfe button[aria-expanded="true"]::before{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.btn.abbrechen{background:none;border-color:transparent;color:var(--ink-soft);text-decoration:underline;font-weight:500;margin-top:18px !important}
 /* langes Blatt (Leitung hinzufügen): die Knöpfe bleiben unten stehen.
    v1.262 (Jean: ohne Federn fühlte es sich falsch an, mit klebender Zeile federten die
    Knöpfe mit): nur #modalBody rollt und federt, Überschrift und Knopfzeile stehen fest */
@@ -4141,6 +4160,8 @@ function nameGross(s){
           <button class="btn primary" id="btnAddCircuit">Stromkreis hinzufügen</button>
         </div>
         <!-- v1.192: Ordnen-Modus der Leitungsplanung -->
+        <div class="plan-wahl" id="planWahl" hidden><span id="planWahlN"></span>   <!-- v1.290 -->
+          <button type="button" id="btnPlanAufheben">✕ Markierung aufheben</button></div>
         <div class="btn-row plan-leiste" id="planLeiste" hidden>
           <button class="btn primary" id="btnPlanLeitung" type="button">+ Leitung</button>
           <button class="btn ghost" id="btnPlanGeraet" type="button">+ Gerät</button>
@@ -4741,7 +4762,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.289';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.290';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 29.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -7154,13 +7175,20 @@ $('#btnPlanReihe').onclick = () => {
 };
 
 /* --- Kopf über der Liste und Fußleiste --- */
+function planFiTitel(c){ return c.breaker ? 'FI ' + c.breaker : 'FI-Schutzschalter'; }   // v1.290 (Deklaration: renderBoard kann früher laufen)
 function planKopfZeigen(n){
   const k = $('#planKopf');
   if(!planBar()){ ordnen = false; k.innerHTML = ''; return; }
   const ohne = circuits().filter(ohneNr).length;
   /* v1.229 (Jean): kein „Ordnen“ mehr – die Liste kann es immer */
-  k.innerHTML = n ? `<p class="muted small plan-hinweis">Kästchen markieren, Zeile antippen zum Bearbeiten, am ≡ ziehen. Die Nummern folgen der Reihenfolge.</p>` : '';
+  /* v1.290 (Designteam Paket B): der Hinweis stand bei jedem Öffnen da und schob die Liste
+     nach unten – jetzt hinter „?“; Text nach v1.240 (erst halten, dann ziehen) */
+  k.innerHTML = n ? `<div class="plan-hilfe"><button type="button" id="btnPlanHilfe" aria-expanded="${planHilfeAuf}" aria-label="Bedienung"></button></div>`
+    + (planHilfeAuf ? `<p class="muted small plan-hinweis">Kästchen = markieren · Zeile antippen = bearbeiten · ≡ kurz halten, dann ziehen. Die Nummern folgen der Reihenfolge.</p>` : '') : '';
+  const hb = $('#btnPlanHilfe');
+  if(hb) hb.onclick = () => { planHilfeAuf = !planHilfeAuf; planKopfZeigen(n); };
 }
+var planHilfeAuf = false;
 function planLeisteZeigen(){
   setTimeout(() => { if($('#toast').classList.contains('show')) toastSetzen(); });   // v1.278: Leiste kann zweireihig werden
   const pb = planBar();
@@ -7172,8 +7200,11 @@ function planLeisteZeigen(){
   $('#btnAddCircuit').textContent = 'Stromkreis hinzufügen';
   $('#planLeiste').hidden    = !pb;
   $('#btnPlanFertig').hidden = true;
-  if(!pb){ $('#planLeiste2').hidden = true; return; }
+  if(!pb){ $('#planLeiste2').hidden = true; $('#planWahl').hidden = true; return; }
   const sel = planZeilen().filter(c => ordnenWahl.has(c.cid));
+  /* v1.290 (Designteam Paket B): wie viel markiert ist, und mit einem Tipp alles abwählen */
+  $('#planWahl').hidden = !sel.length;
+  $('#planWahlN').textContent = sel.length === 1 ? '1 markiert' : `${sel.length} markiert`;
   $('#btnPlanLeitung').hidden = sel.length > 0;
   $('#btnPlanReihe').hidden   = !sel.some(c => !istFrei(c));
   $('#planLeiste2').hidden    = !sel.length;
@@ -7239,12 +7270,14 @@ function ordnenZeigen(){
         <span class="ord-griff" aria-label="Verschieben">≡</span></div>`;
     }
     const fi = istFiZeile(c);
-    const unter = fi ? (c.breaker || '') : isSpecial(c) ? `${Math.max(1, parseInt(c.te, 10) || 1)} TE`   // v1.227: nicht zweimal der Name
+    /* v1.290 (Designteam Paket B): der FI hieß hier „Ohne Bezeichnung“ und sah aus wie ein
+       Fehler – Titel „FI 40 A / 30 mA“, darunter Pole und abgedeckte Kreise */
+    const unter = fi ? [c.poles ? `${c.poles}-pol.` : '', c.covers ? `deckt ${c.covers}` : ''].filter(Boolean).join(' · ') : isSpecial(c) ? `${Math.max(1, parseInt(c.te, 10) || 1)} TE`   // v1.227: nicht zweimal der Name
       : [c.room, c.breaker, kabelText(c.cable), Array.isArray(c.teile) && c.teile.length > 1 ? `${c.teile.length} Leitungen` : ''].filter(Boolean).join(' · ');   // v1.238: Räume vorn
     return kopf(c) + `<div class="list-item ord-zeile${fi ? ' ord-fi' : ''}${an ? ' an' : ''}" data-ord="${esc(c.cid)}" data-idx="${PROJ.items.indexOf(c)}" role="button">
       ${wahl(an)}
       <span class="no">${esc(circuitLabel(c) || '–')}</span>
-      <span class="body"><span class="t">${esc(c.name || 'Ohne Bezeichnung')}</span>
+      <span class="body"><span class="t">${esc(c.name || (fi ? planFiTitel(c) : 'Ohne Bezeichnung'))}</span>
         <span class="s">${ordUnter(c, unter)}</span>${ueber.has(c.cid) ? `
         <span class="ord-reihe">Passt nicht mehr in Reihe ${ueber.get(c.cid).r}
           <button type="button" data-reihe="1">Ab ${ueber.get(c.cid).ab} beginnen</button></span>` : ''}</span>
@@ -7286,6 +7319,9 @@ function ordnenZeigen(){
       z.classList.add('mark-neu');                   // v1.288: Häkchen zeichnet sich (nur beim Antippen)
       const w = z.querySelector('.ord-wahl'); if(w) w.setAttribute('aria-checked', ordnenWahl.has(id));
       planLeisteZeigen(); leistenPlatz();
+      /* v1.290: wächst die Leiste über die eben markierte Zeile, rückt die Liste nach */
+      const bar = $('.view.active .actionbar');
+      if(bar){ const r = z.getBoundingClientRect(), u = bar.getBoundingClientRect().top; if(r.bottom > u - 8) bildNach(bildY() + r.bottom - u + 12); }
     };
     const g = z.querySelector('.ord-griff');
     /* v1.240 (Jean: beim Scrollen am Griff ungewollt verschoben): mit dem Finger erst
@@ -7361,8 +7397,10 @@ function bundZiehen(z, e){
   const vorTop = z.getBoundingClientRect().top;
   const te = mit.reduce((n, c) => n + Math.max(1, parseInt(c.te, 10) || 1), 0);
   const leer = leereReihen(mit);                     // v1.248
+  /* v1.290 (Designteam Paket B): „Steckdosen, Steckdosen“ sah aus wie zusammengelegt – die Karte
+     heißt „n Kreise“, darunter die einzelnen, und liegt wie ein Stapel */
   const b = Object.assign(blankCircuit(), {cid:BUND, no:'', te:String(te), device:'ls', breaker:'', cable:'', covers:'',
-    name:mit.map(c => c.name || 'Ohne Bezeichnung').join(', '), room:`${mit.length} Zeilen`, bund:mit});
+    name:`${mit.length} Kreise`, room:mit.map(c => `${circuitLabel(c) || ''} ${c.name || (istFiZeile(c) ? planFiTitel(c) : '')}`.trim()).join(' · '), bund:mit});
   bundAktiv = true;
   PROJ.items.splice(PROJ.items.indexOf(mit.includes(greif) ? greif : mit[0]), 0, b);
   PROJ.items = PROJ.items.filter(it => !mit.includes(it));
@@ -7370,8 +7408,9 @@ function bundZiehen(z, e){
   z.dataset.ord = BUND;
   z.classList.add('bund');
   const t = z.querySelector('.t'), u = z.querySelector('.s');
-  if(t) t.textContent = b.name;
+  if(t){ t.textContent = b.name; const l = document.createElement('span'); l.className = 'bund-liste'; l.textContent = b.room; t.after(l); }
   if(u) u.textContent = b.room;
+  z.classList.toggle('bund3', mit.length > 2);
   mit.forEach(c => { if(c !== greif){ const el = $(`#boardBody [data-ord="${c.cid}"]`); if(el) el.remove(); } });
   bildNach(bildY() + z.getBoundingClientRect().top - vorTop);    // die Karte bleibt unter dem Finger
   /* v1.252: ganz oben lässt sich nicht nachrollen – dann holt die erste Bewegung die
@@ -7838,6 +7877,10 @@ function ordnenFiEinfuegen(){
    sitzen Hauptschalter und Überspannungsableiter meist; der Rest wird gezogen.
    v1.228: FI an erster Stelle; mit Markierung kommt das Gerät vor die erste
    markierte Zeile, der FI holt die markierten Leitungen hinter sich. */
+$('#btnPlanAufheben').onclick = () => {           // v1.290
+  ordnenWahl.clear();
+  lageHalten(() => { renderBoard(); planLeisteZeigen(); leistenPlatz(); });
+};
 $('#btnPlanGeraet').onclick = () => {
   const liste = specialList();
   const mark = planZeilen().some(c => ordnenWahl.has(c.cid));
@@ -7850,7 +7893,7 @@ $('#btnPlanGeraet').onclick = () => {
     PROJ.items.splice(erste ? PROJ.items.indexOf(erste) : PROJ.items.length, 0, g);
     ordnenWahl.clear(); saveProj(); renderBoard(); zeileLeuchten(g.cid, true);
     toast(`${e.name} eingefügt – am ≡ an seinen Platz ziehen`);
-  }})), {t:'Abbrechen', cls:'ghost', fn:null}]);
+  }})), {t:'Abbrechen', cls:'abbrechen', fn:null}]);   // v1.290: abgesetzt, nicht wie ein Gerät
 };
 /* v1.218: freie TE vor die erste markierte Zeile, sonst ans Ende – meist bleibt
    der Rest einer Reihe frei */

@@ -551,9 +551,17 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   `--enclosure-2` (auch in `.halten`/`.zieht` mitgeführt); freie Zeile flach (48 px, gestrichelt `--line`, einzeilig);
   Reihenüberlauf `:has(.ord-reihe)` gelb (`--sig-bg`, `inset 4px --signal`), Text in `--signal-ink`; Ziel/Stufe/Platzhalter
   in `--pe` gedämpft (`color-mix`); beim Ziehen `#boardBody ~ :not(.actionbar)` auf .3.
+- **Paket B (v1.290) – Gleiches gleich:** FI in der Planliste `planFiTitel(c)` („FI 40 A / 30 mA“), Unterzeile
+  „4-pol. · deckt …“; Gruppenkarte „n Kreise“ mit `.bund-liste` (Nummer + Name) und Stapel-Schatten (`.bund`, `.bund3`);
+  `.frei-skala::after` „frei“; `#planWahl` „n markiert · ✕ Markierung aufheben“ über der Leiste (`#btnPlanAufheben`),
+  beim Markieren rückt die Liste, wenn die Leiste die Zeile verdeckt; Hinweis nur hinter `#btnPlanHilfe` („?“,
+  `planHilfeAuf`); `waehlDialog` kennt `cls:'abbrechen'` (Textknopf, abgesetzt), genutzt in „Gerät einfügen“.
+  Bewusst nicht: Nummern der freien Streifen „einfrieren“ – sie zeigen die Zielnummer (v1.243), sonst stimmte die
+  Anzeige nicht mit dem Ergebnis.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.289, 29.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.290, 29.10.2026)
 
+- **Erfassen Pakete A/B (v1.289/v1.290):** Optik, FI-Name, „n markiert“, „?“ am Gerät ansehen.
 - **Ziehen (v1.288):** Halten/Anheben/Federn/Ablegen am iPhone ansehen – Werte (Größe, Federn, 250 ms) nach Gefühl nachstellen.
 - **Dunkelmodus (v1.285):** im dunklen Keller bei geringer Helligkeit und draußen – Hauptknopf noch klar?
 - **Designteam Runde 2 (v1.277–v1.282):** alles am Gerät ansehen (vorher „App neu laden“).
