@@ -10,6 +10,8 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.294 29.10.2026 Erfassen (Jean): der Rahmen um die gezogene und um markierte Zeilen war links offen
+                    (seit v1.289 trug die linke Kante eine eigene, schwache Farbe) - jetzt rundum.
   v1.293 29.10.2026 Erfassen, Ziehen (Jean, Video): das Ziel springt jetzt dort um, wo sich die Kreise
                     sichtbar kreuzen (der ausweichende ist halb zur Seite) - vorher stand die Zeile
                     schon sichtbar zwischen den Kreisen und schnappte beim Loslassen zurueck. Der
@@ -2942,6 +2944,7 @@ input.schalter:checked::after{transform:translateX(20px)}
    keinen Zustand; als Schatten, damit die Textkante nicht wieder rückt */
 .list-item.ord-zeile{border-left:1px solid var(--line)}
 .list-item.ord-zeile.ord-fi{border-left:1px solid var(--line);box-shadow:inset 4px 0 0 var(--ink-soft);background:var(--enclosure-2)}
+.list-item.ord-zeile.zieht,.list-item.ord-zeile.an{border-left-color:var(--ink)}   /* v1.294 (Jean: Rahmen links offen) */
 .list-item.ord-zeile.ord-fi.halten{box-shadow:inset 4px 0 0 var(--ink-soft),0 4px 12px rgba(0,0,0,.14)}
 .list-item.ord-zeile.ord-fi.zieht{box-shadow:inset 4px 0 0 var(--ink-soft),0 10px 24px rgba(0,0,0,.28)}
 /* freie Zeile flach und einzeilig – liest sich als Lücke, nicht als Eintrag */
@@ -3482,7 +3485,7 @@ input.ungueltig{border-color:var(--fault)!important;color:var(--fault)}   /* v1.
   .list-item .t{font-weight:500}
   .list-item .no{font-weight:600}
   /* markierte Zeile der Planliste: grau statt weißer Rahmen (Jean, 4 ja) */
-  .ord-zeile.an{border-color:var(--ink-soft)}
+  .ord-zeile.an,.list-item.ord-zeile.an{border-color:var(--ink-soft)}
 }
 
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
@@ -4773,7 +4776,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.293';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.294';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 29.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */

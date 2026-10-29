@@ -573,8 +573,11 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   bei m < c + H/2 (für `ziel`, Reihenköpfe `koepfeNach`, `anfang`); `ausweichen()` ist dort genau halb (f = 0,5).
   Der gestrichelte Platzhalter `.zieh-platz` entfällt ganz – die Lücke zeigt das Ziel. Tests: Ziele auch nicht in die
   Randzone über einer zweireihigen Leiste legen.
+- **v1.294 (Jean: Rahmen der gezogenen Zeile links offen):** `.list-item.ord-zeile{border-left:1px …}` (v1.289) überdeckte
+  die Randfarbe von `.zieht`/`.an` – `.list-item.ord-zeile.zieht/.an{border-left-color}` eigens gesetzt (dunkel `.an` grau).
+  Ziehen nach v1.293 von Jean bestätigt: „fühlt sich deutlich ruhiger an“ (29.10.2026).
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.293, 29.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.294, 29.10.2026)
 
 - **Erfassen Pakete A/B (v1.289/v1.290):** Optik, FI-Name, „n markiert“, „?“ am Gerät ansehen.
 - **Ziehen (v1.288, Einrasten v1.291):** Halten/Anheben/Federn/Ablegen/Einrasten am iPhone ansehen – Werte (Größe, Federn, 250 ms) nach Gefühl nachstellen.
