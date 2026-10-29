@@ -520,11 +520,12 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Streifen der gemessenen Kreise bleibt (Jean), `--brand-ink` = `--ink` (Verweise hell, unterstrichen), `--sel`
   #C9CDBF, Rot `--fault` #F08A7E, `--warn-bg` #2E2220; Zurück-Ring, `.b-gleiter` neutral, Ränder von `.btn`/`.seg`
   in `--field-border`. Logogrün `--brand` bleibt (Logo, Wolke, Kamera). Hell unverändert.
-- **Noch offen (Fragen an Jean):** Abschluss als eine Sammelkarte, „noch nicht erledigt“ gelb statt rot; leisere
-  Vorschlag-Rahmen in den Prüfpunkten; Mangel-Zeichen gefüllt (ohne Farbe lesbar); Schrift im Dunkeln eine
-  Stufe leichter; markierte Zeile der Planliste mit weißem Rahmen.
+- **v1.286 (Jean: 1 nein, 2–4 ja):** Vorschlag in den Prüfpunkten (`.seg button.vorschlag`) gestrichelt in
+  `--ink-soft` (`outline`, hell und dunkel), „Vorschlag“ bleibt bernstein; `.z-bad .zst` gefüllte Scheibe mit
+  ausgespartem „!“ (evenodd, beide Modi); im Dunkeln `.list-item .t` 500, `.no` 600; `.ord-zeile.an` Rand
+  `--ink-soft`. Verworfen: Abschluss als Sammelkarte / „noch offen“ gelb (Jean: nein) – nicht wieder vorschlagen.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.285, 29.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.286, 29.10.2026)
 
 - **Dunkelmodus (v1.285):** im dunklen Keller bei geringer Helligkeit und draußen – Hauptknopf noch klar?
 - **Designteam Runde 2 (v1.277–v1.282):** alles am Gerät ansehen (vorher „App neu laden“).
