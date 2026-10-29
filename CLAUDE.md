@@ -529,8 +529,27 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   `ring-rot` rot (knapp), `ring-gelb` gelb (bestellt) – bewusste Ausnahme von „Gelb nur für bitte ansehen“
   (Jean: Lieferung steht noch aus). Nicht wieder auf Grau stellen.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.287, 29.10.2026)
+## Erfassen flüssiger und ruhiger (Designteam 29.10.2026, Jean: Pakete C, A, B; Fragen 2–6 ja)
 
+- **Paket C (v1.288) – Ziehen in `ordnenZiehen`:** Lagen über `offsetTop` (`messen()`, ohne transform/scale);
+  `mv` setzt nur die Lage der Zeile, der Rest läuft per rAF in `malen()` und nur bei neuem `schluessel`
+  (Ziel, freier Block i:k, Zahl der Reihenköpfe darüber); `zc` (Kennung → Zeile), `freiW` (Breiten der freien
+  Blöcke) einmal beim Anheben. **Zwischenstufe entfällt** (Jean 4 ja; `luecke` immer false). **Freie Blöcke
+  gehen erst in der Nähe auf** (`naehe()`, ± eine Zeilenhöhe, `.offen`, Skala nur dann): über dem Finger
+  wächst der Block nach oben (Liste rollt mit, `ausgleich`), darunter nach unten; entfernt sich der Finger,
+  schrumpft er. Halten: `.ord-zeile.halten` hebt sich über 250 ms (`scale` 1,015 + Schatten); `.zieht` deckend
+  (`opacity:1`, über freiem Block .9 – Jean 3 ja, ersetzt „halb durchsichtig“ v1.242), `scale:1.03`, Federn
+  140 ms; Nachbarn `transform 180ms cubic-bezier(.3,1.25,.5,1)`. **Ablegen sofort** mit
+  `lageHalten(fn, ausgleich, vorherMap, gehoben)` – `sanftSpielen(vorher, gehoben)` lässt die gezogene Zeile
+  (bzw. alle Zeilen der Gruppe aus der Karte) von ihrer Bildschirmlage mit Schatten absetzen (ersetzt „nie nach
+  dem Ziehen“, Jean 2 ja), danach `zeileLeuchten`. Randrollen nach Zeit (bis ~900 px/s, 300 ms Anlauf),
+  hält an, wenn die Karte bei `dMin`/`dMax` ansteht. Häkchen `.mark-neu` zeichnet sich.
+  Gemessen (40 Zeilen, CPU ×4): Bilder > 20 ms beim Ziehen 47/51/47 → 4/3/2. Prüfung: `c-pruef.mjs`
+  (Anzeige beim Ziehen = Ergebnis, 13 Fälle; Ziele nicht in die Randzone legen, sonst rollt die Liste weiter).
+
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.288, 29.10.2026)
+
+- **Ziehen (v1.288):** Halten/Anheben/Federn/Ablegen am iPhone ansehen – Werte (Größe, Federn, 250 ms) nach Gefühl nachstellen.
 - **Dunkelmodus (v1.285):** im dunklen Keller bei geringer Helligkeit und draußen – Hauptknopf noch klar?
 - **Designteam Runde 2 (v1.277–v1.282):** alles am Gerät ansehen (vorher „App neu laden“).
 - **Startbild und Speicher auf dem Gerät (v1.273–v1.275):** Start ohne leeren Bildschirm, ohne Netz, neue Version beim übernächsten Öffnen.
