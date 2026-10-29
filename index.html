@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.292 29.10.2026 Erfassen, Ziehen (Jean): die anderen Kreise weichen stufenlos aus, waehrend man
+                    sich naehert, und kommen beim Zurueckziehen ebenso zurueck - kein ploetzliches
+                    Umschnappen mehr. In freien Bloecken steht die Zeile auch auf der ersten und
+                    letzten TE ganz im Block (vorher ragte sie fuer die letzte TE schon optisch in
+                    die naechste Reihe). Das "?" bei "Stromkreise" steht hinter der Linie.
   v1.291 29.10.2026 Erfassen, Ziehen ueber freien TE (Designteam, Jean ja – Versuch): die Zeile rastet
                     Stufe fuer Stufe ein, statt stufenlos zu gleiten; die neue Stufe blitzt kurz auf,
                     die Zielangabe waechst kurz. Die Stufe ergibt sich weiter aus der Fingerlage.
@@ -2953,7 +2958,7 @@ input.schalter:checked::after{transform:translateX(20px)}
 .frei-skala .stufe.an{background:color-mix(in srgb, var(--pe) 22%, var(--surface));color:var(--ink);box-shadow:inset 3px 0 0 var(--pe)}
 #boardBody .row-head.ziel{background:none;color:var(--pe);box-shadow:inset 3px 0 0 var(--pe);padding:4px 8px 4px 11px}
 #boardBody .row-head.neu:not(.ziel){border:1.5px dashed var(--line)}
-.zieh-platz{border:2px dashed var(--pe);background:color-mix(in srgb, var(--pe) 8%, transparent)}
+.zieh-platz{transition:top 120ms ease-out;border:2px dashed var(--pe);background:color-mix(in srgb, var(--pe) 8%, transparent)}
 /* während des Ziehens tritt alles unter der Liste zurück – Fotos schienen durch die Karte */
 #boardBody ~ :not(.actionbar){transition:opacity .15s}
 #boardBody:has(.ord-zeile.zieht) ~ :not(.actionbar){opacity:.3}
@@ -2964,11 +2969,10 @@ input.schalter:checked::after{transform:translateX(20px)}
 .list-item.ord-zeile.bund.bund3.zieht{box-shadow:0 10px 24px rgba(0,0,0,.28),5px 5px 0 -1px var(--surface),5px 5px 0 0 var(--line),10px 10px 0 -1px var(--surface),10px 10px 0 0 var(--line)}
 .plan-wahl{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 10px;margin-bottom:8px;background:var(--enclosure);border:1px solid var(--line);border-radius:var(--r);font-size:14px;font-weight:600;color:var(--ink-soft)}
 .plan-wahl button{background:none;border:0;min-height:40px;padding:0 4px;color:var(--ink);font:inherit;text-decoration:underline}
-.plan-hilfe{display:flex;justify-content:flex-end;margin:-38px 0 2px}
-.plan-hilfe button{width:44px;height:44px;border:0;background:none;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
-.plan-hilfe button::before{content:"?";display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;
+.eyebrow .plan-hilfe-knopf{order:2;flex:0 0 44px;width:44px;height:44px;margin:-14px -9px -14px 0;border:0;background:none;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.eyebrow .plan-hilfe-knopf::before{content:"?";display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;
   border:1.5px solid var(--field-border);color:var(--ink-soft);font-weight:700;font-size:14px}
-.plan-hilfe button[aria-expanded="true"]::before{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.eyebrow .plan-hilfe-knopf[aria-expanded="true"]::before{background:var(--ink);border-color:var(--ink);color:var(--surface)}
 .btn.abbrechen{background:none;border-color:transparent;color:var(--ink-soft);text-decoration:underline;font-weight:500;margin-top:18px !important}
 /* langes Blatt (Leitung hinzufügen): die Knöpfe bleiben unten stehen.
    v1.262 (Jean: ohne Federn fühlte es sich falsch an, mit klebender Zeile federten die
@@ -4147,7 +4151,7 @@ function nameGross(s){
       <button class="btn ghost" id="btnSamBoard" type="button" hidden style="margin-bottom:12px">SAM: Fotos und Einträge</button>
       <div class="eyebrow">Zuleitung</div>
       <button class="list-item" id="btnFeed" style="width:100%"></button>
-      <div class="eyebrow">Stromkreise</div>
+      <div class="eyebrow" id="kreiseTitel">Stromkreise</div>
       <div id="planKopf"></div>   <!-- v1.192: Leitungen planen (Neuinstallation) -->
       <div id="boardBody"></div>
       <div class="eyebrow">Fotos</div>
@@ -4765,7 +4769,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.291';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.292';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 29.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -7181,13 +7185,15 @@ $('#btnPlanReihe').onclick = () => {
 function planFiTitel(c){ return c.breaker ? 'FI ' + c.breaker : 'FI-Schutzschalter'; }   // v1.290 (Deklaration: renderBoard kann früher laufen)
 function planKopfZeigen(n){
   const k = $('#planKopf');
-  if(!planBar()){ ordnen = false; k.innerHTML = ''; return; }
+  if(!planBar()){ ordnen = false; k.innerHTML = ''; const hb = $('#btnPlanHilfe'); if(hb) hb.remove(); return; }
   const ohne = circuits().filter(ohneNr).length;
   /* v1.229 (Jean): kein „Ordnen“ mehr – die Liste kann es immer */
   /* v1.290 (Designteam Paket B): der Hinweis stand bei jedem Öffnen da und schob die Liste
      nach unten – jetzt hinter „?“; Text nach v1.240 (erst halten, dann ziehen) */
-  k.innerHTML = n ? `<div class="plan-hilfe"><button type="button" id="btnPlanHilfe" aria-expanded="${planHilfeAuf}" aria-label="Bedienung"></button></div>`
-    + (planHilfeAuf ? `<p class="muted small plan-hinweis">Kästchen = markieren · Zeile antippen = bearbeiten · ≡ kurz halten, dann ziehen. Die Nummern folgen der Reihenfolge.</p>` : '') : '';
+  /* v1.292 (Jean: das „?“ kreuzte die Linie): der Knopf steht in der Überschrift hinter der Linie */
+  const alt = $('#btnPlanHilfe'); if(alt) alt.remove();
+  if(n) $('#kreiseTitel').insertAdjacentHTML('beforeend', `<button type="button" id="btnPlanHilfe" class="plan-hilfe-knopf" aria-expanded="${planHilfeAuf}" aria-label="Bedienung"></button>`);
+  k.innerHTML = n && planHilfeAuf ? `<p class="muted small plan-hinweis">Kästchen = markieren · Zeile antippen = bearbeiten · ≡ kurz halten, dann ziehen. Die Nummern folgen der Reihenfolge.</p>` : '';
   const hb = $('#btnPlanHilfe');
   if(hb) hb.onclick = () => { planHilfeAuf = !planHilfeAuf; planKopfZeigen(n); };
 }
@@ -7522,8 +7528,10 @@ function ordnenZiehen(zeile, e, leerBund){
     for(const [i, {f, w}] of freiW){
       if(mitteJetzt < lagen[i].top || mitteJetzt >= lagen[i].top + lagen[i].h) continue;
       const kmax = Math.max(0, w - te);
-      /* v1.243: jede TE ein Streifen – Finger auf Streifen k, so weit die Zeile passt */
-      const k = Math.min(kmax, Math.floor((mitteJetzt - lagen[i].top) / lagen[i].h * w));
+      /* v1.243: jede TE ein Streifen – Finger auf Streifen k, so weit die Zeile passt;
+         v1.292: gezählt im Innern des Blocks (ohne den Rand oben und unten) */
+      const pd = offen.has(i) ? freiRand : 0, iTop = lagen[i].top + pd, iH = Math.max(1, lagen[i].h - 2 * pd);
+      const k = Math.max(0, Math.min(kmax, Math.floor((mitteJetzt - iTop) / iH * w)));
       /* v1.252: Zielreihe nach der Lage des Blocks, wie er vor dem Ziehen stand */
       return {f, i, k, zr: Math.ceil(((origNr.get(f) || 1) + k) / ROW_SIZE)};
     }
@@ -7624,7 +7632,8 @@ function ordnenZiehen(zeile, e, leerBund){
     if(an !== rastet){ rastet = an; zeile.style.transition = ueberg + (an ? ', transform 80ms ease-out' : ''); }
     if(!an) { rastStufe = ''; return false; }
     const {w} = freiW.get(fr.i), l = lagen[fr.i], teS = Math.max(1, parseInt(selbst.te, 10) || 1);
-    const mitteZiel = l.top + (fr.k + Math.min(teS, w) / 2) * l.h / w;
+    const pd = offen.has(fr.i) ? freiRand : 0, iH = Math.max(1, l.h - 2 * pd);
+    const mitteZiel = l.top + pd + (fr.k + Math.min(teS, w) / 2) * iH / w;
     zeile.style.transform = `translateY(${mitteZiel - lagen[von].h / 2 - lagen[von].top}px)`;
     const st = fr.i + ':' + fr.k;
     if(st !== rastStufe){
@@ -7638,9 +7647,13 @@ function ordnenZiehen(zeile, e, leerBund){
     }
     return true;
   };
-  elems.forEach(el => { if(el !== zeile) el.style.transition = 'transform 180ms cubic-bezier(.3,1.25,.5,1)'; });   // v1.242: auch Überschriften
+  /* v1.242: auch Überschriften rücken; v1.292: Übergang je nach Bewegung in ausweichen() */
   /* freie Blöcke in der Nähe des Fingers öffnen, entfernte schließen (v1.288) */
   const offen = new Map();                           // Index → Ausgleich, um den gerollt wurde
+  /* v1.292 (Jean: um die letzte TE einer Reihe zu erreichen, ragte die Zeile optisch schon in die
+     nächste Reihe): oben und unten so viel Rand, dass die Zeile auch auf der ersten und letzten
+     Stufe ganz im Block steht */
+  const freiRand = Math.max(0, (lagen[von].h - FREI_STUFE) / 2);
   const naehe = () => {
     if(!freiW.size) return false;
     const n = lagen[von].h;
@@ -7650,8 +7663,9 @@ function ordnenZiehen(zeile, e, leerBund){
       if(nah === offen.has(i) || w < 2) return;
       const z = zeilen[i], hVor = z.offsetHeight;
       const oben = l.top + l.h / 2 < mitteJetzt;     // Block über dem Finger: wächst nach oben
-      if(nah){ z.style.minHeight = Math.max(hVor, w * FREI_STUFE) + 'px'; z.classList.add('offen'); }
-      else { z.style.minHeight = ''; z.classList.remove('offen'); }
+      const sk = skalen.get(i);
+      if(nah){ z.style.minHeight = Math.max(hVor, w * FREI_STUFE + 2 * freiRand) + 'px'; z.classList.add('offen'); if(sk){ sk.style.top = freiRand + 'px'; sk.style.bottom = freiRand + 'px'; } }
+      else { z.style.minHeight = ''; z.classList.remove('offen'); if(sk){ sk.style.top = ''; sk.style.bottom = ''; } }
       const dh = z.offsetHeight - hVor;
       let comp = 0;
       if(nah && oben){ const vor = bildY(); bildNach(vor + dh); comp = bildY() - vor; }
@@ -7663,7 +7677,36 @@ function ordnenZiehen(zeile, e, leerBund){
     if(geaendert){ messen(); schluessel = ''; }
     return geaendert;
   };
-  let platzAn = false;
+  let platzAn = false, freiJetzt = false;
+  /* v1.292 (Jean: der Platz machende Kreis schnappte zu plötzlich an die neue Lage): die Zeilen
+     weichen stufenlos aus, während die gezogene Zeile sich ihnen nähert – über eine Zeilenhöhe,
+     vollständig genau dann, wenn das Ziel umspringt (Mitte erreicht) – und kommen beim Zurückziehen
+     ebenso zurück. Über einem freien Block stehen alle auf ihrem Platz (dort zeigt die Skala das Ziel). */
+  const verschub = new Map();
+  const ausweichen = () => {
+    const H = lagen[von].h, platz = H + abstand, m = mitteJetzt, d0 = elems.indexOf(zeile);
+    let teil = 0;                                    // wie weit eine Zeile gerade in die Lücke rückt
+    elems.forEach((el, i) => {
+      if(el === zeile) return;
+      let sh = 0;
+      if(!freiJetzt){
+        const L = elLagen.get(el), c = L.top + L.h / 2;
+        const f = Math.max(0, Math.min(1, i > d0 ? (m - (c - H)) / H : (c + H - m) / H));
+        if(f > 0 && f < 1) teil = Math.max(teil, f);
+        sh = (i > d0 ? -platz : platz) * f;
+      }
+      sh = Math.round(sh * 2) / 2;
+      const alt = verschub.get(el) || 0;
+      if(sh === alt) return;
+      /* großer Sprung (freier Block an/aus): federnd; sonst folgt die Zeile dem Finger dicht */
+      el.style.transition = Math.abs(sh - alt) > platz * 0.4 ? 'transform 200ms cubic-bezier(.3,1.25,.5,1)' : 'transform 60ms linear';
+      el.style.transform = sh ? `translateY(${sh}px)` : '';
+      verschub.set(el, sh);
+    });
+    /* der Platzhalter verblasst, während eine Zeile in ihn hineinrückt; nach dem Umspringen steht er neu */
+    const op = freiJetzt ? '' : String(Math.round((1 - teil) * 100) / 100);
+    if(platzEl.style.opacity !== op) platzEl.style.opacity = op;
+  };
   const malen = () => {
     let d = Math.max(dMin, Math.min(dMax, y + bildY() - y0));
     mitteJetzt = lagen[von].top + d + lagen[von].h / 2;
@@ -7677,7 +7720,7 @@ function ordnenZiehen(zeile, e, leerBund){
     const fr = imFrei();
     const koepfeDrueber = Object.values(koepfe).filter(k => k < mitte).length;
     const sch = [ziel, fr ? fr.i + ':' + fr.k : '', koepfeDrueber].join('|');
-    if(sch === schluessel) return;
+    if(sch === schluessel){ ausweichen(); return; }
     schluessel = sch;
     const w = wohin();
     /* v1.242: die Lücke öffnet sich genau dort, wo die Zeile landet – Überschriften rücken
@@ -7691,12 +7734,7 @@ function ordnenZiehen(zeile, e, leerBund){
       ins = sZ ? elems.indexOf(sZ) : elems.length;
       if(sZ && !w.anfang && ins > 0 && elems[ins - 1].classList.contains('row-head')) ins--;
     }
-    elems.forEach((el, i) => {
-      if(el === zeile) return;
-      const sh = ins > d0 && i > d0 && i < ins ? -platz : ins < d0 && i >= ins && i < d0 ? platz : 0;
-      const t = sh ? `translateY(${sh}px)` : '';
-      if(el.style.transform !== t) el.style.transform = t;
-    });
+    freiJetzt = !!w.frei;
     const lage = el => elLagen.get(el);
     let pTop;
     if(ins > d0 + 1){ const v = lage(elems[ins - 1]); pTop = v.top + v.h - platz + abstand; }
@@ -7709,6 +7747,7 @@ function ordnenZiehen(zeile, e, leerBund){
     if(!platzEl.hidden && !platzAn && platzEl.animate && !BEWEGUNG_AUS()) platzEl.animate([{opacity:0}, {opacity:1}], {duration:100, easing:'ease-out'});
     platzAn = !platzEl.hidden;
     zielZeigen(w);
+    ausweichen();
   };
   const kanten = () => {
     const r = m.getBoundingClientRect();

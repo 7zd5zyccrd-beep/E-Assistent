@@ -561,8 +561,15 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **Einrasten (v1.291, Versuch, Jean 6 ja):** `rasten(fr)` in `ordnenZiehen` – über einem freien Block steht die
   Zeile mittig auf ihrer Stufe (`transform 80ms`, Stufe weiter aus dem Finger), neue Stufe blitzt (`brightness`),
   `.zieh-text` wächst kurz; `mv` setzt dann keine Lage. Bei Missfallen: `rasten` liefert false → altes Gleiten.
+- **v1.292 (Jean: Platz machender Kreis schnappte zu plötzlich; letzte TE nur „über die Reihengrenze“; „?“ kreuzte
+  die Linie):** `ausweichen()` läuft jedes Bild – jede Zeile/Überschrift weicht stufenlos aus, Anteil
+  f = (m − (c − H)) / H darunter bzw. (c + H − m) / H darüber (c = Mitte der Zeile, H = Höhe der gezogenen), voll genau
+  an der Ziel-Schwelle; Übergang 60 ms linear, große Sprünge (freier Block an/aus) federnd; Platzhalter-Deckkraft
+  1 − Anteil. Freie Blöcke beim Öffnen mit Rand `freiRand` = (H − `FREI_STUFE`) / 2 oben/unten (Skala innen,
+  `imFrei`/`rasten` rechnen im Innern) – die Zeile steht auch auf der ersten/letzten Stufe ganz im Block.
+  „?“ (`#btnPlanHilfe.plan-hilfe-knopf`) steht in `#kreiseTitel` hinter der Linie (`order:2`).
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.291, 29.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.292, 29.10.2026)
 
 - **Erfassen Pakete A/B (v1.289/v1.290):** Optik, FI-Name, „n markiert“, „?“ am Gerät ansehen.
 - **Ziehen (v1.288, Einrasten v1.291):** Halten/Anheben/Federn/Ablegen/Einrasten am iPhone ansehen – Werte (Größe, Federn, 250 ms) nach Gefühl nachstellen.
