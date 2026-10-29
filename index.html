@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.285 29.10.2026 Dunkelmodus ruhiger (Designteam, Jean: Gruen zu stechend; Variante A): Grund
+                    fast neutral statt oliv, Hauptknopf und "in Ordnung" in gedaempftem Gruen
+                    (Streifen bei gemessenen Kreisen bleibt), Verweise, Zurueck und Bereichsleiste
+                    hell statt gruen, gewaehlte Kacheln nicht mehr fast weiss, Knopfraender grau,
+                    Rot heller lesbar. Der helle Modus bleibt, wie er ist.
   v1.284 29.10.2026 Nummer innerhalb der eigenen Breite (Jean: FI 13-16 auf 14 ging nicht): in der
                     letzten Reihe zaehlen auch die offenen TE hinter dem letzten Kreis als Platz.
                     Vorher klappte es erst, wenn dort eine freie Zeile stand. Reicht der Platz
@@ -3332,40 +3337,50 @@ input.ungueltig{border-color:var(--fault)!important;color:var(--fault)}   /* v1.
 
 
 @media (prefers-color-scheme:dark){
+  /* v1.285 (Designteam Dunkelmodus, Jean: „das Grün ist zu stechend, andere Dinge treten
+     in den Hintergrund“; Variante A „Grün gedämpft“): das Logogrün trug hier sieben Rollen
+     zugleich und war als Hauptknopf die hellste Fläche. Jetzt: Grund fast neutral statt oliv,
+     Hauptknopf und „in Ordnung“ gedämpftes Grün (Streifen der gemessenen Kreise bleibt, Jean),
+     Verweise, Zurück, Bereichsleiste neutral, gewählte Kacheln nicht mehr fast weiß, Ränder
+     grau statt weiß, Rot heller lesbar. Das reine Logogrün bleibt Logo, Wolke, Kamera. */
   :root{
-    --enclosure:#15180F;
-    --enclosure-2:#1E2317;
-    --surface:#232819;
-    --ink:#E9ECE0;
-    --ink-soft:#A6AD99;
-    --line:#353C2A;
-    --field-border:#6C7560;
-    --rail-dark:#6C7560;
+    --enclosure:#111310;
+    --enclosure-2:#191C17;
+    --surface:#23271F;
+    --ink:#E3E6DD;
+    --ink-soft:#A9B0A1;
+    --line:#3B4236;
+    --field-border:#7C8672;
+    --rail-dark:#7C8672;
     --bar:#0D1008;
-    --brand-dark:#A0D241;     /* auf Dunkel wirkt die Logofarbe selbst am besten */
-    --brand-ink:#A0D241;
-    /* Hervorgehobene Buttons kehren sich um: hell auf dunklem Grund */
-    --strong:#A0D241;
-    --on-strong:#15180F;
-    /* v1.168: gewählte Tasten und Kacheln hell-neutral; Grün bleibt der einen
-       Hauptaktion und dem "in Ordnung" vorbehalten */
-    --sel:#E9ECE0;
-    --on-sel:#15180F;
-    --pe:#A0D241;
-    --signal:#E3B23C;
-    --fault:#E0685C;
+    --brand-dark:#8DB84A;
+    --brand-ink:#E3E6DD;      /* Verweise hell und unterstrichen – Grün heißt „in Ordnung“ */
+    /* Hauptaktion gedämpftes Grün statt Neon (vorher #A0D241, 10:1 – heller als jeder Text) */
+    --strong:#86AE3C;
+    --on-strong:#0F120C;
+    /* v1.168: gewählte Tasten und Kacheln hell-neutral; v1.285 gedämpft, nicht mehr so hell
+       wie der Hauptknopf */
+    --sel:#C9CDBF;
+    --on-sel:#111310;
+    --pe:#8DB84A;
+    --signal:#E7B64A;
+    --fault:#F08A7E;          /* auf --warn-bg 5,6 : 1 statt 4,3 : 1 */
     --fault-fill:#C0392B;     /* weiß darauf 5,4 : 1 statt 3,3 : 1 */
-    --warn-bg:#3A2523;
-    --sig-bg:#38300F;
+    --warn-bg:#2E2220;
+    --sig-bg:#2F2914;
     --info-bg:#1E2A36;
-    --ok-bg:#252E14;
+    --ok-bg:#232A1C;
     --neutral:#93A1AE;
     --neutral-bg:#262B22;   /* v1.281 */
-    --signal-ink:#E3B23C;
+    --signal-ink:#E7B64A;
   }
   .list-item.state-red{background:var(--warn-bg)}
   .list-item.state-yellow{background:var(--sig-bg)}
-  header .back{border-color:#3A444B}
+  header .back{border-color:#4A5245;color:#C9CDBF}
+  .bereiche .b-gleiter{background:var(--ink)}
+  .btn,.seg,.seg button{border-color:var(--field-border)}
+  .fortschritt i{background:var(--pe)}
+  .projekt-karte .s.naechst.gruen{color:var(--pe)}
 }
 
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
@@ -4654,7 +4669,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.284';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.285';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 29.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */

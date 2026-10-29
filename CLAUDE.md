@@ -513,8 +513,20 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   letzten belegten Reihe die offenen TE hinter dem letzten Eintrag mit (`offen`). `planKeinPlatz` hält „Kein Platz“
   stehen (sonst sofort von „Gespeichert“ überdeckt).
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.284, 29.10.2026)
+## Dunkelmodus (Designteam 29.10.2026, Jean: Grün zu stechend; Variante A „Grün gedämpft“)
 
+- **v1.285:** nur der Block `@media (prefers-color-scheme:dark)`: Grund fast neutral (`--enclosure` #111310,
+  `--surface` #23271F), `--strong` #86AE3C (Hauptknopf gedämpft), `--pe`/`--brand-dark` #8DB84A – der grüne
+  Streifen der gemessenen Kreise bleibt (Jean), `--brand-ink` = `--ink` (Verweise hell, unterstrichen), `--sel`
+  #C9CDBF, Rot `--fault` #F08A7E, `--warn-bg` #2E2220; Zurück-Ring, `.b-gleiter` neutral, Ränder von `.btn`/`.seg`
+  in `--field-border`. Logogrün `--brand` bleibt (Logo, Wolke, Kamera). Hell unverändert.
+- **Noch offen (Fragen an Jean):** Abschluss als eine Sammelkarte, „noch nicht erledigt“ gelb statt rot; leisere
+  Vorschlag-Rahmen in den Prüfpunkten; Mangel-Zeichen gefüllt (ohne Farbe lesbar); Schrift im Dunkeln eine
+  Stufe leichter; markierte Zeile der Planliste mit weißem Rahmen.
+
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.285, 29.10.2026)
+
+- **Dunkelmodus (v1.285):** im dunklen Keller bei geringer Helligkeit und draußen – Hauptknopf noch klar?
 - **Designteam Runde 2 (v1.277–v1.282):** alles am Gerät ansehen (vorher „App neu laden“).
 - **Startbild und Speicher auf dem Gerät (v1.273–v1.275):** Start ohne leeren Bildschirm, ohne Netz, neue Version beim übernächsten Öffnen.
 - **Prüfvermerk (v1.210):** entschieden – Variante A mit Beschriftung auf der Verteiler-
