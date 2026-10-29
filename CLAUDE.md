@@ -558,11 +558,14 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   `planHilfeAuf`); `waehlDialog` kennt `cls:'abbrechen'` (Textknopf, abgesetzt), genutzt in „Gerät einfügen“.
   Bewusst nicht: Nummern der freien Streifen „einfrieren“ – sie zeigen die Zielnummer (v1.243), sonst stimmte die
   Anzeige nicht mit dem Ergebnis.
+- **Einrasten (v1.291, Versuch, Jean 6 ja):** `rasten(fr)` in `ordnenZiehen` – über einem freien Block steht die
+  Zeile mittig auf ihrer Stufe (`transform 80ms`, Stufe weiter aus dem Finger), neue Stufe blitzt (`brightness`),
+  `.zieh-text` wächst kurz; `mv` setzt dann keine Lage. Bei Missfallen: `rasten` liefert false → altes Gleiten.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.290, 29.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.291, 29.10.2026)
 
 - **Erfassen Pakete A/B (v1.289/v1.290):** Optik, FI-Name, „n markiert“, „?“ am Gerät ansehen.
-- **Ziehen (v1.288):** Halten/Anheben/Federn/Ablegen am iPhone ansehen – Werte (Größe, Federn, 250 ms) nach Gefühl nachstellen.
+- **Ziehen (v1.288, Einrasten v1.291):** Halten/Anheben/Federn/Ablegen/Einrasten am iPhone ansehen – Werte (Größe, Federn, 250 ms) nach Gefühl nachstellen.
 - **Dunkelmodus (v1.285):** im dunklen Keller bei geringer Helligkeit und draußen – Hauptknopf noch klar?
 - **Designteam Runde 2 (v1.277–v1.282):** alles am Gerät ansehen (vorher „App neu laden“).
 - **Startbild und Speicher auf dem Gerät (v1.273–v1.275):** Start ohne leeren Bildschirm, ohne Netz, neue Version beim übernächsten Öffnen.

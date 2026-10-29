@@ -10,6 +10,9 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.291 29.10.2026 Erfassen, Ziehen ueber freien TE (Designteam, Jean ja – Versuch): die Zeile rastet
+                    Stufe fuer Stufe ein, statt stufenlos zu gleiten; die neue Stufe blitzt kurz auf,
+                    die Zielangabe waechst kurz. Die Stufe ergibt sich weiter aus der Fingerlage.
   v1.290 29.10.2026 Erfassen, Planliste einheitlich (Designteam Paket B): der FI heisst "FI 40 A /
                     30 mA" mit Polen und abgedeckten Kreisen darunter statt "Ohne Bezeichnung"; eine
                     gezogene Gruppe heisst "n Kreise" und liegt wie ein Stapel; aufgeklappte freie
@@ -2892,7 +2895,7 @@ input.schalter:checked::after{transform:translateX(20px)}
 .ord-zeile.nr-neu .no{color:var(--brand-dark, #5f8a14)}
 .frei-skala{position:absolute;inset:0;border-radius:inherit;background:var(--surface);pointer-events:none;z-index:2}
 .ord-zeile.zieht.ueber-frei{opacity:.9}   /* die Streifen darunter bleiben zu ahnen */
-.ord-zeile.zieht .zieh-text{font-family:var(--f-label);font-size:16px;font-weight:700;color:var(--ink);letter-spacing:.03em}
+.ord-zeile.zieht .zieh-text{display:inline-block;transform-origin:left center;font-family:var(--f-label);font-size:16px;font-weight:700;color:var(--ink);letter-spacing:.03em}
 .frei-skala .stufe{position:absolute;left:0;right:0;border-top:1px dashed var(--field-border);display:flex;align-items:center;padding-left:60px;font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
 .frei-skala .stufe:first-child{border-top:0}
 .frei-skala .stufe.an{background:var(--brand);color:var(--ink);font-weight:700;font-family:var(--f-label);font-size:16px}
@@ -4762,7 +4765,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.290';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.291';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 29.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -7610,7 +7613,31 @@ function ordnenZiehen(zeile, e, leerBund){
   zeile.classList.add('zieht');
   /* v1.288 (Designteam): die Zeile folgt dem Finger ohne Verzögerung (transform), hebt sich
      aber mit kleinem Federn an (scale/Schatten); die übrigen weichen federnd aus */
-  zeile.style.transition = 'scale 140ms cubic-bezier(.34,1.4,.64,1), box-shadow 140ms ease-out';
+  const ueberg = 'scale 140ms cubic-bezier(.34,1.4,.64,1), box-shadow 140ms ease-out';
+  zeile.style.transition = ueberg;
+  /* v1.291 (Designteam, Jean 6 ja – Versuch): über einem freien Block rastet die Zeile Stufe für
+     Stufe ein (80 ms) statt stufenlos zu gleiten; die Stufe ergibt sich weiter aus dem Finger.
+     Die neue Stufe blitzt kurz auf, die Zielangabe wächst kurz – sichtbares „Klick“ ohne Vibrieren. */
+  let rastet = false, rastStufe = '';
+  const rasten = fr => {
+    const an = !!fr && !BEWEGUNG_AUS();
+    if(an !== rastet){ rastet = an; zeile.style.transition = ueberg + (an ? ', transform 80ms ease-out' : ''); }
+    if(!an) { rastStufe = ''; return false; }
+    const {w} = freiW.get(fr.i), l = lagen[fr.i], teS = Math.max(1, parseInt(selbst.te, 10) || 1);
+    const mitteZiel = l.top + (fr.k + Math.min(teS, w) / 2) * l.h / w;
+    zeile.style.transform = `translateY(${mitteZiel - lagen[von].h / 2 - lagen[von].top}px)`;
+    const st = fr.i + ':' + fr.k;
+    if(st !== rastStufe){
+      if(rastStufe) setTimeout(() => {
+        const sk = skalen.get(fr.i), el = sk && sk.children[fr.k];
+        if(el && el.animate) el.animate([{filter:'brightness(1.25)'}, {filter:'none'}], {duration:120, easing:'ease-out'});
+        const tx = zeile.querySelector('.zieh-text');
+        if(tx && tx.animate) tx.animate([{transform:'scale(1.1)'}, {transform:'none'}], {duration:140, easing:'cubic-bezier(.34,1.4,.64,1)'});
+      });
+      rastStufe = st;
+    }
+    return true;
+  };
   elems.forEach(el => { if(el !== zeile) el.style.transition = 'transform 180ms cubic-bezier(.3,1.25,.5,1)'; });   // v1.242: auch Überschriften
   /* freie Blöcke in der Nähe des Fingers öffnen, entfernte schließen (v1.288) */
   const offen = new Map();                           // Index → Ausgleich, um den gerollt wurde
@@ -7641,9 +7668,9 @@ function ordnenZiehen(zeile, e, leerBund){
     let d = Math.max(dMin, Math.min(dMax, y + bildY() - y0));
     mitteJetzt = lagen[von].top + d + lagen[von].h / 2;
     if(naehe()){ d = Math.max(dMin, Math.min(dMax, y + bildY() - y0)); mitteJetzt = lagen[von].top + d + lagen[von].h / 2; }
-    zeile.style.transform = `translateY(${d}px)`;
     const mitte = mitteJetzt;
     ziel = lagen.filter((l, i) => i !== von && l.top + l.h / 2 < mitte).length;
+    if(!rasten(imFrei())) zeile.style.transform = `translateY(${d}px)`;   // v1.291
     /* v1.288 (Designteam: jede Fingerbewegung rechnete die ganze Liste neu – auf dem
        iPhone fiel bei vielen Zeilen jedes 3.–5. Bild aus): neu gerechnet wird nur, wenn
        sich das Ziel ändert */
@@ -7712,7 +7739,7 @@ function ordnenZiehen(zeile, e, leerBund){
   /* v1.288: je Bild einmal rechnen, nicht je Fingerereignis – die Zeile selbst folgt sofort */
   const mv = ev => {
     y = ev.clientY;
-    zeile.style.transform = `translateY(${Math.max(dMin, Math.min(dMax, y + bildY() - y0))}px)`;
+    if(!rastet) zeile.style.transform = `translateY(${Math.max(dMin, Math.min(dMax, y + bildY() - y0))}px)`;
     if(!rafMalen) rafMalen = requestAnimationFrame(() => { rafMalen = 0; malen(); });
   };
   malen();
