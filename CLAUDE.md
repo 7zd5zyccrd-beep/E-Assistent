@@ -568,8 +568,13 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   1 − Anteil. Freie Blöcke beim Öffnen mit Rand `freiRand` = (H − `FREI_STUFE`) / 2 oben/unten (Skala innen,
   `imFrei`/`rasten` rechnen im Innern) – die Zeile steht auch auf der ersten/letzten Stufe ganz im Block.
   „?“ (`#btnPlanHilfe.plan-hilfe-knopf`) steht in `#kreiseTitel` hinter der Linie (`order:2`).
+- **v1.293 (Jean, Video: Zeile stand sichtbar schon zwischen den Kreisen und schnappte zurück; Platzhalter nervös):**
+  Ziel-Schwelle = sichtbares Kreuzen: `unter(c, nach)` – Element darunter gilt als überholt bei m > c − H/2, darüber
+  bei m < c + H/2 (für `ziel`, Reihenköpfe `koepfeNach`, `anfang`); `ausweichen()` ist dort genau halb (f = 0,5).
+  Der gestrichelte Platzhalter `.zieh-platz` entfällt ganz – die Lücke zeigt das Ziel. Tests: Ziele auch nicht in die
+  Randzone über einer zweireihigen Leiste legen.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.292, 29.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.293, 29.10.2026)
 
 - **Erfassen Pakete A/B (v1.289/v1.290):** Optik, FI-Name, „n markiert“, „?“ am Gerät ansehen.
 - **Ziehen (v1.288, Einrasten v1.291):** Halten/Anheben/Federn/Ablegen/Einrasten am iPhone ansehen – Werte (Größe, Federn, 250 ms) nach Gefühl nachstellen.
