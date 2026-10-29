@@ -576,8 +576,12 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
 - **v1.294 (Jean: Rahmen der gezogenen Zeile links offen):** `.list-item.ord-zeile{border-left:1px …}` (v1.289) überdeckte
   die Randfarbe von `.zieht`/`.an` – `.list-item.ord-zeile.zieht/.an{border-left-color}` eigens gesetzt (dunkel `.an` grau).
   Ziehen nach v1.293 von Jean bestätigt: „fühlt sich deutlich ruhiger an“ (29.10.2026).
+- **v1.295 (Jean: beim Anfassen einer markierten Zeile sprang die Anzeige in ein Sammelobjekt – sichtbar stapeln):**
+  `bundZiehen` legt Abbilder (`.bund-flug`, `position:fixed`) der übrigen markierten Zeilen an, entfernt die Zeilen und
+  lässt die Abbilder nach `ordnenZiehen` 220 ms in die Karte fliegen (landen 5/10 px versetzt = Stapelkanten); die
+  übrigen Zeilen rücken mit `composite:'add'` weich auf (nur wo unterstützt). Test: CDP `Animation.setPlaybackRate`.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.294, 29.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.295, 29.10.2026)
 
 - **Erfassen Pakete A/B (v1.289/v1.290):** Optik, FI-Name, „n markiert“, „?“ am Gerät ansehen.
 - **Ziehen (v1.288, Einrasten v1.291):** Halten/Anheben/Federn/Ablegen/Einrasten am iPhone ansehen – Werte (Größe, Federn, 250 ms) nach Gefühl nachstellen.
