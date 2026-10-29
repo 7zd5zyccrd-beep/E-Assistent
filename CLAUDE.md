@@ -546,8 +546,13 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   hält an, wenn die Karte bei `dMin`/`dMax` ansteht. Häkchen `.mark-neu` zeichnet sich.
   Gemessen (40 Zeilen, CPU ×4): Bilder > 20 ms beim Ziehen 47/51/47 → 4/3/2. Prüfung: `c-pruef.mjs`
   (Anzeige beim Ziehen = Ergebnis, 13 Fälle; Ziele nicht in die Randzone legen, sonst rollt die Liste weiter).
+- **Paket A (v1.289) – Optik der Planliste** (CSS-Block „v1.289“ hinter `.list-item.ord-zeile .no`): Nummernspalte
+  fest 48 px (`tabular-nums`), Kreise ohne Streifen (`border-left:1px`), FI mit `inset 4px` in `--ink-soft` und
+  `--enclosure-2` (auch in `.halten`/`.zieht` mitgeführt); freie Zeile flach (48 px, gestrichelt `--line`, einzeilig);
+  Reihenüberlauf `:has(.ord-reihe)` gelb (`--sig-bg`, `inset 4px --signal`), Text in `--signal-ink`; Ziel/Stufe/Platzhalter
+  in `--pe` gedämpft (`color-mix`); beim Ziehen `#boardBody ~ :not(.actionbar)` auf .3.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.288, 29.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.289, 29.10.2026)
 
 - **Ziehen (v1.288):** Halten/Anheben/Federn/Ablegen am iPhone ansehen – Werte (Größe, Federn, 250 ms) nach Gefühl nachstellen.
 - **Dunkelmodus (v1.285):** im dunklen Keller bei geringer Helligkeit und draußen – Hauptknopf noch klar?

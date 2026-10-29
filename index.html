@@ -10,6 +10,12 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.289 29.10.2026 Erfassen, Planliste ruhiger (Designteam Paket A): Nummern in einer festen
+                    Spalte, alle Bezeichnungen beginnen an einer Kante; der dicke Streifen links nur
+                    noch beim FI, gedaempft; freie Zeilen flach und einzeilig; "Passt nicht mehr in
+                    Reihe" als gelb markierte Zeile statt Kasten in der Zeile; Ziel und Platzhalter
+                    beim Ziehen in gedaempftem Gruen statt Logogruen; beim Ziehen treten Fotos und
+                    Material darunter zurueck.
   v1.288 29.10.2026 Erfassen, Ziehen in der Planliste (Designteam Paket C, Jean: fluessiger und
                     haptischer; Fragen 2-5 ja): gerechnet wird nur noch einmal je Bild und nur
                     bei neuem Ziel (bei vielen Zeilen fiel vorher jedes 3.-5. Bild aus). Beim
@@ -2908,6 +2914,40 @@ input.schalter:checked::after{transform:translateX(20px)}
 .plan-leiste .btn{flex:1 1 0;width:auto;min-width:0;padding:0 6px;font-size:15px;white-space:nowrap}
 @media (max-width:360px){ .plan-leiste .btn{font-size:14px;padding:0 4px} }
 .list-item.ord-zeile .no{flex:0 0 auto;min-width:1.2em;max-width:4.2em}
+/* v1.289 (Designteam Paket A, Jean ja: ruhiger, einheitlicher) ---------------------------
+   feste Nummernspalte: alle Bezeichnungen beginnen an einer Kante (vorher sprang die
+   Textkante je nach Breite der Nummer) */
+.list-item.ord-zeile .no{flex:0 0 48px;min-width:48px;max-width:none;font-size:18px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.list-item.ord-zeile{gap:8px;padding-top:11px;padding-bottom:11px}
+.list-item.ord-zeile .s{margin-top:3px;line-height:1.35}
+/* der dicke Streifen links nur noch beim FI, gedämpft – Kreise haben in der Planliste
+   keinen Zustand; als Schatten, damit die Textkante nicht wieder rückt */
+.list-item.ord-zeile{border-left:1px solid var(--line)}
+.list-item.ord-zeile.ord-fi{border-left:1px solid var(--line);box-shadow:inset 4px 0 0 var(--ink-soft);background:var(--enclosure-2)}
+.list-item.ord-zeile.ord-fi.halten{box-shadow:inset 4px 0 0 var(--ink-soft),0 4px 12px rgba(0,0,0,.14)}
+.list-item.ord-zeile.ord-fi.zieht{box-shadow:inset 4px 0 0 var(--ink-soft),0 10px 24px rgba(0,0,0,.28)}
+/* freie Zeile flach und einzeilig – liest sich als Lücke, nicht als Eintrag */
+.ord-zeile.ord-frei{min-height:48px;padding-top:8px;padding-bottom:8px;align-items:center;border:1.5px dashed var(--line);background:transparent}
+.ord-zeile.ord-frei .no{align-self:center;color:var(--ink-soft);font-weight:600}
+.ord-zeile.ord-frei .body{display:flex;flex-direction:row;align-items:baseline;gap:4px 8px;flex-wrap:wrap}
+.ord-zeile.ord-frei .t{font-weight:500;color:var(--ink-soft);font-size:15px}
+.ord-zeile.ord-frei .s{margin-top:0}
+.ord-zeile.ord-frei .ord-frei-ctl{flex-basis:100%}
+.ord-zeile.ord-frei .ord-griff{color:var(--field-border)}
+.ord-zeile.ord-frei .ord-mark{border-color:var(--line)}
+/* „Passt nicht mehr in Reihe“: Zustand der Zeile (bitte ansehen) statt Kasten im Kasten */
+.list-item.ord-zeile:has(.ord-reihe){box-shadow:inset 4px 0 0 var(--signal);background:var(--sig-bg)}
+.ord-reihe{display:block;background:none;padding:0;margin-top:6px;font-size:13.5px;color:var(--signal-ink);font-weight:600}
+.ord-reihe button{display:flex;align-items:center;margin-top:6px;min-height:44px;font-size:14px;border:1.5px solid var(--field-border);border-radius:var(--r);font-weight:600}
+/* Ziel beim Ziehen in gedämpftem Grün statt Logogrün als Fläche – überall dieselbe Sprache */
+.frei-skala .stufe{padding-left:56px;font-family:var(--f-label);font-size:16px}
+.frei-skala .stufe.an{background:color-mix(in srgb, var(--pe) 22%, var(--surface));color:var(--ink);box-shadow:inset 3px 0 0 var(--pe)}
+#boardBody .row-head.ziel{background:none;color:var(--pe);box-shadow:inset 3px 0 0 var(--pe);padding:4px 8px 4px 11px}
+#boardBody .row-head.neu:not(.ziel){border:1.5px dashed var(--line)}
+.zieh-platz{border:2px dashed var(--pe);background:color-mix(in srgb, var(--pe) 8%, transparent)}
+/* während des Ziehens tritt alles unter der Liste zurück – Fotos schienen durch die Karte */
+#boardBody ~ :not(.actionbar){transition:opacity .15s}
+#boardBody:has(.ord-zeile.zieht) ~ :not(.actionbar){opacity:.3}
 /* langes Blatt (Leitung hinzufügen): die Knöpfe bleiben unten stehen.
    v1.262 (Jean: ohne Federn fühlte es sich falsch an, mit klebender Zeile federten die
    Knöpfe mit): nur #modalBody rollt und federt, Überschrift und Knopfzeile stehen fest */
@@ -4701,7 +4741,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.288';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.289';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 29.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
