@@ -580,8 +580,9 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   `bundZiehen` legt Abbilder (`.bund-flug`, `position:fixed`) der übrigen markierten Zeilen an, entfernt die Zeilen und
   lässt die Abbilder nach `ordnenZiehen` 220 ms in die Karte fliegen (landen 5/10 px versetzt = Stapelkanten); die
   übrigen Zeilen rücken mit `composite:'add'` weich auf (nur wo unterstützt). Test: CDP `Animation.setPlaybackRate`.
+  v1.296 (Jean: Zusammenfliegen zu schnell, Auseinandergleiten 220 ms „optimal“): `BUND_FLUG` 380 ms, Abbild bis 75 % deckend.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.295, 29.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.296, 29.10.2026)
 
 - **Erfassen Pakete A/B (v1.289/v1.290):** Optik, FI-Name, „n markiert“, „?“ am Gerät ansehen.
 - **Ziehen (v1.288, Einrasten v1.291):** Halten/Anheben/Federn/Ablegen/Einrasten am iPhone ansehen – Werte (Größe, Federn, 250 ms) nach Gefühl nachstellen.
