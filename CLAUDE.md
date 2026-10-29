@@ -525,7 +525,11 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   ausgespartem „!“ (evenodd, beide Modi); im Dunkeln `.list-item .t` 500, `.no` 600; `.ord-zeile.an` Rand
   `--ink-soft`. Verworfen: Abschluss als Sammelkarte / „noch offen“ gelb (Jean: nein) – nicht wieder vorschlagen.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.286, 29.10.2026)
+- **v1.287 (Jean: 1 ja, 2 a):** Lager-Knopf der Startseite nur noch mit Rand (2 px), kein äußerer Ring mehr:
+  `ring-rot` rot (knapp), `ring-gelb` gelb (bestellt) – bewusste Ausnahme von „Gelb nur für bitte ansehen“
+  (Jean: Lieferung steht noch aus). Nicht wieder auf Grau stellen.
+
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.287, 29.10.2026)
 
 - **Dunkelmodus (v1.285):** im dunklen Keller bei geringer Helligkeit und draußen – Hauptknopf noch klar?
 - **Designteam Runde 2 (v1.277–v1.282):** alles am Gerät ansehen (vorher „App neu laden“).
