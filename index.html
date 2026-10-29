@@ -10,6 +10,9 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.298 29.10.2026 Erfassen, Planliste (Jean: ganze Reihe in eine neue Reihe ziehen ging nur, wenn etwas
+                    zurueckblieb): die einzige Reihe laesst sich ganz in "Reihe 2 (neu)" ziehen; war die
+                    Reihe davor ganz frei, rueckte nach dem Ablegen alles zurueck - jetzt bleibt es stehen.
   v1.297 29.10.2026 Erfassen, Planliste (Jean: 4-poliger FI stand als "1-pol." da): die Polzahl kommt
                     beim FI aus dem FI-Typ; der Titel lautet "FI 40 A / 30 mA" (auch statt des
                     eingetragenen Standardnamens "FI-Schutzschalter"; ein eigener Name bleibt).
@@ -4784,7 +4787,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.297';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.298';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 29.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -7519,10 +7522,11 @@ function ordnenZiehen(zeile, e, leerBund){
   {
     const sb = planZeilen().find(c => c.cid === zeile.dataset.ord);
     const pl = nummernPlan(leereReihenHalten(planZeilen().filter(c => c !== sb), ziehLeer, sb)).filter(q => q.te > 0);
-    if(sb && !istFrei(sb) && pl.length){
+    /* v1.298: auch wenn nichts zurückbleibt (die einzige Reihe ganz gezogen) */
+    if(sb && !istFrei(sb) && (pl.length || (ziehLeer || []).length)){
       const l = pl[pl.length - 1];
       /* v1.249 (Jean: nur Reihe 2 nach Reihe 3 ging nicht): eine geleerte letzte Reihe zählt mit */
-      neuR = Math.max(Math.ceil((l.no + l.te - 1) / ROW_SIZE), ...(ziehLeer || []).map(x => x.r)) + 1;
+      neuR = Math.max(l ? Math.ceil((l.no + l.te - 1) / ROW_SIZE) : 0, ...(ziehLeer || []).map(x => x.r)) + 1;
       const k = document.createElement('div');
       k.className = 'row-head neu'; k.dataset.r = String(neuR); k.textContent = `Reihe ${neuR} (neu)`;
       zeilen[zeilen.length - 1].after(k);
@@ -8231,7 +8235,11 @@ function nummernAnwenden(){
       if(!istFrei(a.c) || !istFrei(b.c) || a.c.rest) continue;
       const ende = Math.ceil(a.no / ROW_SIZE) * ROW_SIZE;
       if(b.no > ende + (b.c.rest && b.te === 0 ? 1 : 0)) continue;   // b liegt schon in der nächsten Reihe
-      if(b.c.rest) a.c.rest = true; else a.c.te = String(a.te + b.te);
+      /* v1.298 (Jean: ganze Reihe in eine neue gezogen – ging nur, wenn etwas zurückblieb): reicht a
+         genau bis ans Reihenende, ist ein Reihenwechsel ohne Breite dahinter überflüssig. a bleibt,
+         wie es ist – eine ganz freie Reihe als Rest hätte keine Breite, alles rückte zurück. */
+      if(b.c.rest && b.te === 0 && a.no + a.te - 1 === ende){ /* nur b weg */ }
+      else if(b.c.rest) a.c.rest = true; else a.c.te = String(a.te + b.te);
       if(freiOffen === b.c.cid) freiOffen = a.c.cid;
       PROJ.items.splice(PROJ.items.indexOf(b.c), 1);
       weiter = geaendert = true;

@@ -585,7 +585,12 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   `poleTe`), nicht in `c.poles` → `planFiPole(c)`; `planFiTitel` schneidet „FI“ und Polzahl ab und gilt auch, wenn der
   Name der Standardname `AUTO_NAMES.rcd` ist (Einfügen über „+ Gerät“ trägt ihn ein).
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.297, 29.10.2026)
+- **v1.298 (Jean: ganze Reihe in eine neue ziehen ging nur mit Zurücklassen):** „Reihe n (neu)“ auch, wenn nichts
+  zurückbleibt (einzige Reihe ganz gezogen; `neuR` aus `ziehLeer`). `nummernAnwenden` wirft einen Reihenwechsel ohne
+  Breite hinter einem freien Block, der genau am Reihenende endet, nur weg – vorher wurde eine ganz freie Reihe davor
+  zum Rest (0 TE), und alles rückte zurück. Prüfung `c298.mjs` (5 Fälle, auch Neuladen).
+
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.298, 29.10.2026)
 
 - **Erfassen Pakete A/B (v1.289/v1.290):** Optik, FI-Name, „n markiert“, „?“ am Gerät ansehen.
 - **Ziehen (v1.288, Einrasten v1.291):** Halten/Anheben/Federn/Ablegen/Einrasten am iPhone ansehen – Werte (Größe, Federn, 250 ms) nach Gefühl nachstellen.
