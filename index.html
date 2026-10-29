@@ -10,6 +10,11 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.284 29.10.2026 Nummer innerhalb der eigenen Breite (Jean: FI 13-16 auf 14 ging nicht): in der
+                    letzten Reihe zaehlen auch die offenen TE hinter dem letzten Kreis als Platz.
+                    Vorher klappte es erst, wenn dort eine freie Zeile stand. Reicht der Platz
+                    wirklich nicht, bleibt "Kein Platz in Reihe n" stehen (wurde von "Gespeichert"
+                    sofort ueberdeckt).
   v1.283 28.10.2026 Freie TE bleiben nach dem Neuladen (Jean: erste Reihe frei gelassen, nach
                     Schliessen oder "App neu laden" standen die Kreise wieder in Reihe 1). Beim
                     Laden fielen alle freien Zeilen weg, auch nach dem Abgleich mit der Wolke.
@@ -4649,8 +4654,8 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.283';                    // siehe Änderungsliste im Dateikopf
-const BUILD        = VERSION + ' · 28.10.2026';
+const VERSION      = 'v1.284';                    // siehe Änderungsliste im Dateikopf
+const BUILD        = VERSION + ' · 29.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
 const DAUER_WARN   = 100;                        // zu lang: unplausibel im Protokoll
@@ -7844,6 +7849,8 @@ function planEndeNr(zeilen){
    davor eingefügt, die anderen rücken nach hinten (Frage 2 a). Liegt die Nummer in
    einer Lücke oder hinter allem, füllen freie TE den Raum davor; reicht er bis ans
    Reihenende, steht er dort fest hinter „bis Reihenende“ (Frage 3, wie v1.232). */
+/* v1.284: „Kein Platz“ soll stehen bleiben – sonst überdeckte es das „Gespeichert“ danach sofort */
+var planKeinPlatz = false;
 function planVersetzen(c, N, bisher){
   /* v1.234 (Jean: FI 13–16 auf 14): innerhalb der eigenen Breite rückt der Kreis
      mit allen Folgenden nach hinten, davor wird frei – bezahlt vom freien Platz
@@ -7853,9 +7860,15 @@ function planVersetzen(c, N, bisher){
     const k = N - bisher, plan = nummernPlan(), r = Math.ceil(bisher / ROW_SIZE);
     const i = plan.findIndex(p => p.c === c);
     const danach = plan.slice(i + 1).filter(p => istFrei(p.c) && p.no <= r * ROW_SIZE);
-    const platz = danach.reduce((s, p) => s + Math.max(0, Math.min(p.bis, r * ROW_SIZE) - p.no + 1), 0);
-    if(k > platz){ toast(`Kein Platz in Reihe ${r} – Nummer bleibt`, 'fehler'); nummernAnwenden(); return; }
-    let noch = k - danach.filter(p => p.c.rest).reduce((s, p) => s + p.te, 0);
+    /* v1.284 (Jean: FI 13–16 auf 14 ging nicht, solange der letzte Kreis auf 23 stand): ist es die
+       letzte belegte Reihe, zählen auch die offenen TE hinter dem letzten Eintrag – dort steht
+       keine freie Zeile, die sie ausweist. */
+    const hinten = plan.some(p => p.te > 0 && p.no > r * ROW_SIZE);
+    const letzte = plan.filter(p => p.te > 0 && p.no <= r * ROW_SIZE).reduce((m, p) => Math.max(m, p.bis), 0);
+    const offen = hinten ? 0 : Math.max(0, r * ROW_SIZE - letzte);
+    const platz = offen + danach.reduce((s, p) => s + Math.max(0, Math.min(p.bis, r * ROW_SIZE) - p.no + 1), 0);
+    if(k > platz){ toast(`Kein Platz in Reihe ${r} – Nummer bleibt`, 'fehler'); planKeinPlatz = true; nummernAnwenden(); return; }
+    let noch = k - offen - danach.filter(p => p.c.rest).reduce((s, p) => s + p.te, 0);
     danach.filter(p => !p.c.rest).forEach(p => {     // feste freie TE abgeben, wenn der Rest nicht reicht
       if(noch <= 0) return;
       const ab = Math.min(noch, p.te); p.c.te = String(p.te - ab); noch -= ab;
@@ -9899,7 +9912,8 @@ function saveCircuitThen(next, still){
   /* Erst speichern, dann fragen: die Frage bezieht sich auf den Stand mit
      diesem Kreis, und der Weiterlauf wartet auf die Antwort. */
   const done = () => {
-    const gesp = persistCircuit(); if(!still) toast('Gespeichert');   // v1.177: nach "Nächster Kreis" kein Hinweis über den Kacheln
+    planKeinPlatz = false;
+    const gesp = persistCircuit(); if(!still && !planKeinPlatz) toast('Gespeichert');   // v1.177: nach "Nächster Kreis" kein Hinweis über den Kacheln
     /* v1.163: die Übersicherung unterbricht den Messweg nicht mehr – sie steht
        als Hinweis am FI und im Abschluss (Bedienkonzept B15).
        v1.221 (Prüfung Erfassen): auch ein neuer Kreis auf belegter Nummer fragt

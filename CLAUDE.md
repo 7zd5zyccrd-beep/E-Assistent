@@ -509,8 +509,11 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   im Messen und einspaltig zurück in `#paneGeraet`.
 - **v1.283 (Jean: erste Reihe frei, nach Neuladen wieder Reihe 1):** `migrateProject` warf alle Zeilen außer
   Kreisen weg – auch die freien TE (bei jedem Start und Abgleich). Jetzt bleiben `kind:'frei'`.
+- **v1.284 (Jean: FI 13–16 auf 14 ging nicht, letzter Kreis auf 23):** `planVersetzen(c, N, bisher)` zählt in der
+  letzten belegten Reihe die offenen TE hinter dem letzten Eintrag mit (`offen`). `planKeinPlatz` hält „Kein Platz“
+  stehen (sonst sofort von „Gespeichert“ überdeckt).
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.283, 28.10.2026)
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.284, 29.10.2026)
 
 - **Designteam Runde 2 (v1.277–v1.282):** alles am Gerät ansehen (vorher „App neu laden“).
 - **Startbild und Speicher auf dem Gerät (v1.273–v1.275):** Start ohne leeren Bildschirm, ohne Netz, neue Version beim übernächsten Öffnen.
