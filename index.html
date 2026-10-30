@@ -10,6 +10,10 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.301 30.10.2026 Messen (Jean: beim Tippen rutschten die Felder hoch, weil die Umschaltung verschwand):
+                    "Gemessen / Keine Messung" steht jetzt unter den Messfeldern, die Ueberschrift
+                    "Messwerte" entfaellt im Messen; beim Tippen blendet sich nichts mehr aus. Zuleitung:
+                    Kopfkarte antippbar mit Pfeil statt Link "Kabel und Absicherung aendern".
   v1.300 30.10.2026 Messen (Jean: mit offener Tastatur war die Kopfkarte bei fast jedem Kreis angeschnitten
                     oder weg): beim Tippen bleibt die volle Karte oben stehen, auch wenn der Inhalt rollt;
                     dafuer ist "Gemessen / Keine Messung" ausgeblendet, solange die Tastatur offen ist.
@@ -2865,16 +2869,19 @@ input.schalter:checked::after{transform:translateX(20px)}
 .btn:not(:disabled):active,.list-item:not(.ord-zeile):active,.ord-zeile:active:not(:has(.ord-griff:active)),
 .sug:active,.chk:active,.seg button:not(:disabled):active,.linkbtn:active{filter:brightness(.88);transition:none}
 .btn.primary:not(:disabled):active,.chk.on:active{filter:brightness(1.35)}
-/* v1.299: Kopfkarte im Messen antippbar (öffnet Gerät und Kabel), Pfeil rechts wie .set-zeile */
-#messKopf{position:relative;padding-right:40px;cursor:pointer;transition:filter var(--t-tipp) var(--k-std)}
-#messKopf:active:not(:has(.sam-streifen:active)){filter:brightness(.94);transition:none}
-#messKopf > .chev{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--ink-soft)}
+/* v1.299: Kopfkarte im Messen antippbar (öffnet Gerät und Kabel), Pfeil rechts wie .set-zeile;
+   v1.301 die der Zuleitung ebenso */
+#messKopf,#feedKopf{position:relative;padding-right:40px;cursor:pointer;transition:filter var(--t-tipp) var(--k-std)}
+#messKopf:active:not(:has(.sam-streifen:active)),#feedKopf:active{filter:brightness(.94);transition:none}
+#messKopf > .chev,#feedKopf > .chev{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--ink-soft)}
 /* v1.299: beim Tippen der Messwerte fällt die Überschrift weg – mehr Platz für die Kopfkarte.
    v1.300 (Jean: bei fast jedem Kreis war die Karte mit offener Tastatur weg – gerade bei gleich
    beginnenden Bezeichnungen muss Raum und Absicherung zu sehen sein): die volle Karte bleibt oben
    stehen, dafür fällt „Gemessen / Keine Messung“ weg – wer tippt, hat gemessen. Eine sehr hohe
    Karte (kopfLang) heftet sich nicht an, sie verdeckte sonst das Feld. */
-body.messTippt #messTitel,body.messTippt #segStatus{display:none}
+/* v1.301 (Jean: das Wegblenden beim Tippen ließ die Felder hochrutschen): nichts blendet sich mehr
+   aus – die Umschaltung steht unter den Feldern, die Überschrift „Messwerte“ entfällt im Messen ganz */
+body[data-modus="mess"] #messTitel{display:none}
 body.messTippt:not(.kopfLang) #messKopf:not([hidden]){position:sticky;top:0;z-index:3;
   box-shadow:0 8px 14px -10px rgba(0,0,0,.35)}
 .btn.gesperrt{background:var(--neutral-bg);color:var(--ink-soft);border-color:var(--line)}
@@ -4292,17 +4299,6 @@ function nameGross(s){
           <button class="mess-zu" id="messZu" type="button" hidden></button>
           <p class="muted small" id="trafoHinweis" hidden>LS für den Trafo: wird nicht gemessen und steht nicht in der Messtabelle des Protokolls.</p>
           <div id="messTeil">                  <!-- v1.226: im Erfassen eingeklappt -->
-          <div class="seg" id="segStatus" style="margin-bottom:14px">
-            <button data-v="measured" aria-pressed="true">Gemessen</button>
-            <button data-v="nomeasure" aria-pressed="false">Keine Messung</button>
-          </div>
-          <label class="field" id="fldReason" hidden><span>Bemerkung</span><select id="cReason">
-            <option value="inaccessible">Nicht zugänglich</option>
-            <option value="function_ok">Funktion geprüft, i.O.</option>
-            <option value="other">Andere</option>
-          </select></label>
-          <label class="field" id="fldNote" hidden><span>Beschreibung</span><input id="cNote" placeholder="z.B. Herd fest angeschlossen"></label>
-
           <div id="measBlock">
             <div class="row" id="isoZsRow">
               <label class="field"><span>Isolations&shy;widerstand</span><span class="unit"><input id="mIso" inputmode="decimal"><em>MΩ</em></span></label>
@@ -4323,6 +4319,18 @@ function nameGross(s){
               </div>
             </div>
           </div>
+          <!-- v1.301 (Jean: beim Tippen rutschten die Felder hoch, wenn die Umschaltung verschwand):
+               Gemessen / Keine Messung unter den Feldern – dort liegt sie beim Tippen unter der Tastatur -->
+          <div class="seg" id="segStatus" style="margin-bottom:14px">
+            <button data-v="measured" aria-pressed="true">Gemessen</button>
+            <button data-v="nomeasure" aria-pressed="false">Keine Messung</button>
+          </div>
+          <label class="field" id="fldReason" hidden><span>Bemerkung</span><select id="cReason">
+            <option value="inaccessible">Nicht zugänglich</option>
+            <option value="function_ok">Funktion geprüft, i.O.</option>
+            <option value="other">Andere</option>
+          </select></label>
+          <label class="field" id="fldNote" hidden><span>Beschreibung</span><input id="cNote" placeholder="z.B. Herd fest angeschlossen"></label>
           </div>
         </div>
       </div>
@@ -4807,7 +4815,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.300';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.301';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 30.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -9117,6 +9125,8 @@ function saveFeedThen(next){
    Absicherung stehen als Vorbelegung schon in der Auswahl, sind aber erst nach
    dem ersten Speichern im Projekt hinterlegt. Ohne das stünde dort nur
    "Zuleitung". Die Kennlinie steht seit v1.36 im Eintrag selbst. */
+/* v1.301: Pfeil wie in den Einstellungen – für antippbare Kopfkarten (Kreis, Zuleitung) */
+const CHEV = '<svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
 function feedKopfZeile(){
   const name  = ($('#fName').value || '').trim() || 'Zuleitung';
   const kabel = $('#fCable').value;
@@ -9138,9 +9148,11 @@ function feedModus(){
     `<div><strong>${esc(($('#fName').value || '').trim() || 'Zuleitung')}</strong></div>`
     + `<div class="muted small">${esc(kabelText($('#fCable').value) || 'Kabel nicht erfasst')}</div>`
     + `<div class="muted small">${esc(abs && abs !== FEED_FUSE_UNBEKANNT ? abs : 'Absicherung unbekannt')}</div>`
-    + (offen ? '' : `<div class="small" style="margin-top:6px"><button class="linkbtn" id="feedAendernKnopf" type="button">Kabel und Absicherung ändern</button></div>`);
-  const ka = $('#feedAendernKnopf');
-  if(ka) ka.onclick = () => { feedAendern = true; feedModus(); };
+    /* v1.301 (Jean): wie die Kreiskarte – ganze Karte antippbar, Pfeil statt Link */
+    + CHEV;
+  $('#feedKopf').setAttribute('role', 'button');
+  $('#feedKopf').setAttribute('aria-label', 'Kabel und Absicherung ändern');
+  $('#feedKopf').onclick = () => { feedAendern = true; feedModus(); };
   samFeedZeigen(false);
   feedKlappe();                                      // v1.226
   /* Im Messen-Modus führt die Zuleitung direkt zum ersten offenen Kreis weiter;
@@ -9468,7 +9480,7 @@ function messKopfSetzen(an){
     /* v1.175 (QK G52): bei jedem Kreis – B10 statt B16 bemerkt kostete sonst den Weg ins Erfassen.
        v1.299 (Jean: bei offener Tastatur war die Karte nur halb zu lesen): statt des Links „Gerät und
        Kabel ändern“ ist die ganze Karte antippbar, Pfeil wie in den Einstellungen – eine Zeile weniger */
-    + '<svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
+    + CHEV;
   k.setAttribute('role', 'button');
   k.setAttribute('aria-label', 'Gerät und Kabel ändern');
   /* v1.208: im Messen der Bildstreifen, solange der Kreis noch angesehen werden soll */
