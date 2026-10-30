@@ -10,6 +10,10 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.300 30.10.2026 Messen (Jean: mit offener Tastatur war die Kopfkarte bei fast jedem Kreis angeschnitten
+                    oder weg): beim Tippen bleibt die volle Karte oben stehen, auch wenn der Inhalt rollt;
+                    dafuer ist "Gemessen / Keine Messung" ausgeblendet, solange die Tastatur offen ist.
+                    Sehr lange Karten bleiben nicht stehen, damit sie kein Messfeld verdecken.
   v1.299 30.10.2026 Messen (Jean: bei offener Tastatur war die Beschreibung des Kreises nur halb zu lesen):
                     der Link "Geraet und Kabel aendern" entfaellt, die ganze Kopfkarte ist antippbar
                     (Pfeil rechts wie in den Einstellungen); beim Tippen der Messwerte faellt die
@@ -2865,8 +2869,14 @@ input.schalter:checked::after{transform:translateX(20px)}
 #messKopf{position:relative;padding-right:40px;cursor:pointer;transition:filter var(--t-tipp) var(--k-std)}
 #messKopf:active:not(:has(.sam-streifen:active)){filter:brightness(.94);transition:none}
 #messKopf > .chev{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--ink-soft)}
-/* v1.299: beim Tippen der Messwerte fällt die Überschrift weg – mehr Platz für die Kopfkarte */
-body.messTippt #messTitel{display:none}
+/* v1.299: beim Tippen der Messwerte fällt die Überschrift weg – mehr Platz für die Kopfkarte.
+   v1.300 (Jean: bei fast jedem Kreis war die Karte mit offener Tastatur weg – gerade bei gleich
+   beginnenden Bezeichnungen muss Raum und Absicherung zu sehen sein): die volle Karte bleibt oben
+   stehen, dafür fällt „Gemessen / Keine Messung“ weg – wer tippt, hat gemessen. Eine sehr hohe
+   Karte (kopfLang) heftet sich nicht an, sie verdeckte sonst das Feld. */
+body.messTippt #messTitel,body.messTippt #segStatus{display:none}
+body.messTippt:not(.kopfLang) #messKopf:not([hidden]){position:sticky;top:0;z-index:3;
+  box-shadow:0 8px 14px -10px rgba(0,0,0,.35)}
 .btn.gesperrt{background:var(--neutral-bg);color:var(--ink-soft);border-color:var(--line)}
 .kreis-ok{font-size:14px;color:var(--ink-soft);margin:0 0 10px;display:flex;gap:6px;align-items:baseline}
 .kreis-ok b{color:var(--ink);font-weight:600}
@@ -4797,7 +4807,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.299';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.300';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 30.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
@@ -5461,7 +5471,11 @@ function feldFreiholen(){
   const fehlt = unten > kante ? unten + 12 - kante : 0;
   if(fehlt > 0) bildNach(bildY() + fehlt);
   const oben = el.getBoundingClientRect().top - bild().getBoundingClientRect().top;
-  if(oben < 8) bildNach(bildY() + oben - 24);       // nicht über den oberen Rand hinaus
+  /* v1.300: im Messen steht beim Tippen die Kopfkarte oben – das Feld nicht darunter schieben */
+  const kopf = document.body.matches('.messTippt:not(.kopfLang)') && $('#messKopf').contains(el) === false
+    && !$('#messKopf').hidden ? $('#messKopf') : null;
+  const grenze = kopf ? kopf.getBoundingClientRect().bottom - bild().getBoundingClientRect().top + 8 : 8;
+  if(oben < grenze) bildNach(bildY() + oben - grenze - 16);   // nicht über den oberen Rand hinaus
 }
 function tastaturPlatz(el){
   if(bild().contains(el) && el.type !== 'checkbox' && el.tagName !== 'SELECT'){
@@ -8572,12 +8586,14 @@ function naechstesLeeres(el){
    nimmt den Fokus nicht (mousedown/touchend ohne Vorgabe), speichert wie der Knopf der
    Fußleiste und setzt den Cursor im nächsten Kreis ins erste leere Feld – im selben
    Tipp, damit iOS die Tastatur offen lässt. */
+const KOPF_HEFT_MAX = 130;                           // v1.300: bis etwa vier Zeilen bleibt die Karte oben
 function weiterTastZeigen(){
   const b = $('#btnWeiterTast'), a = document.activeElement;
   const an = current === 'circuit' && messModus() && !(archOffen && archLesen)
     && a instanceof HTMLInputElement && !!a.closest('#measBlock');
   b.hidden = !an;
   document.body.classList.toggle('messTippt', an);  // v1.299
+  document.body.classList.toggle('kopfLang', an && $('#messKopf').offsetHeight > KOPF_HEFT_MAX);   // v1.300
   if(an) b.textContent = $('#btnSaveCircuit').textContent;
 }
 document.addEventListener('focusin', weiterTastZeigen);

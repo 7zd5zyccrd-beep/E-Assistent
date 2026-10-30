@@ -595,7 +595,13 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   SAM-Bildstreifen ausgenommen); `weiterTastZeigen` setzt `body.messTippt`, dann ist `#messTitel` ausgeblendet.
   Test `k299.mjs` (Fenster 445 hoch = Jeans Platz): Karte beim FI und LS ganz sichtbar.
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.299, 30.10.2026)
+- **v1.300 (Jean: mit Tastatur war die Karte bei fast jedem Kreis angeschnitten oder weg; einzeilig/Kopfleiste
+  verworfen – gleich beginnende Bezeichnungen, Blick geht nicht in die Kopfleiste):** `body.messTippt` blendet auch
+  `#segStatus` aus und heftet die volle `#messKopf` an (`sticky`, Schatten); höher als `KOPF_HEFT_MAX` (130 px) →
+  `kopfLang`, nicht angeheftet (Jean: dann ausnahmsweise hochrollen). `feldFreiholen` hält Felder unter der Karte.
+  Test `k301.mjs`: LS, FI/LS, FI, Wiederholung und Neuinstallation, jedes Feld – Karte, Feld und 999 frei.
+
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.300, 30.10.2026)
 
 - **Erfassen Pakete A/B (v1.289/v1.290):** Optik, FI-Name, „n markiert“, „?“ am Gerät ansehen.
 - **Ziehen (v1.288, Einrasten v1.291):** Halten/Anheben/Federn/Ablegen/Einrasten am iPhone ansehen – Werte (Größe, Federn, 250 ms) nach Gefühl nachstellen.
