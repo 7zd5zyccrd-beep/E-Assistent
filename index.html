@@ -10,6 +10,10 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.299 30.10.2026 Messen (Jean: bei offener Tastatur war die Beschreibung des Kreises nur halb zu lesen):
+                    der Link "Geraet und Kabel aendern" entfaellt, die ganze Kopfkarte ist antippbar
+                    (Pfeil rechts wie in den Einstellungen); beim Tippen der Messwerte faellt die
+                    Ueberschrift "Messwerte" weg.
   v1.298 29.10.2026 Erfassen, Planliste (Jean: ganze Reihe in eine neue Reihe ziehen ging nur, wenn etwas
                     zurueckblieb): die einzige Reihe laesst sich ganz in "Reihe 2 (neu)" ziehen; war die
                     Reihe davor ganz frei, rueckte nach dem Ablegen alles zurueck - jetzt bleibt es stehen.
@@ -2857,6 +2861,12 @@ input.schalter:checked::after{transform:translateX(20px)}
 .btn:not(:disabled):active,.list-item:not(.ord-zeile):active,.ord-zeile:active:not(:has(.ord-griff:active)),
 .sug:active,.chk:active,.seg button:not(:disabled):active,.linkbtn:active{filter:brightness(.88);transition:none}
 .btn.primary:not(:disabled):active,.chk.on:active{filter:brightness(1.35)}
+/* v1.299: Kopfkarte im Messen antippbar (öffnet Gerät und Kabel), Pfeil rechts wie .set-zeile */
+#messKopf{position:relative;padding-right:40px;cursor:pointer;transition:filter var(--t-tipp) var(--k-std)}
+#messKopf:active:not(:has(.sam-streifen:active)){filter:brightness(.94);transition:none}
+#messKopf > .chev{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--ink-soft)}
+/* v1.299: beim Tippen der Messwerte fällt die Überschrift weg – mehr Platz für die Kopfkarte */
+body.messTippt #messTitel{display:none}
 .btn.gesperrt{background:var(--neutral-bg);color:var(--ink-soft);border-color:var(--line)}
 .kreis-ok{font-size:14px;color:var(--ink-soft);margin:0 0 10px;display:flex;gap:6px;align-items:baseline}
 .kreis-ok b{color:var(--ink);font-weight:600}
@@ -4787,8 +4797,8 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.298';                    // siehe Änderungsliste im Dateikopf
-const BUILD        = VERSION + ' · 29.10.2026';
+const VERSION      = 'v1.299';                    // siehe Änderungsliste im Dateikopf
+const BUILD        = VERSION + ' · 30.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
 const DAUER_WARN   = 100;                        // zu lang: unplausibel im Protokoll
@@ -8567,6 +8577,7 @@ function weiterTastZeigen(){
   const an = current === 'circuit' && messModus() && !(archOffen && archLesen)
     && a instanceof HTMLInputElement && !!a.closest('#measBlock');
   b.hidden = !an;
+  document.body.classList.toggle('messTippt', an);  // v1.299
   if(an) b.textContent = $('#btnSaveCircuit').textContent;
 }
 document.addEventListener('focusin', weiterTastZeigen);
@@ -9438,14 +9449,19 @@ function messKopfSetzen(an){
   k.innerHTML = (zw.length ? `<div class="small" style="color:var(--signal-ink);margin-bottom:4px">${esc(samZwText(draft))} – Weiter gilt als angesehen</div>` : '')
     + `<div><strong>${mark(z[0], 0)}</strong></div>`
     + z.slice(1).map((t, i) => `<div class="muted small">${mark(t, i + 1)}</div>`).join('')
-    /* v1.175 (QK G52): bei jedem Kreis – B10 statt B16 bemerkt kostete sonst den Weg ins Erfassen */
-    + '<div class="small" style="margin-top:6px"><button class="linkbtn" id="btnSamAendern" type="button">Gerät und Kabel ändern</button></div>';
+    /* v1.175 (QK G52): bei jedem Kreis – B10 statt B16 bemerkt kostete sonst den Weg ins Erfassen.
+       v1.299 (Jean: bei offener Tastatur war die Karte nur halb zu lesen): statt des Links „Gerät und
+       Kabel ändern“ ist die ganze Karte antippbar, Pfeil wie in den Einstellungen – eine Zeile weniger */
+    + '<svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
+  k.setAttribute('role', 'button');
+  k.setAttribute('aria-label', 'Gerät und Kabel ändern');
   /* v1.208: im Messen der Bildstreifen, solange der Kreis noch angesehen werden soll */
   if(zw.length && draft.samStreifen){
     k.insertAdjacentHTML('afterbegin', '<div class="sam-streifen" id="mStreifen" hidden></div>');
     samStreifenZeigen($('#mStreifen'), draft.samStreifen.fid, draft.samStreifen.i);
   }
-  $('#btnSamAendern').onclick = () => {
+  k.onclick = e => {
+    if(e.target.closest('.sam-streifen')) return;   // der Bildstreifen vergrößert sich beim Antippen
     samAendern = true;
     if(samKabelWahl) paintCableList(samKabelWahl);    // die Wahl steht dann im Feld
     syncCircuitUi();

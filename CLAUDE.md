@@ -590,7 +590,12 @@ F9–F11 a; F7 nach VDE-Nachtrag: R_PE je Kreis).
   Breite hinter einem freien Block, der genau am Reihenende endet, nur weg – vorher wurde eine ganz freie Reihe davor
   zum Rest (0 TE), und alles rückte zurück. Prüfung `c298.mjs` (5 Fälle, auch Neuladen).
 
-## Offen – von Jean noch am Gerät zu prüfen (Stand v1.298, 29.10.2026)
+- **v1.299 (Jean: bei offener Tastatur war die Kopfkarte im Messen nur halb zu lesen):** Link „Gerät und Kabel
+  ändern“ entfällt, die ganze `#messKopf` ist antippbar (`role=button`, Pfeil `.chev` wie `.set-zeile`, Tipp auf den
+  SAM-Bildstreifen ausgenommen); `weiterTastZeigen` setzt `body.messTippt`, dann ist `#messTitel` ausgeblendet.
+  Test `k299.mjs` (Fenster 445 hoch = Jeans Platz): Karte beim FI und LS ganz sichtbar.
+
+## Offen – von Jean noch am Gerät zu prüfen (Stand v1.299, 30.10.2026)
 
 - **Erfassen Pakete A/B (v1.289/v1.290):** Optik, FI-Name, „n markiert“, „?“ am Gerät ansehen.
 - **Ziehen (v1.288, Einrasten v1.291):** Halten/Anheben/Federn/Ablegen/Einrasten am iPhone ansehen – Werte (Größe, Federn, 250 ms) nach Gefühl nachstellen.
