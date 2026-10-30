@@ -10,6 +10,8 @@
   seine eigene Kennung (pruefassistent-projekt-v1) und dreht sich nicht mit.
 
   ÄNDERUNGEN
+  v1.302 30.10.2026 Messen, Zuleitung (Jean: wie im Kreis): "Gemessen / Keine Messung" unter den
+                    Messfeldern, Ueberschrift "Messwerte" entfaellt im Messen.
   v1.301 30.10.2026 Messen (Jean: beim Tippen rutschten die Felder hoch, weil die Umschaltung verschwand):
                     "Gemessen / Keine Messung" steht jetzt unter den Messfeldern, die Ueberschrift
                     "Messwerte" entfaellt im Messen; beim Tippen blendet sich nichts mehr aus. Zuleitung:
@@ -2881,7 +2883,7 @@ input.schalter:checked::after{transform:translateX(20px)}
    Karte (kopfLang) heftet sich nicht an, sie verdeckte sonst das Feld. */
 /* v1.301 (Jean: das Wegblenden beim Tippen ließ die Felder hochrutschen): nichts blendet sich mehr
    aus – die Umschaltung steht unter den Feldern, die Überschrift „Messwerte“ entfällt im Messen ganz */
-body[data-modus="mess"] #messTitel{display:none}
+body[data-modus="mess"] #messTitel,body[data-modus="mess"] #feedMessTitel{display:none}   /* v1.302 auch Zuleitung */
 body.messTippt:not(.kopfLang) #messKopf:not([hidden]){position:sticky;top:0;z-index:3;
   box-shadow:0 8px 14px -10px rgba(0,0,0,.35)}
 .btn.gesperrt{background:var(--neutral-bg);color:var(--ink-soft);border-color:var(--line)}
@@ -4366,6 +4368,14 @@ function nameGross(s){
           <div class="eyebrow" id="feedMessTitel">Messwerte</div>
           <button class="mess-zu" id="feedMessZu" type="button" hidden></button>
           <div id="feedMessTeil">              <!-- v1.226: im Erfassen eingeklappt -->
+          <div id="feedMeasBlock">
+            <div class="row">
+              <label class="field"><span>Isolations&shy;widerstand</span><span class="unit"><input id="fIso" inputmode="decimal"><em>MΩ</em></span></label>
+              <label class="field"><span>Schleifen&shy;impedanz</span><span class="unit"><input id="fZs" inputmode="decimal"><em>Ω</em></span></label>
+            </div>
+            <div class="chk-grid" id="fIsoSug" hidden style="margin:0 0 14px"><button class="sug" type="button">999</button></div>
+          </div>
+          <!-- v1.302 (Jean): wie im Kreis – Gemessen / Keine Messung unter den Feldern -->
           <div class="seg" id="segFeedStatus" style="margin-bottom:14px">
             <button data-v="measured" aria-pressed="true">Gemessen</button>
             <button data-v="nomeasure" aria-pressed="false">Keine Messung</button>
@@ -4376,14 +4386,6 @@ function nameGross(s){
             <option value="other">Andere</option>
           </select></label>
           <label class="field" id="fldFeedNote" hidden><span>Beschreibung</span><input id="fNote" placeholder="z.B. im Kabelkanal verputzt"></label>
-
-          <div id="feedMeasBlock">
-            <div class="row">
-              <label class="field"><span>Isolations&shy;widerstand</span><span class="unit"><input id="fIso" inputmode="decimal"><em>MΩ</em></span></label>
-              <label class="field"><span>Schleifen&shy;impedanz</span><span class="unit"><input id="fZs" inputmode="decimal"><em>Ω</em></span></label>
-            </div>
-            <div class="chk-grid" id="fIsoSug" hidden style="margin:0 0 14px"><button class="sug" type="button">999</button></div>
-          </div>
           </div>
         </div>
       </div>
@@ -4815,7 +4817,7 @@ const ROW_SIZE     = 12;                       // Stromkreise je Verteilerreihe
 const AUTO_NAMES   = {rcd:'FI-Schutzschalter', rcbo:'FI/LS', ls:''};
 const REASONS      = {inaccessible:'Nicht zugänglich', function_ok:'Funktion geprüft, i.O.', other:'Andere'};
 const GEAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M10.29 1.74 L13.71 1.74 L13.72 4.60 L16.02 5.55 L18.05 3.54 L20.46 5.95 L18.45 7.98 L19.40 10.28 L22.26 10.29 L22.26 13.71 L19.40 13.72 L18.45 16.02 L20.46 18.05 L18.05 20.46 L16.02 18.45 L13.72 19.40 L13.71 22.26 L10.29 22.26 L10.28 19.40 L7.98 18.45 L5.95 20.46 L3.54 18.05 L5.55 16.02 L4.60 13.72 L1.74 13.71 L1.74 10.29 L4.60 10.28 L5.55 7.98 L3.54 5.95 L5.95 3.54 L7.98 5.55 L10.28 4.60 Z M8.00 12.00 A4.00 4.00 0 1 0 16.00 12.00 A4.00 4.00 0 1 0 8.00 12.00 Z"/></svg>';
-const VERSION      = 'v1.301';                    // siehe Änderungsliste im Dateikopf
+const VERSION      = 'v1.302';                    // siehe Änderungsliste im Dateikopf
 const BUILD        = VERSION + ' · 30.10.2026';
 /* Ab dieser Prüfdauer in Minuten fragt die App beim Bestätigen der Angaben nach,
    ob die errechnete Endzeit stimmt. */
